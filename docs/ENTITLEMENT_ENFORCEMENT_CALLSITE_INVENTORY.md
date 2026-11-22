@@ -2,7 +2,7 @@
 
 > **وضعیت سند:** تحلیل فنی و پیشنهاد اجرا (`Proposed`)؛ هیچ سیاست، رفتار یا فلگ جدیدی فعال نشده است. این سند خروجی S-D مأموریت «ادامهٔ کار Vendor» است و فقط مسیر پیاده‌سازی آینده را آماده می‌کند. تغییر کد تولیدی صفر است. مرجع تصمیم‌ها: `docs/DECISIONS.md` (D-013/D-025/D-041/D-054/D-058/D-059/D-072..D-073)، `docs/LICENSING.md`، `docs/LICENSING_WORKFLOWS.md` §۱۴.
 
-## ۱) وضعیت واقعی اجرای فعلی (سweep کد، main@`58a1ccd4`)
+## ۱) وضعیت واقعی اجرای فعلی (sweep کد، main@`58a1ccd4`)
 
 امروز فقط دو لایه اجرا وجود دارد و هر دو «سطح وضعیت لایسنس» را کنترل می‌کنند، نه entitlement شرکت‌محور:
 
@@ -27,6 +27,21 @@
 | 10 | نواحی بدون هیچ بررسی: `/admin/users/**`، `/admin/security-audit`، `/admin/access/catalog/**`، `/corporate-groups`، `/companies/{id}/org/**` (HR)، `/session`، `/me/**`، Razor Pages | عملیات عمومی نصب | بسته به endpoint | فقط تابع گیت سراسری (وقتی opt-in) | با گیت خاموش: همه‌چیز باز است (رفتار ثبت‌شدهٔ طراحی) | پوشش با گیت سراسری کافی است؛ entitlement شرکت‌محور فقط برای endpointهای Company-scoped لازم است | تست نمونه در E1 |
 | 11 | `EntitlementPolicyEngine.cs:71/211` (فقط Vendor مصرف می‌کند: `VendorAmendmentEntitlementPolicy`، `VendorProvisioningCompanyReferenceRules`، `VendorProvisioningLicenseResolver`) | ارزیابی خالص ماژول/subsystem | — | در Server هیچ call-siteای ندارد | — | Engine باید بدون وابستگی EF/ASP.NET بماند (الزام D-041) | تست‌های موجود Contracts |
 
+## ۲.۱) ترتیب کنترل‌ها در یک درخواست و جای entitlement (Proposed)
+
+هر کنترل باید **دقیقاً یک‌بار** و در لایهٔ درست خودش اعمال شود؛ هدف این Inventory جلوگیری از هم کنترل تکراری در چند لایه و هم شکاف بین لایه‌هاست. ترتیب معتبر طبق معماری فعلی مخزن:
+
+1. **حل هویت Tenant (مرز مالکیت داده):** طبق D-103، Tenant نمایش مشتق‌شده از `CustomerAccount` است و هویت از دامنه resolve می‌شود؛ هیچ TenantId قابل‌اعتمادی از کلاینت/Claim به‌تنهایی گرفته نمی‌شود (D-013/D-087). در Customer Host تک‌نصبی، Installation همان مرز نصب است و گیت سراسری (#1) روی آن کار می‌کند.
+2. **دامنهٔ Company (جلوگیری از دسترسی به شرکت دیگر):** فقط `CompanyAccessService` (عضویت فعال + نقش در DB) تعیین می‌کند کاربر به کدام Companyها دسترسی دارد؛ `CompanyId`/`TenantId` همیشه از context معتبر سمت سرور می‌آید (WorkContext)، نه از مسیر/بدنه/کلاینت. این لایه امروز برای endpointهای Company-scoped موجود است و **تکرار نشود** — entitlement نباید نسخهٔ دومِ همین کنترل شود.
+3. **RBAC (مجوز عملیات کاربر):** کدهای مجوز `PermissionDefinitions`/سیاست‌های endpoint تعیین می‌کنند کاربرِ درون شرکتِ مجاز، اجازهٔ انجام چه عملیاتی دارد.
+4. **Entitlement (قابلیت خریداری‌شده در License):** بررسی مستقل از RBAC که «ماژول/زیرسیستم/شرکت خریداری‌شده» است یا نه؛ جای درست آن **بعد از** حل Company (نیاز به `CompanyId` معتبر دارد) و هم‌لایه/قبل از handler است — الگوی مرجع: `TradeAccessFilter` که entitlement را قبل از مجوز کاربر با deny پیش‌فرض می‌سنجد. entitlement **جایگزین** هیچ‌کدام از سه لایهٔ قبلی نیست و هیچ‌کدام را هم دور نمی‌زند (D-025: مجوز عملیاتی + entitlement هر دو لازم‌اند؛ fail-closed ترکیب آن‌ها D-074).
+
+**تفکیک مفهومی (مبنای جدول‌بندی این سند):** «مجوز کاربر» (هویت/عضویت/نقش — متغیر با مدیریت دسترسی) با «قابلیت خریداری‌شده در License» (Company/Module/Feature/Seat امضاشده در payload — فقط با amendment عوض می‌شود) دو دامنهٔ جدا هستند؛ اولی سؤال «این کاربر مجاز است؟» و دومی سؤال «این نصب/شرکت چنین قابلیتی خریداری کرده؟». هیچ endpointی نباید یکی را به‌جای دیگری بپرسد و هیچ لایهٔ جدیدی برای «ترکیب» آن‌ها لازم نیست؛ ترکیب همان ترتیب بالا با همان `CompanyId` واحد است.
+
+**قاعدهٔ ضد-تکرار:** هر کنترل فقط در یک نقطهٔ مالکیت‌دار: گیت نصب در middleware موجود؛ دامنهٔ Company فقط در `CompanyAccessService`؛ RBAC فقط در authorization endpointها؛ entitlement شرکت‌محور فقط در یک نقطهٔ مشترک قرارداد-محور (طرح E2) — نه در هر endpoint جداگانه و نه به‌صورت چک موازی با معنای متفاوت. هر کنترل باید fail-closed باشد: نبود داده/خطای resolve/استثنا → deny با کد روشن، نه عبور (D-074).
+
+
+
 ## ۳) تفکیک نقاط مرکزی کم‌هزینه از نقاط پرهزینه
 
 **گروه A — مرکزی و کم‌هزینه (پیشنهاد اجرای اول):**
@@ -41,11 +56,11 @@
 ## ۴) طرح اجرای حداقلی پیشنهادی (همه `Proposed`؛ هیچ‌کدام بدون تأیید مالک شروع نمی‌شود)
 
 - **E1 — فعال‌سازی گیت موجود (کمترین ریسک):** روشن‌کردن opt-in در محیط تست + ماتریس تست HTTP پنج-state × دو DeploymentMode + regression برای مسیرهای همیشه‌مجاز. کد تولیدی جدید ندارد.
-- **E2 — seam شرکت‌محور مرکزی:** یک سرویس کوچکِ resolve-only (بدون جدول/Migration جدید؛ منبع داده: `CompanySetupRecord` + entitlementهای همان payload اعتبارسنجی‌شده که snapshot گیت ارائه می‌دهد) که به‌صورت یک filter/دموِن مشترک روی گروه‌های Company-scoped endpoint اعمال می‌شود؛ fail-closed: نبود mapping/نبود entitlement/خطای resolve → 403 با کد روشن. قرارداد کدهای خطا پیش از پیاده‌سازی در Issue/ADR تثبیت شود.
+- **E2 — seam شرکت‌محور مرکزی:** حداقلی و بازاستفاده‌محور: همان `CompanyId` که scope/RBAC از context سرور می‌گیرند، به یک resolve-only کوچک داده می‌شود (بدون جدول/Migration جدید؛ منبع داده: `CompanySetupRecord` + entitlementهای همان payload اعتبارسنجی‌شده که snapshot گیت ارائه می‌دهد؛ بدون cache — بهینه‌سازی فقط از مسیر S-C/OD-28) و نتیجه در نقطهٔ اعمال موجود می‌نشیند؛ کاندیدهای محل اعمال: extension روی گروه‌های Company-scoped endpoint موجود یا فیلتر مشترک روی همان گروه‌ها — انتخاب نهایی با Issue/ADR اجرایی، نه با این سند؛ این پیشنهاد **تصمیم مصوب نیست** و هیچ middleware/abstraction جدیدی تا تأیید مالک ساخته نمی‌شود. fail-closed: نبود mapping/نبود entitlement/خطای resolve → 403 با کد روشن. قرارداد کدهای خطا پیش از پیاده‌سازی در Issue/ADR تثبیت شود.
 - **E3 — Seat (`MaxUsers`):** پس از E2، روی endpointهای عضویت کاربر (#8) با سیاست block-new (هیچ نشست/کاربر موجودی قطع نشود).
 - **E4 — per-subsystem در عملیات:** فقط پس از نگاشت مصوب زیرسیستم↔endpoint؛ برش‌بندی با مأموریت مستقل.
 
-ممنوعیت‌ها: اتصال entitlement به Trade (`DenyAllTradeModuleEntitlement` fail-closed می‌ماند)، ایجاد abstraction/سرویس اضافه، تغییر قرارداد `Licensing.Contracts`، فعال‌سازی هر سیاست بدون ADR/تأیید مالک.
+ممنوعیت‌ها: اتصال entitlement به Trade (`DenyAllTradeModuleEntitlement` fail-closed می‌ماند)، ایجاد abstraction/سرویس اضافه، معرفی هر Middleware/Cache/لایهٔ جدید به‌عنوان «تصمیم مصوب» (هر پیشنهاد ساختاری فقط با وضعیت `Proposed` و در Issue/ADR مستقل)، تغییر قرارداد `Licensing.Contracts`، فعال‌سازی هر سیاست بدون ADR/تأیید مالک.
 
 ## ۵) ریسک‌ها
 
