@@ -78,6 +78,38 @@ public sealed class TradeProductServiceTests
         Assert.Empty(store.Products);
     }
 
+    [Theory]
+    [InlineData("a\u202Eb")]
+    [InlineData("a\u200Eb")]
+    [InlineData("a\u061Cb")]
+    [InlineData("a\u2028b")]
+    [InlineData("a\u2029b")]
+    [InlineData("a\uFEFFb")]
+    public async Task Update_RejectsControlAndBidiCharactersInCodeAndNameAndKeepsStoredData(string bad)
+    {
+        var product = await Seed();
+        var token = store.TokenText(product.Id);
+
+        AssertInvalid(await service.UpdateAsync(Context, product.Id, Update(token, code: bad), CancellationToken.None), "code", bad);
+        AssertInvalid(await service.UpdateAsync(Context, product.Id, Update(token, name: bad), CancellationToken.None), "name", bad);
+
+        var stored = store.Products.Single();
+        Assert.Equal("PR-1", stored.Code);
+        Assert.Equal("Steel", stored.Name);
+        Assert.Equal(token, store.TokenText(product.Id));
+    }
+
+    [Fact]
+    public async Task Update_StillAcceptsZwnjInName()
+    {
+        var product = await Seed();
+
+        var result = await service.UpdateAsync(
+            Context, product.Id, Update(store.TokenText(product.Id), name: "ورق می\u200Cخواهم"), CancellationToken.None);
+
+        Assert.Equal(ProductOutcome.Success, result.Outcome);
+    }
+
     [Fact]
     public async Task Create_HsCodeStaysTextAndRejectsNonAsciiBecauseTheColumnIsVarchar()
     {

@@ -3530,3 +3530,7 @@
 - TDD: تست قبلی `UpgradeFromV1ToV2IsCheckedOnTheCandidateSideOnly` جایگزین شد با `UpgradeFromV1ToV2IsDeniedUntilAnOwnerApprovedMappingExists` (بازتولید دقیق مثال مأموریت) + `UpgradeFromV1ToV2IsDeniedEvenWhenTheCandidateAloneIsValid`؛ هر دو قبل از اصلاح RED و پس از آن GREEN شدند (کلاس Gate: ۱۲ تست، صفر شکست).
 - نتایج واقعی محلی پس از اصلاح: build `Vendor.sln` موفق؛ `dotnet test --solution Vendor.sln` → ۴۶۳ تست، ۳۷۵ موفق، ۱۰ ناموفق (نام‌ها دقیقاً همان مجموعهٔ پیش‌موجود محیطی)، ۷۸ Skip؛ `Licensing.Contracts.Tests` → ۱۶۷/۱۶۷؛ `check_static_assets.py` PASS؛ `git diff --check` تمیز. CI روی head پس از اصلاحیه در PR ثبت می‌شود؛ «neutral» CodeRabbit تأیید یا Review موفق تلقی نمی‌شود.
 - Merge این PR با اختیار صریح مأموریت مرور نهایی و فقط پس از احراز کامل هشت شرط انجام می‌شود؛ ثبت پس از Merge در همین گزارش انجام خواهد شد.
+
+## 2026-11-22 — تست Update نویسه‌های ممنوع Product و طبقه‌بندی شکاف‌های Party/Product
+
+- تست Update برای نویسه‌های کنترلی/bidi و ZWNJ در Product اضافه شد؛ کد تولیدی تغییر نکرد. موارد ZWSP/WJ، نرمال‌سازی ارقام و ی/ک نیازمند سیاست مالک است (`docs/handoffs/ISSUE-UNNUMBERED-trade-product-update-forbidden-chars-tests.md`).
