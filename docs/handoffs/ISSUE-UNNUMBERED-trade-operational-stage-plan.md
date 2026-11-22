@@ -28,7 +28,7 @@
 ## ۲) گیت‌ها — دقیق
 - **تمام Schemaهای S3 مسدود است، نه فقط ستون‌های Tenant/Company:** ROADMAP می‌گوید S3-0 باید پیش از هر کدنویسی تغییردهندهٔ Schema بسته شود (`docs/ROADMAP.md:257`) و تا تصویب S3-0g/h هیچ جدول/ستون Tenant جدید یا Backfill مجاز نیست (`:269`).
 - **دلیل فنی [V]:** هر جدول جدید از `TradeEntity` ارث می‌برد که `TenantId` را نگه می‌دارد و در عمل `Company.Id` است (`TradeEntity.cs:25-26`، `TradeAuthorizationAdapter.cs:45`). ساخت جدول پیش از D-090 (`Proposed`) بدهی legacy می‌افزاید و پس از هر تغییر، کلید/ایندکس `(TenantId, …)` باید بازطراحی شود.
-- **مسدودکننده‌ها:** بسته‌شدن S3-0 (G0..G5؛ جزئیات در بستهٔ آمادگی که در شاخهٔ جدا و PR جدا است)، و در Trade: D-090، D-094/OD-17 (Tenant)، D-095، و OD-017 سری Trade (دقت ستون‌های مالی/تناژ؛ `Open`) [D] `docs/TRADE_OPEN_DECISIONS.md:165`.
+- **مسدودکننده‌ها:** بسته‌شدن S3-0 (G0..G5؛ جزئیات در بستهٔ آمادگی `ISSUE-UNNUMBERED-trade-s3-0-readiness-decision-package.md` (PR #747))، و در Trade: D-090، D-094/OD-17 (Tenant)، D-095، و OD-017 سری Trade (دقت ستون‌های مالی/تناژ؛ `Open`) [D] `docs/TRADE_OPEN_DECISIONS.md:165`.
 - **بدون گیت قابل‌انجام:** کلاس‌های دامنهٔ خالص بدون نگاشت EF، Use Caseهای Application با port باریک و Store جعلی در پروژهٔ تست، تست واحد، ADR و مستندات. پیش از Migration نباید EF Configuration یا `DbSet` اضافه شود (ناهمخوانی با Snapshot).
 
 ## ۳) منطق موجود برای استفادهٔ مجدد (بازنویسی نمی‌شود) [V]
