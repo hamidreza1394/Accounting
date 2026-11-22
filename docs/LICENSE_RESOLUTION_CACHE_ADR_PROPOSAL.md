@@ -1,0 +1,50 @@
+# ADR پیشنهادی — Cache نسخه‌دار رزولوشن وضعیت لایسنس (#396) — `Proposed`
+
+> **وضعیت سند:** خروجی S-C مأموریت. این **پیش‌نویس ADR با وضعیت `Proposed`** است و به‌تنهایی مجوز پیاده‌سازی یا تغییر رفتار نیست؛ ثبت هم‌زمان آن به‌عنوان **OD-28** در `docs/LICENSING_OPEN_DECISIONS.md` انجام شده است. پیاده‌سازی فقط پس از پذیرش مالک، ثبت ADR قطعی و شماره‌گیری رسمی انجام می‌شود. هیچ کدی تغییر نکرده است.
+
+## ۱) زمینه: رفتار فعلی و چرایی حساسیت
+
+- `LicenseRuntimeStateService.ResolveAsync` (`Server/Infrastructure/Licensing/LicenseRuntimeStateService.cs:40-76`) در **هر فراخوانی** دوباره ارزیابی می‌کند و این تصمیم صریحاً در کد ثبت شده است: «Re-resolves on every call; there is deliberately no cache that could outlive a license import, revocation or expiry change.»
+- ارزیابی در `CustomerLicenseRuntimeEvaluator.EvaluateCurrentAsync` (`CustomerLicenseRuntimeEvaluator.cs:53`) شامل: خواندن ردیف `InstalledLicenses`، deserialize پاکت، و اعتبارسنجی کامل از طریق `RevocationAwareLicenseEnvelopeValidator` (امضای ECDSA P-256 + trust + installation binding + snapshot ابطال آفلاین از طریق `OfflineRevocationConsumer`/`TpmAnchoredOfflineRevocationStateStore`). هر نتیجهٔ رد، fail-closed است و payload هرگز از رد افشا نمی‌شود.
+- مفاد D-058 (Cloud) و D-059 §۸: «از تماس شبکه‌ای جداگانه برای هر عملیات حسابداری اجتناب می‌شود؛ resolution/cache فقط در سرور و با version/expiry/invalidating event کنترل می‌شود.»
+- **نکتهٔ تعیین‌کننده:** در پیاده‌سازی فعلی **هیچ round-trip شبکه‌ای به Vendor در مسیر رزولوشن وجود ندارد** — همه‌چیز محلی است. مفاد cache مذکور برای حالت Cloud با authority مرکزی نوشته شده است. بنابراین مزیت امروز فقط صرفهٔ CPU (بررسی امضا در هر درخواست) است، نه حذف تأخیر شبکه؛ و هزینه‌اش تضعیف یک invariant ثبت‌شدهٔ امنیتی است. به همین دلیل این تغییر باید تصمیم مالک باشد، نه بهینه‌سازی پنهان.
+
+## ۲) مقایسهٔ گزینه‌ها
+
+| گزینه | شرح | امنیت | پیچیدگی | سازگاری |
+|---|---|---|---|---|
+| **O1 — بدون cache (وضع فعلی)** | ارزیابی کامل در هر درخواست | حداکثر تازگی؛ بدون تغییر | صفر | مبنا |
+| **O2 — Memo نسخه‌دار درون composition موجود (پیشنهاد برای بررسی)** | cache فقط نتایج `IsUsable=true`، کلید = SHA-256 روی (installationId، بایت‌های دقیق EnvelopeJson، وضعیت serialize‌شدهٔ snapshot ابطال فعلی، نسخهٔ trust/تنظیمات، DeploymentMode)؛ TTL = min(مرز وضعیت بعدی payload، سقف کوتاه مثلاً ۶۰–۳۰۰ ثانیه)؛ process-wide، بدون جدول/زیرساخت جدید | ردْها هرگز cache نمی‌شوند → مسیر fail-closed همیشه تازه؛ تغییر هر ورودی → miss فوری؛ سقف TTL محدودیت زمانی هرگونه drift سیاست/ساعت | کم–متوسط؛ یک composition در DI، بدون API جدید | با مفاد D-058/D-059 («فقط در سرور، نسخه‌دار، با invalidating event») سازگار؛ به‌عنوان گام آماده‌سازی حالت Cloud |
+| **O3 — سرویس cache با شمارندهٔ نسخهٔ persist و invalidating eventهای صریح** | نسخهٔ کامل‌تر برای حالت Cloud واقعی | مشروط به صحت رویدادها | بالا | زودهنگام قبل از اتصال authority مرکزی |
+| **O4 — cache در سطح middleware فقط snapshot** | بدون cache شدن نتیجهٔ اعتبارسنجی | همان پرسش‌های امنیتی O2 با سود کمتر | کم | فایدهٔ اندک، ریسک مشابه |
+
+## ۳) تحلیل موضوعات الزامی مأموریت (برای گزینهٔ O2)
+
+- **Version و اعتبار:** کلید fingerprint «نسخهٔ» محتوایی است نه شمارنده؛ هر تغییر در ورودی‌ها نسخهٔ جدید می‌سازد. TTL سقف زمانی مطلق دارد.
+- **Invalidation:** تغییر EnvelopeJson، تغییر snapshot ابطال، تغییر trust/تنظیمات یا DeploymentMode → fingerprint عوض می‌شود؛ تغییر import لایسنس = تغییر ردیف DB → miss؛ restart پردازش = حذف cache.
+- **Revocation:** snapshot ابطال بخشی از کلید است؛ اگر snapshot بدون تغییر ردیف لایسنس به‌روز شود، fingerprint تغییر می‌کند و نتیجهٔ قبلی (مجاز) بی‌اعتبار می‌شود. **هیچ مسیری نباید اجازهٔ استفادهٔ نتیجهٔ قبل از import snapshot جدید را بدهد.**
+- **رفتار در قطع ارتباط:** معماری فعلی محلی است؛ قطع اینترنت رزولوشن را تغییر نمی‌دهد (D-046). cache محلی هم این رفتار را عوض نمی‌کند.
+- **جلوگیری از دادهٔ منقضی/downgrade:** فقط نتیجهٔ `IsUsable` cache می‌شود؛ sequence پایین‌تر/پاکت متفاوت = fingerprint متفاوت؛ نتایج رد همیشه تازه محاسبه می‌شوند.
+- **جداسازی Company/Tenant:** میزبان مشتری فقط یک Installation دارد؛ کلید cache Installation-scoped است و entitlementهای داخل payload متعلق به همان Installation‌اند. هنگام فعال‌سازی چند-Tenant روی یک نمونه (فقط پس از گیت‌های G6/SP)، کلید باید Tenant-qualified شود و این در ADR قطعی الزام شود.
+- **جلوگیری از آلودگی بین مشتریان:** کلید شامل installationId و بایت‌های پاکت است؛ اشتراک پردازش بین مشتریان وجود ندارد (هر مشتری host خودش) و cache هم process-local است؛ هیچ cache مشترک بین‌میزبانی مجاز نیست.
+
+## ۴) طرح تست (پس از پذیرش مالک؛ قبل از آن هیچ کدی نوشته نمی‌شود)
+
+| تست | انتظار |
+|---|---|
+| cache hit درون TTL با ورودی‌های ثابت | نتیجهٔ همان شیء قبلی؛ عدد فراخوانی validator = ۱ |
+| گذر از مرز وضعیت payload (مثلاً Valid→ExpiringSoon در لحظهٔ boundary) | miss و بازمحاسبه؛ وضعیت جدید |
+| تغییر snapshot ابطال با ثابت‌ماندن پاکت | miss؛ اگر نتیجهٔ جدید رد باشد، رد تازه برگردد |
+| تغییر EnvelopeJson (import/sequence بالاتر) | miss |
+| نتیجهٔ رد (`license_missing`، امضای نامعتبر، snapshot نامعتبر) | هرگز cache نشود؛ فراخوانی بعدی دوباره اعتبارسنجی کامل |
+| فلگ فعال‌سازی خاموش (پیش‌فرض) | رفتار دقیقاً برابر وضع فعلی |
+| clock تزریقی در همهٔ تست‌ها | بدون sleep واقعی |
+
+قواعد: پیش‌فرض فلگ خاموش و opt-in فقط در پیکربندی تست/تأییدشده؛ هیچ تست موجودی حذف/تضعیف نشود؛ تست‌های رگرسیون ردْها (دقیقاً رفتار fail-closed #753) حفظ شوند.
+
+## ۵) شرط‌های پذیرش ADR توسط مالک
+
+1. تعیین سقف TTL و سیاست فلگ (پیش‌فرض خاموش).
+2. تأیید اینکه O2 با برنامهٔ حالت Cloud (اتصال authority مرکزی) هم‌راستاست یا O3 لازم است.
+3. تعیین معیار اندازه‌گیری مزیت (قبل/بعد) — در نبود round-trip شبکه، مزیت باید واقعاً اندازه‌گیری شود.
+4. تثبیت الزام Tenant-qualification برای آیندهٔ چند-Tenant.
