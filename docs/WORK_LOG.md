@@ -3486,3 +3486,29 @@
 - **تکمیل دور سوم:** در بند وابستگی L2، دامنهٔ D-109 از «صدور/ابطال» به دامنهٔ مصوب ADR («تمام عملیات انسانی مدیریتی و امنیتی Vendor v1») اصلاح و تاریخ به 2026-11-19 (تاریخ مصوب در DECISIONS.md) تصحیح شد.
 - **اعتبارسنجی:** فقط تغییر مستندات؛ Diff نسبت به main شامل هیچ فایل غیر-md نیست. CI روی head این PR باید سبز شود؛ Merge با تأیید مالک است.
 
+## Vendor — مرحله ۰ مأموریت تکمیل Vendor (بازممیزی 2026-11-22)
+
+- **دروازهٔ شروع:** PR #743 در `2026-11-22T06:06:14Z` با Squash ادغام شد؛ مبنای جدید `main@eba5e336` است و دلتای `ac0ec741..eba5e336` فقط ۵ فایل Markdown است (بدون تغییر کد/تست/Workflow/Migration).
+- **ممیزی مجدد:** مستندات اجباری مأموریت و ADRهای D-055/D-107/D-109/D-110..D-115 روی مبنای جدید مطالعه شد؛ وضعیت GitHub استعلام شد (تنها PR باز #744 از Trade با مالکیت Claude؛ هیچ Issue جدید Vendor پس از #401) و هشت محور مأموریت در کد با جستجوی مستقیم راستی‌آزمایی شد: EntitlementPolicyEngine بدون call-site عملیاتی؛ تک‌پیاده‌سازی `DenyAllTradeModuleEntitlement` برای `ITradeModuleEntitlement`؛ Gate `Provisioning:CompanyReferenceIssuance:Enabled` پیش‌فرض Disabled با interlock `CustomerConsumerReady`؛ ACK Provisioning با تست SQL Server ولی `VendorLicenseAmendmentRequest` بدون فیلد تحویل/ACK/اعمال؛ نبود Retention/Archive در Vendor با سیاست مصوب D-070 پیاده‌نشده؛ مکانیزم‌های خاص D-110 (انتخاب نام کاربری توسط مشتری، توکن Bootstrap، بازیابی) `NotImplemented`؛ signerهای CNG/HSM و Runbookها در کد با Key Ceremony واقعی Not Verified؛ چهار پروژهٔ تست با e2e اپ اصلی (نه Vendor.Web).
+- **فایل‌های به‌روز‌شده:** `VENDOR_LIFECYCLE_FINAL_AUDIT.md` (افزودن بخش ممیزی مجدد)، همین Work Log، `INDEX.md` (ردیف handoff) و `handoffs/ISSUE-UNNUMBERED-vendor-stage0-reaudit-2026-11-22.md`. فقط مستندات؛ کد، Migration و فایل‌های Trade تغییر نکرده‌اند.
+- **گام بعدی:** گزارش کامل مرحله ۰ ارائه شده و شروع مرحله ۱ (اتصال Entitlement به مصرف‌کنندگان) در انتظار تأیید مالک است.
+
+
+
+## Vendor — بازتطبیق Mergeهای #281/#282/#284 و CI جاری (2026-11-22)
+
+- **مبنای تازه:** `main@eba5e3368dda0c2e859fd9f204603f073b065cf0`. روی همین SHA، ۱۲/۱۲ Check Run موفق‌اند. چون delta از `ac0ec741` فقط مستندات PR #743 است، Vendor CI روی `eba5e336` trigger نشد؛ آخرین Vendor CI روی main کددار `ac0ec741`، run [44926165757](https://github.com/hamidreza1394/Accounting/actions/runs/44926165757)، چهار Job موفق دارد.
+- **PR #281:** merge commit `2ee1edc52904833bc28eead5a679185377363c24`؛ Check Runهای post-merge روی همان SHA: ۱۲/۱۲ موفق (از جمله .NET CI run [40843230825](https://github.com/hamidreza1394/Accounting/actions/runs/40843230825)).
+- **PR #282:** merge commit `f4a0462b0972e7686a686eca0febfaee680baecf`؛ Check Runهای post-merge روی همان SHA: ۱۳/۱۳ موفق؛ .NET CI run [40843073694](https://github.com/hamidreza1394/Accounting/actions/runs/40843073694) نیز completed/success است. این، تأیید صریح CI پس از Merge #282 است.
+- **PR #284:** merge commit `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`؛ Check Runهای post-merge روی همان SHA: ۱۳/۱۳ موفق. ترتیب Authorization قبل از بررسی RowVersion/Status در کد جاری و regression 404 برای منبع Provisioning غیرقابل‌دسترسی دوباره بررسی شد. D-109/#724 سیاست self-approval را بعداً برای Vendor V1 تغییر داده‌اند؛ این تغییر، ترتیب Authorization را تضعیف نمی‌کند.
+- **شکست میان‌مرحله‌ای PR #742:** Vendor CI run [44920988669](https://github.com/hamidreza1394/Accounting/actions/runs/44920988669) روی commit میانی `69d70a64` یک regression واقعی داشت: تست `CustomerUpdateEnforcesAntiforgeryAndRowVersionAndAuditsOnlyCommittedWrites` انتظار داشت stage پرداخت `ReferenceId=LatestOrderNumber` بدهد، اما مقدار null بود. علت ریشه‌ای این بود که شاخه‌های Ready/Pending در `VendorLifecycleReadinessRules.Resolve` شناسه سفارش را روی stage پرداخت قرار نمی‌دادند. commit نهایی `7a8c17590222dc433be4f0c3aa63b14ed843781e` با افزودن `ReferenceId: s.LatestOrderNumber` به شاخه‌های پرداخت این نقص را رفع کرد؛ Vendor CI روی head نهایی، run [44924770922](https://github.com/hamidreza1394/Accounting/actions/runs/44924770922)، موفق است. پیام duplicate-key در همان log مربوط به تست مستقل rollback با `SwitchableVendorAuditWriter` و خطای Audit تزریق‌شده بود، نه assertion شکست‌خورده.
+- **دامنه و وضعیت PRها:** در snapshot فعلی #745 تنها PR باز مرتبط با Vendor و مستنداتی است؛ #744 مربوط به Trade است و دست‌نخورده می‌ماند. هیچ Customer-side consumer، `Server/**` یا Customer migration در این تغییر مستنداتی اضافه نشده است.
+- **گام بعدی طبق اولویت مأموریت:** ادامه #228 فقط در مرز Vendor؛ CompanyReference mapping/bootstrap در #392 و Customer consumer/trust/ACK در #235 وابستگی‌های جدا هستند. Purchased Company-scoped add-on در #393 تا #392 مسدود می‌ماند. Key Ceremony در #236، الزامات offline revocation در #214/#364 و sink مستقل #107 به زیرساخت/دسترسی واقعی نیاز دارند.
+- **اعتبارسنجی این ثبت:** فقط مستندات؛ هیچ Build/Test محلی اجرا نشده است.
+
+
+## 2026-11-22 — اصلاح مرز سیاست نگهداری Vendor در بازبینی PR #745
+
+- بازبینی CodeRabbit نشان داد ارجاع D-070 به سیاست نگهداری Vendor نادرست است: D-070 فقط `SecurityAuditEvents` و metadata نشست `UserSession` در Customer Host را پوشش می‌دهد.
+- جملهٔ جاری در `VENDOR_LIFECYCLE_FINAL_AUDIT.md` اصلاح شد: مرز ممیزی Vendor از D-046 می‌آید؛ D-046 تعیین دورهٔ عددی را به پیکربندی/راهنمای استقرار و Issue اجرایی واگذار می‌کند و در حال حاضر دورهٔ Vendor تعریف/مصوب نیست؛ Retention/Archive همچنان پیاده‌سازی نشده است.
+- این رکورد، عبارت تاریخی همین ممیزی را تصحیح می‌کند و سابقهٔ append-only قبلی را بازنویسی نمی‌کند. هیچ کد، Schema، Migration یا Customer Host تغییر نکرده است.
