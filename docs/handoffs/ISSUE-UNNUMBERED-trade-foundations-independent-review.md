@@ -49,7 +49,7 @@
 - تست غایب: سناریوی بیش‌تخصیص چندمرحله‌ای (رفتار فعلی قفل نشده است).
 
 ### `TradeAccessGate` و `TradeAccessFilter`
-- ترتیب [V]: هویت ← context ← بستن نوشتن در دورهٔ ReadOnly (`TradeAccessGate.cs:40`) ← entitlement (`:45`) ← مجوز کاربر ← مجوزهای Read اضافه. نگاشت: `PeriodReadOnly`→`409 trade_period_read_only`، `ModuleUnavailable`→`403 trade_module_unavailable` (`TradeAccessFilter.cs:139-140`). این تفکیک در مستندات PR #744 (هنوز ادغام‌نشده) اصلاح شده بود و در اینجا دوباره با کد تأیید شد.
+- ترتیب [V]: هویت ← context ← بستن نوشتن در دورهٔ ReadOnly (`TradeAccessGate.cs:40`) ← entitlement (`:45`) ← مجوز کاربر ← مجوزهای Read اضافه. نگاشت: `PeriodReadOnly`→`409 trade_period_read_only`، `ModuleUnavailable`→`403 trade_module_unavailable` (`TradeAccessFilter.cs:139-140`). این تفکیک در مستندات PR #744 (ادغام‌شده در `main@5a8e7a14`) اصلاح شده بود و در اینجا دوباره با کد تأیید شد.
 - `PeriodIndependent` فقط از metadata سمت سرور می‌آید، فقط برای Write اثر دارد و Adapter دوباره آن را اعمال می‌کند؛ مجوزهای Read اضافه همچنان لازم‌اند.
 - خطای entitlement بلعیده و به `ModuleUnavailable` تبدیل می‌شود (Fail-Closed).
 - Runtime: wired (`Program.cs:286`، `TradeEndpoints.cs:21`)؛ گروه `/api/v1` خود `RequireAuthorization()` دارد.
