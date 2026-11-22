@@ -14,7 +14,7 @@
 - [x] بدون فایل Trade، بدون تغییر `Licensing.Contracts`، بدون Migration/جدول/Workflow جدید، بدون سرویس/Broker/Worker جدید
 - [x] `DenyAllTradeModuleEntitlement` دست‌نخورده و Trade همچنان Fail-Closed (تست موجود `ExactlyOneEntitlementImplementationShipsAndItDeniesAll` پابرجاست)
 - [x] Gate دوکلیدی صدور v5 همچنان بسته (interlock `CustomerConsumerReady=false` با تست گارد تثبیت شد)
-- [x] تأیید CI مخزن روی head نهایی PR: run روی `65dc7ab2` — **۱۹ Check Run پایان‌یافته: ۱۸ `success` و ۱ `neutral` (CodeRabbit)**؛ بدون Check معلق؛ `build-and-test`، `publish-windows`، `e2e`، `Windows CNG certificate-store signer tests`، `Semgrep OSS`، CodeQL×۴ و هر دو regression قفل checkpoint (ubuntu/windows) سبز؛ `neutral` CodeRabbit به‌عنوان تأیید یا Review موفق تلقی نمی‌شود.
+- [x] تأیید CI مخزن روی head نهایی PR: run روی `65dc7ab2` و تکرار سبز روی `69cd355f` — **۱۹ Check Run پایان‌یافته: ۱۸ `success` و ۱ `neutral` (CodeRabbit)**؛ بدون Check معلق؛ `build-and-test`، `publish-windows`، `e2e`، `Windows CNG certificate-store signer tests`، `Semgrep OSS`، CodeQL×۴ و هر دو regression قفل checkpoint (ubuntu/windows) سبز؛ `neutral` CodeRabbit به‌عنوان تأیید یا Review موفق تلقی نمی‌شود.
 
 ## نقشهٔ Enforcement (ترتیب اعتبارسنجی، وضعیت پس از این تغییر)
 
@@ -69,7 +69,7 @@
 | `python3 scripts/check_static_assets.py` | PASS | exit 0 |
 | `git diff --check` | تمیز | exit 0 |
 | `dotnet build Template.sln` / `dotnet test --solution Template.sln` | اجرا شد (نتیجه در PR ثبت می‌شود) | اثبات عدم اثر جانبی روی اپ اصلی |
-| CI مخزن روی head نهایی PR (`65dc7ab2`) | پایان‌یافته: ۱۹ Check Run — ۱۸ `success` و ۱ `neutral` | همهٔ Jobهای Vendor (checkpoint file-lock regression روی ubuntu/windows، Windows CNG signer tests) و چک‌های الزامی مخزن سبز؛ `neutral` مربوط به CodeRabbit است و تأیید یا Review موفق تلقی نمی‌شود؛ این CI شامل اجرای تست‌های SQL Server در محیط CI است، ولی نتیجهٔ آن جایگزین گزارش شفاف بالا نمی‌شود |
+| CI مخزن روی head کدِ PR (`65dc7ab2`) و head مستندات (`69cd355f`) — هر دو با نتیجهٔ یکسان | پایان‌یافته: ۱۹ Check Run — ۱۸ `success` و ۱ `neutral` | همهٔ Jobهای Vendor (checkpoint file-lock regression روی ubuntu/windows، Windows CNG signer tests) و چک‌های الزامی مخزن سبز؛ `neutral` مربوط به CodeRabbit است و تأیید یا Review موفق تلقی نمی‌شود؛ این CI شامل اجرای تست‌های SQL Server در محیط CI است، ولی نتیجهٔ آن جایگزین گزارش شفاف بالا نمی‌شود |
 
 ## امنیت، داده و سازگاری
 
