@@ -3512,3 +3512,11 @@
 - بازبینی CodeRabbit نشان داد ارجاع D-070 به سیاست نگهداری Vendor نادرست است: D-070 فقط `SecurityAuditEvents` و metadata نشست `UserSession` در Customer Host را پوشش می‌دهد.
 - جملهٔ جاری در `VENDOR_LIFECYCLE_FINAL_AUDIT.md` اصلاح شد: مرز ممیزی Vendor از D-046 می‌آید؛ D-046 تعیین دورهٔ عددی را به پیکربندی/راهنمای استقرار و Issue اجرایی واگذار می‌کند و در حال حاضر دورهٔ Vendor تعریف/مصوب نیست؛ Retention/Archive همچنان پیاده‌سازی نشده است.
 - این رکورد، عبارت تاریخی همین ممیزی را تصحیح می‌کند و سابقهٔ append-only قبلی را بازنویسی نمی‌کند. هیچ کد، Schema، Migration یا Customer Host تغییر نکرده است.
+
+
+## 2026-11-22 — مرحله ۱ Entitlement: اتصال Engine به مصرف‌کنندگان عملیاتی Vendor
+
+- شاخهٔ `glm/vendor-stage1-entitlement-consumers` از `main@5484758722d0` (کد `27e85c57`): تصمیم entitlement در دو نقطهٔ عملیاتی به `EntitlementPolicyEngine` متولی شد — subset زیرسیستم v1 در `VendorProvisioningLicenseResolver`، انتخاب شرکت/ماژول v2 در `VendorProvisioningCompanyReferenceRules`، و Gate سیاستی payload نهایی amendment (`VendorAmendmentEntitlementPolicy`؛ کد `amendment_payload_policy_invalid`) پیش از امضا در `VendorLicenseAmendmentIssuanceService`. بدون تغییر در `Licensing.Contracts`، Trade، Migration، Workflow یا کدهای خطای تثبیت‌شده؛ Gate دوکلیدی v5 بسته ماند.
+- تست‌های جدید: ۱۱ تست قرارداد Gate (`VendorAmendmentEntitlementPolicyTests`) و ۳ تست گارد معماری (`VendorEntitlementEnforcementGuardTests`: allow-list نقاط مصرف Engine، پابرجایی اتصال، بسته‌ماندن interlock v5). تست‌های SQL Server/SoftHSM محلی Skip شدند (زیرساخت sandbox ندارد) و «Skip» موفق حساب نشده است.
+- نتایج واقعی محلی (SDK 10.0.100): build `Vendor.sln` موفق؛ `dotnet test --solution Vendor.sln` → ۴۶۲ تست، ۳۷۴ موفق، ۱۰ ناموفق (همان مجموعهٔ پیش‌موجود محیطی HTTP/SPA روی baseline `main@54847587`: ۴۴۸/۳۶۰/۱۰)، ۷۸ Skip؛ `Licensing.Contracts.Tests` → ۱۶۷/۱۶۷ سبز؛ `check_static_assets.py` PASS؛ `git diff --check` تمیز. وضعیت CI فقط با شاهد Check Run روی PR گزارش می‌شود؛ هیچ ادعای Production readiness ثبت نشده است.
+- handoff: `docs/handoffs/ISSUE-UNNUMBERED-vendor-stage1-entitlement-consumers-2026-11-22.md`؛ Merge فقط با مالک.
