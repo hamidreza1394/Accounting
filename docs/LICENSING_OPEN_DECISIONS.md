@@ -269,3 +269,19 @@ D-060 سه حوزه معماری و state machine شروع برنامه را ث�
 - **گزینه‌ها:** (a) حفظ TPM فقط برای دریافت/اعمال snapshot ابطال آفلاین؛ نصب فاقد TPM می‌تواند فعال‌سازی آفلاین پایه داشته باشد ولی برای تازه‌سازی وضعیت ابطال به اتصال آنلاین نیاز دارد و رفتار دقیق fail-closed باید تعریف شود؛ (b) طراحی SoftwareProtected rollback anchor با assurance پایین‌تر و پذیرش ریسک صریح، بدون ادعای معادل TPM؛ (c) عدم پشتیبانی Offline Revocation در نصب فاقد TPM و محدودکردن قابلیت‌های وابسته.
 - **پیشنهاد:** ابتدا مرز قابلیت را دقیق کنیم و گزینه (a) را بررسی کنیم؛ D-057 بدون ADR جایگزین تغییر نکند. هیچ software counter/DB-only anchor به‌عنوان معادل TPM معرفی نشود.
 - **نیاز به تأیید مالک:** بله؛ این تصمیم به امنیت Customer Offline Revocation مربوط است، نه امضای مرکزی Vendor.
+
+## OD-28 — Cache نسخه‌دار رزولوشن وضعیت لایسنس (#396)
+- **وضعیت:** NeedsApproval؛ پیش‌نویس ADR و طرح تست در `docs/LICENSE_RESOLUTION_CACHE_ADR_PROPOSAL.md` ثبت شده است.
+- **زمینه:** مفاد D-058 (Cloud) و D-059 §۸ cache فقط-سرورِ نسخه‌دار با invalidating event را برای حالت Cloud با authority مرکزی الزام کرده‌اند؛ اما پیاده‌سازی فعلی رزولوشن کاملاً محلی است و کد «بدون cache» را به‌عنوان تصمیم ثبت کرده (`LicenseRuntimeStateService`/`CustomerLicenseRuntimeEvaluator`). افزودن cache امروز فقط صرفهٔ CPU دارد و یک invariant ثبت‌شدهٔ fail-closed را تغییر می‌دهد؛ بنابراین باید تصمیم صریح مالک باشد.
+- **گزینه‌ها:** (a) بدون cache (وضع فعلی)؛ (b) memo نسخه‌دار fingerprint-keyed فقط برای نتایج usable با TTL تا مرز وضعیت بعدی و سقف کوتاه، بدون زیرساخت جدید؛ (c) سرویس cache کامل با نسخهٔ persist و invalidating eventهای صریح برای حالت Cloud واقعی؛ (d) cache سطح middleware snapshot.
+- **ملاحظات:** نتایج رد هرگز cache نشوند؛ fingerprint باید EnvelopeJson + snapshot ابطال + trust/تنظیمات را پوشش دهد؛ در آیندهٔ چند-Tenant (پس از گیت‌های G6/SP) کلید باید Tenant-qualified شود؛ هیچ cache مشترک بین‌میزبانی مجاز نیست.
+- **پیشنهاد (`Proposed`):** تا وجود Benchmark واقعی یا شواهد معتبر از مشکل عملکردی، **گزینهٔ (a) بدون cache انتخاب بهتر و پیش‌فرض فعلی است** — مسیر رزولوشن کاملاً محلی است، هیچ round-trip شبکه‌ای حذف نمی‌شود و سود ممکن فقط صرفهٔ CPU است؛ گزینهٔ (b) فقط به‌عنوان گام آیندهٔ حالت Cloud، مشروط به شواهد اندازه‌گیری‌شده، تأیید صریح مالک و حفظ invariantهای سند پیش‌نویس؛ هیچ کد/فلگ cache ساخته نمی‌شود. جزئیات، ماتریس تست و «پیشنهاد نهایی» در سند پیش‌نویس (§۶).
+- **نیاز به تأیید مالک:** بله (انتخاب گزینه، سقف TTL، سیاست فلگ و معیار اندازه‌گیری).
+
+## OD-29 — سیاست تغییر CustomerNumber پس از اولین Binding
+- **وضعیت:** NeedsApproval؛ بستهٔ تصمیم‌گیری کامل با شواهد کد در `docs/DECISION_PACKAGE_CUSTOMERNUMBER_EDITABILITY.md` ثبت شده است.
+- **زمینه:** `CustomerNumber` لنگر برابری `payload.CustomerReference == customer.CustomerNumber` در صدور/binding است (`VendorProvisioningIssuanceService.cs:78`) و `PUT /api/vendor/customers/{id}` امروز آن را بی‌قید بازنویسی می‌کند (`VendorBusinessEndpoints.cs:296`)؛ تغییر آن پس از binding، پاکت‌های امضاشده و binding مشتری را از شناسه جدا می‌کند و در مسیرهای fail-closed خطای سیاستی می‌سازد. `VendorTenantView` (D-103) نیز از همین فیلد ساخته می‌شود.
+- **گزینه‌ها:** (a) Immutable همیشه؛ (b) ویرایش فقط تا «اولین وابستگی واقعی» (اولین وقوع: پاکت provisioning امضاشده، لایسنس امضاشده، amendment امضاشده، CompanySetupRecord مشتری) و قفل پس از آن با کد `customer_number_locked_after_binding`؛ (c) تغییر کنترل‌شدهٔ پس از binding با بازصادری صریح sequence جدید و تست دو میزبان.
+- **ملاحظات:** در هیچ گزینه‌ای تغییر شناسه‌های وابسته به‌صورت خودکار Rebind نمی‌شود؛ گزینهٔ (c) اگر روزی لازم شد فقط با ADR مستقل و مجوز مالک؛ هیچ Migration/backfill داده‌ای لازم نیست (schema `NOT NULL` ≤۳۲ و رد مقدار خالی در هر دو endpoint؛ نصب Production قدیمی اثبات‌پذیر نیست — D-028).
+- **پیشنهاد (`Proposed`):** گزینهٔ (b) با تعریف «اولین وابستگی» §۵.۱ بستهٔ تصمیم؛ جزئیات و سناریوهای داده ناقص در خود بسته.
+- **نیاز به تأیید مالک:** بله (سیاست، مجموعهٔ رکوردهای «اولین وابستگی» و تکلیف گزینهٔ c).
