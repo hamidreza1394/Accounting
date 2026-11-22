@@ -14,7 +14,7 @@
 - [x] بدون فایل Trade، بدون تغییر `Licensing.Contracts`، بدون Migration/جدول/Workflow جدید، بدون سرویس/Broker/Worker جدید
 - [x] `DenyAllTradeModuleEntitlement` دست‌نخورده و Trade همچنان Fail-Closed (تست موجود `ExactlyOneEntitlementImplementationShipsAndItDeniesAll` پابرجاست)
 - [x] Gate دوکلیدی صدور v5 همچنان بسته (interlock `CustomerConsumerReady=false` با تست گارد تثبیت شد)
-- [ ] تأیید CI مخزن روی head نهایی PR (در انتظار اجرای CI؛ با شاهد واقعی گزارش می‌شود، نه ادعا)
+- [x] تأیید CI مخزن روی head نهایی PR: run روی `65dc7ab2` — **۱۹ Check Run پایان‌یافته: ۱۸ `success` و ۱ `neutral` (CodeRabbit)**؛ بدون Check معلق؛ `build-and-test`، `publish-windows`، `e2e`، `Windows CNG certificate-store signer tests`، `Semgrep OSS`، CodeQL×۴ و هر دو regression قفل checkpoint (ubuntu/windows) سبز؛ `neutral` CodeRabbit به‌عنوان تأیید یا Review موفق تلقی نمی‌شود.
 
 ## نقشهٔ Enforcement (ترتیب اعتبارسنجی، وضعیت پس از این تغییر)
 
@@ -69,7 +69,7 @@
 | `python3 scripts/check_static_assets.py` | PASS | exit 0 |
 | `git diff --check` | تمیز | exit 0 |
 | `dotnet build Template.sln` / `dotnet test --solution Template.sln` | اجرا شد (نتیجه در PR ثبت می‌شود) | اثبات عدم اثر جانبی روی اپ اصلی |
-| CI مخزن | هنوز اجرا نشده | وضعیت واقعی فقط با شاهد Check Run در PR گزارش خواهد شد |
+| CI مخزن روی head نهایی PR (`65dc7ab2`) | پایان‌یافته: ۱۹ Check Run — ۱۸ `success` و ۱ `neutral` | همهٔ Jobهای Vendor (checkpoint file-lock regression روی ubuntu/windows، Windows CNG signer tests) و چک‌های الزامی مخزن سبز؛ `neutral` مربوط به CodeRabbit است و تأیید یا Review موفق تلقی نمی‌شود؛ این CI شامل اجرای تست‌های SQL Server در محیط CI است، ولی نتیجهٔ آن جایگزین گزارش شفاف بالا نمی‌شود |
 
 ## امنیت، داده و سازگاری
 
@@ -87,5 +87,5 @@
 ## شناسه‌های Git
 
 - Branch: `glm/vendor-stage1-entitlement-consumers` (از `main@5484758722d0a316511806cf3097c5c691875599`)
-- Commit (کد): `27e85c57`
-- Pull Request: پس از وریفیکیشن نهایی ساخته می‌شود و در همین فایل به‌روز می‌شود.
+- Commitها: `27e85c57` (کد و تست)، `65dc7ab2` (مستندات + ثبت CI واقعی)
+- Pull Request: [#753](https://github.com/hamidreza1394/Accounting/pull/753) — باز، بدون Merge (ادغام فقط با مالک)
