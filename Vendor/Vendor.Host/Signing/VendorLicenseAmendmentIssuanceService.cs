@@ -105,6 +105,12 @@ public sealed class VendorLicenseAmendmentIssuanceService(
         if (candidate is null || buildError is not null)
             return VendorLicenseAmendmentIssuanceResult.Conflict(buildError ?? "amendment_payload_invalid");
 
+        // Final-payload entitlement policy gate: the pure engine must accept the amended payload
+        // before anything is signed or persisted (fail-closed; violation signs nothing).
+        if (VendorAmendmentEntitlementPolicy.ValidateSuccessorKeepsEntitlements(currentPayload, candidate) is
+            { } policyError)
+            return VendorLicenseAmendmentIssuanceResult.Conflict(policyError);
+
         var creation = await envelopeFactory.CreateAsync(candidate, cancellationToken);
         if (!creation.Succeeded || creation.Envelope is null)
         {
