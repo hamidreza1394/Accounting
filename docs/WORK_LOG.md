@@ -3486,3 +3486,10 @@
 - **تکمیل دور سوم:** در بند وابستگی L2، دامنهٔ D-109 از «صدور/ابطال» به دامنهٔ مصوب ADR («تمام عملیات انسانی مدیریتی و امنیتی Vendor v1») اصلاح و تاریخ به 2026-11-19 (تاریخ مصوب در DECISIONS.md) تصحیح شد.
 - **اعتبارسنجی:** فقط تغییر مستندات؛ Diff نسبت به main شامل هیچ فایل غیر-md نیست. CI روی head این PR باید سبز شود؛ Merge با تأیید مالک است.
 
+## Vendor — مرحله ۰ مأموریت تکمیل Vendor (بازممیزی 2026-11-22)
+
+- **دروازهٔ شروع:** PR #743 در `2026-11-22T06:06:14Z` با Squash ادغام شد؛ مبنای جدید `main@eba5e336` است و دلتای `ac0ec741..eba5e336` فقط ۵ فایل Markdown است (بدون تغییر کد/تست/Workflow/Migration).
+- **ممیزی مجدد:** مستندات اجباری مأموریت و ADRهای D-055/D-107/D-109/D-110..D-115 روی مبنای جدید مطالعه شد؛ وضعیت GitHub استعلام شد (تنها PR باز #744 از Trade با مالکیت Claude؛ هیچ Issue جدید Vendor پس از #401) و هشت محور مأموریت در کد با جستجوی مستقیم راستی‌آزمایی شد: EntitlementPolicyEngine بدون call-site عملیاتی؛ تک‌پیاده‌سازی `DenyAllTradeModuleEntitlement` برای `ITradeModuleEntitlement`؛ Gate `Provisioning:CompanyReferenceIssuance:Enabled` پیش‌فرض Disabled با interlock `CustomerConsumerReady`؛ ACK Provisioning با تست SQL Server ولی `VendorLicenseAmendmentRequest` بدون فیلد تحویل/ACK/اعمال؛ نبود Retention/Archive در Vendor با سیاست مصوب D-070 پیاده‌نشده؛ مکانیزم‌های خاص D-110 (انتخاب نام کاربری توسط مشتری، توکن Bootstrap، بازیابی) `NotImplemented`؛ signerهای CNG/HSM و Runbookها در کد با Key Ceremony واقعی Not Verified؛ چهار پروژهٔ تست با e2e اپ اصلی (نه Vendor.Web).
+- **فایل‌های به‌روز‌شده:** `VENDOR_LIFECYCLE_FINAL_AUDIT.md` (افزودن بخش ممیزی مجدد)، همین Work Log، `INDEX.md` (ردیف handoff) و `handoffs/ISSUE-UNNUMBERED-vendor-stage0-reaudit-2026-11-22.md`. فقط مستندات؛ کد، Migration و فایل‌های Trade تغییر نکرده‌اند.
+- **گام بعدی:** گزارش کامل مرحله ۰ ارائه شده و شروع مرحله ۱ (اتصال Entitlement به مصرف‌کنندگان) در انتظار تأیید مالک است.
+
