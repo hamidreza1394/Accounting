@@ -3540,6 +3540,11 @@
 - ۱۰ تست invariant به `TradePaymentPlanInvariantTests` افزوده شد؛ هیچ نقضی از قرارداد مصوب #710 دیده نشد و کد تولیدی تغییر نکرد.
 - سه تصمیم باز مالک (largest-remainder، درصد مؤثر مرحلهٔ آخر، واحد کوچک IRR) با مثال در `docs/handoffs/ISSUE-UNNUMBERED-trade-payment-plan-invariants-and-decision-proposal.md` ثبت شد. بدون Schema/Migration.
 
+## 2026-11-22 — Workstream C: تست ایزولاسیون Company در سطح سرویس Party/Product
+
+- ۶ تست سرویس برای Update شرکت دیگر، کد یکسان در دو شرکت و عدم تغییر رکورد پس از تعارض کد افزوده شد؛ دو جهش روی `ProductService` شکست تست را نشان داد. کد تولیدی تغییر نکرد.
+- ماتریس #749 بازبینی شد: «ReadOnly + DenyAll ← 409» از قبل با `ClosedPeriodWriteGets409ReadOnly` پوشش دارد. جزئیات و شکاف‌های P2 در `docs/handoffs/ISSUE-UNNUMBERED-trade-test-hardening-workstream-c.md`.
+
 ## 2026-11-22 — Vendor: ممیزی وضعیت پس از Mergeهای GLM و نقشهٔ مراحل بعدی (GLM)
 
 - ممیزی تازه روی `main@be2283d80f`: هر سه PR قبلی GLM ادغام‌شده‌اند — #745 (`2026-11-22T08:24:38Z`)، #746 (Squash `c04b440f48`؛ CI head برابر ۱۵/۱۵)، #753 (Squash `d60db127cc`؛ CI head `d9e0d8da` برابر ۱۹ چک = ۱۸ موفق + ۱ neutral CodeRabbit؛ CI پس از Merge روی main برابر ۱۲/۱۲). ایراد v1→v2 entitlement قبلاً با commit `6490214e` در همان #753 اصلاح و Merge شده است؛ دوباره‌کاری نشد.
