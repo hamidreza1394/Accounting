@@ -1,3 +1,20 @@
+## Snapshot تازه Vendor — 2026-11-22 (مبنای `main@eba5e3368dda0c2e859fd9f204603f073b065cf0`)
+
+این snapshot جدیدتر از بخش‌های تاریخی پایین سند است و پیش از Merge شدن PR #745 ثبت شده است.
+
+- **GitHub Actions روی main:** روی SHA دقیق `eba5e336` هر ۱۲/۱۲ Check Run موفق‌اند. این SHA حاصل PR #743 مستنداتی است و Vendor CI به‌علت نبود تغییر در مسیرهای Vendor اجرا نشد؛ آخرین Vendor CI روی main کددار، run [44926165757](https://github.com/hamidreza1394/Accounting/actions/runs/44926165757) روی `ac0ec741` با ۴/۴ Job موفق است.
+- **Mergeهای مرجع:** PR #281 با merge SHA `2ee1edc52904833bc28eead5a679185377363c24` و ۱۲/۱۲ Check Run موفق؛ PR #282 با `f4a0462b0972e7686a686eca0febfaee680baecf` و ۱۳/۱۳ موفق؛ PR #284 با `81ed5f64ed86ebbae47a433cea63e3655cb1d24b` و ۱۳/۱۳ موفق. برای #282، CI پس از Merge روی همان SHA تأیید شده است.
+- **#284 — ترتیب Authorization:** endpoint تصمیم approval ابتدا نوع/وجود Resource را resolve و دسترسی Customer+Installation (برای Provisioning) یا خود Resource (برای سایر انواع) را بررسی می‌کند؛ فقط پس از موفقیت Authorization، RowVersion و Status درخواست approval خوانده می‌شوند. regression در `VendorCustomerMutationHttpIntegrationTests` با parent/installation ناسازگار و RowVersion عمداً نامعتبر، پاسخ 404 را الزام می‌کند. تصمیم D-109 و PR #724 بعداً self-approval را برای اپراتور مجاز Vendor V1 پذیرفتند؛ guard قدیمی `Requester != Reviewer` نباید بازگردانده شود.
+- **#282 — Signing:** اعتبارسنجی کامل payload پیش از فراخوانی signer در main باقی است؛ post-merge checks روی SHA واقعی #282 همگی موفق‌اند.
+- **PRهای باز در snapshot:** #745 همین PR مستنداتی Vendor است؛ #744 ممیزی Trade با مالکیت جداگانه است و خارج از دامنه این مأموریت باقی می‌ماند.
+- **#228 / #392 / #235:** Vendor intent، signing/export و ACK intake و readiness diagnostics موجودند، اما CompanyReference v5 gate همچنان default-off است. Mapping/Company bootstrap و Customer migration متعلق به #392 است؛ trust distribution، consumer و ACK مشتری در #235 باید جداگانه تکمیل شوند. هیچ‌یک نباید به PR محدود به Vendor منتقل شود.
+- **#393 — purchased subsystems:** Order/Payment/Receivables در #722، UI در #738 و Amendment نصب‌محور در #739 در main هستند؛ Company-scoped Module/Feature/UserSeat تا mapping معتبر #392 مسدود است و ACK/Applied و Delivery tracking اختصاصی Amendment باقی مانده‌اند.
+- **#236 / #214:** signer مرکزی CNG/Certificate Store با سطح صریح SoftwareProtected طبق D-107 در کد است؛ Key Ceremony، ACL هویت سرویس، Trust Store، rotation/overlap و recovery روی میزبان Production هنوز Not Verified هستند. الزامات signer ابطال آفلاین D-055 و Customer runtime در #235/#364 مستقل‌اند؛ هیچ HSM/KMS یا credential واقعی فرض نشده است.
+- **#107:** قرارداد checkpoint و startup guard fail-closed و file store فقط Development/Test موجودند؛ Production sink با failure domain/identity مستقل، retention/immutability، alerting و recovery drill هنوز provision نشده است.
+- **اعتبارسنجی محلی:** در این snapshot فقط مستندات تغییر می‌کنند؛ Build/Test محلی اجرا نشده و ادعای اجرای محلی وجود ندارد.
+
+---
+
 ## چرخهٔ سفارش و پرداخت Vendor (D-108، Issue #393) — 2026-11-21 (PR #722/#738/#739 در main)
 
 - **پیاده‌شده در main (Merge PR #722، squash commit `c46e200b28a775080faaaa08c9515cf6a112897f`؛ CI روی head ۱۸/۱۸ و پس از Merge روی main سبز):** سه Entity جدید `VendorSalesOrders` (+Lines) و `VendorPaymentRecords` با Migration `20261119175924_VendorSalesOrdersAndPayments` (فقط Vendor DB؛ گیت `has-pending-model-changes` سبز). ثبت پرداخت دستی چندگانه با ستون‌های typed، تأیید مستقل پرداخت با ResourceType جدید `salesOrderPayment` و permissionهای جدید `vendor.payments.read|manage|verify`، تراکنش واحد و self-approval مجاز طبق D-109. وضعیت‌های `Unpaid/PartiallyPaid/Paid` و برچسب `Overdue` صرفاً در زمان خواندن از مبلغ سفارش و جمع پرداخت‌های Verified مشتق می‌شوند؛ گزارش مطالبات `/api/vendor/receivables` صفحه‌بندی‌شده و بدون Scheduler/Broker/درگاه/Ledger (ممنوعیت‌های D-108 رعایت شده). صدور License از پرداخت و پرداخت از صدور کاملاً مستقل‌اند.
