@@ -69,6 +69,10 @@ public sealed class TradePartyServiceTests
     [InlineData("a\u2069b")]
     [InlineData("a\u200Eb")]
     [InlineData("a\u200Fb")]
+    [InlineData("a\u061Cb")]
+    [InlineData("a\u2028b")]
+    [InlineData("a\u2029b")]
+    [InlineData("a\uFEFFb")]
     public async Task Create_RejectsControlAndBidiCharactersInEveryTextField(string bad)
     {
         AssertInvalid(await service.CreateAsync(Context, Create(code: bad), CancellationToken.None), "code", bad);
