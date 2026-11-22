@@ -185,6 +185,37 @@ public sealed class TradePartyServiceTests
         Assert.Equal(PartyOutcome.NotFound, result.Outcome);
     }
 
+    [Theory]
+    [InlineData("a\u202Eb")]
+    [InlineData("a\u200Eb")]
+    [InlineData("a\u061Cb")]
+    [InlineData("a\u2028b")]
+    [InlineData("a\u2029b")]
+    [InlineData("a\uFEFFb")]
+    public async Task Update_RejectsControlAndBidiCharactersInCodeAndLegalNameAndKeepsStoredData(string bad)
+    {
+        var party = await Seed(["Importer"]);
+        var token = store.TokenText(party.Id);
+
+        AssertInvalid(await service.UpdateAsync(Context, party.Id, Update(token, code: bad), CancellationToken.None), "code", bad);
+        AssertInvalid(await service.UpdateAsync(Context, party.Id, Update(token, legalName: bad), CancellationToken.None), "legalName", bad);
+
+        var stored = store.Parties.Single();
+        Assert.Equal("Legal", stored.LegalName);
+        Assert.Equal(token, store.TokenText(party.Id));
+    }
+
+    [Fact]
+    public async Task Update_StillAcceptsZwnjInLegalName()
+    {
+        var party = await Seed(["Importer"]);
+
+        var result = await service.UpdateAsync(
+            Context, party.Id, Update(store.TokenText(party.Id), legalName: "می\u200Cخواهم"), CancellationToken.None);
+
+        Assert.Equal(PartyOutcome.Success, result.Outcome);
+    }
+
     [Fact]
     public async Task Update_AppliesRoleDiffKeepingUnchangedRowsAndSoftDeletingRemovedOnes()
     {
