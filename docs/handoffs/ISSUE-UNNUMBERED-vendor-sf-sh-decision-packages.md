@@ -8,6 +8,8 @@
 ## هدف و معیارهای پذیرش
 - [x] S-F: بستهٔ تصمیم‌گیری D-100/OD-26 با وضعیت فعلی کد (نشست‌های server-side #504، نبود state مشترک)، گزینه‌ها با مزایا/معایب، اثر امنیتی/کاربری/نگهداری، پیشنهاد مرحله‌ای G-1 و یک سؤال کوتاه مالک
 - [x] S-H: بستهٔ تصمیم‌گیری CustomerNumber با شواهد کد واقعی (binding ordinal در `VendorProvisioningIssuanceService.cs:78`، بازنویسی بی‌قید در `VendorBusinessEndpoints.cs:296`، وابستگی VendorTenantView/D-103)، سه گزینه، پیشنهاد B و سؤال دقیق مالک دربارهٔ تعریف «اولین وابستگی»
+- [x] تکمیل در اصلاحیهٔ همین PR: تعریف پیشنهادی دقیق «اولین وابستگی واقعی» و قاعدهٔ «هیچ Rebind خودکار شناسه‌های وابسته» (§۵.۱ بستهٔ S-H)، سناریوهای رکورد قدیمی/داده ناقص/مهاجرت (§۵.۲) و ثبت Open Decision جداگانهٔ تغییر پس از binding به‌عنوان **OD-29** در `docs/LICENSING_OPEN_DECISIONS.md` (`NeedsApproval`؛ فقط append)
+- [x] تکمیل S-F در اصلاحیه: تفکیک صریح شمارش «کاربران یکتای هم‌زمان» از تعداد حساب‌های تعریف‌شده، رفتار ورود جدید در ظرفیت پر (فقط رد نشست جدید با کد/پیام متمایز از سقف UserSeat؛ نشست‌های فعال دست‌نخورده) و عدم ساخت طراحی توزیع‌شدهٔ Cloud بدون نیاز واقعی
 - [x] هیچ رفتار جدیدی برای OD-26، سقف نشست یا سیاست Update/تغییر شناسه فعال نشد؛ هر دو سند `Proposed`
 
 ## خلاصه تغییرات
@@ -16,6 +18,7 @@
 ## فایل‌های مهم تغییرکرده
 - `docs/DECISION_PACKAGE_D100_SESSION_CAP.md` — جدید
 - `docs/DECISION_PACKAGE_CUSTOMERNUMBER_EDITABILITY.md` — جدید
+- `docs/LICENSING_OPEN_DECISIONS.md` — افزودن OD-29 (فقط append؛ اصلاحیه)
 - `docs/handoffs/ISSUE-UNNUMBERED-vendor-sf-sh-decision-packages.md` — جدید
 
 ## تصمیم‌های فنی
