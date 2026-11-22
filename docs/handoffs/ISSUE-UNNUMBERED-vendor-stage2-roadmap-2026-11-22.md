@@ -33,6 +33,8 @@
 
 **اولویت پیشنهادی پس از تأیید مالک:** S-B → S-D → S-E؛ S-C فقط پس از ADR. هیچ‌یک از موارد S-B..S-H در این مأموریت پیاده نشده است.
 
+**به‌روزرسانی تحویل‌های تحلیلی S-B..S-G/H (افزودهٔ بازبینی نهایی؛ جدول بالا برای «پیاده‌سازی» معتبر می‌ماند):** تحلیل/پیشنهاد هر ردیف اکنون به‌صورت سند مستقل `Proposed` تحویل شده است و پس از Merge، مرجع هر مورد همین اسناد است — S-D: `docs/ENTITLEMENT_ENFORCEMENT_CALLSITE_INVENTORY.md` (PR #757؛ شامل ترتیب کنترل‌ها و طرح E1..E4)؛ S-E: `docs/D099_HARDWARE_REACTIVATION_ACCEPTANCE.md` (PR #758؛ AC-1..AC-10 با AC-8a/AC-8b و ماتریس تست)؛ S-B: `docs/AMENDMENT_ACK_CONTRACT_ANALYSIS.md` (PR #759؛ گزینهٔ A و رفتار Timeout/تکراری)؛ S-C: `docs/LICENSE_RESOLUTION_CACHE_ADR_PROPOSAL.md` + OD-28 (PR #760؛ پیشنهاد نهایی: تا شواهد اندازه‌گیری‌شده، بدون cache)؛ S-F: `docs/DECISION_PACKAGE_D100_SESSION_CAP.md` (PR #761؛ G-1 مرحله‌ای)؛ S-H: `docs/DECISION_PACKAGE_CUSTOMERNUMBER_EDITABILITY.md` + OD-29 (PR #761؛ تعریف «اولین وابستگی» و منع Rebind خودکار)؛ S-G: `docs/VENDOR_OPERATIONAL_READINESS_CHECKLIST.md` (PR #762؛ دسته‌بندی Implemented/Tested/Operationally Verified/Blocked). هیچ‌کدام از این اسناد تصمیم مالک را قبول یا کدی را پیاده نکرده‌اند؛ وضعیت «Open Decision/مأموریت مستقل آینده» در جدول بالا برای همهٔ موارد (بجز تحویل خود اسناد) پابرجاست.
+
 ## ۳) چرا در این مأموریت فقط یک PR مستنداتی وجود دارد
 
 طبق قاعده «کیفیت/امنیت بر سرعت مقدم» و «هیچ تصمیم تأییدنشده‌ای به‌جای مالک فرض نشود»: هر مرحلهٔ کدی باقی‌مانده یا به قرارداد/ADR تأییدنشده وابسته است (S-B/S-C/S-F/S-H) یا سطح تغییرش به مأموریت مستقل با برش‌بندی خودش نیاز دارد (S-D/S-E) یا مالک/زیرساختی است (S-G). ایجاد کد حدسی برای این موارد نقض AGENTS.md §1.6 و اصل Fail-Closed است؛ بنابراین تنها مرحلهٔ مجاز و کامل‌شدنی همین هم‌گام‌سازی است و بقیه با مانع شفاف ثبت شده‌اند.
