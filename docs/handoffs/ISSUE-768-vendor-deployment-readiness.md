@@ -18,7 +18,7 @@
 - [ ] تکمیل شواهد عملیاتی #107/#235/#236/#392/#393/#394/#396.
 
 ## یافته‌های تأییدشده
-1. Vendor.sln در ریشه مخزن و Host در Vendor/Vendor.Host/Vendor.Host.csproj قرار دارند.
+1. Vendor.sln در ریشه مخزن و Host در Vendor/Vendor.Host/Vendor.Host.csproj قرار دارند؛ اجرای مستقیم با dotnet run --project Vendor/Vendor.Host/Vendor.Host.csproj است.
 2. Provider مرکزی Windows CNG/Certificate Store برای License و Provisioning در کد هست و با Signing:CertificateStore:Enabled opt-in می‌شود؛ Key Ceremony و ACL روی میزبان واقعی هنوز تأیید نشده است.
 3. D-107 الزام HSM واقعی را برای signer مرکزی License/Provisioning/Amendment در Vendor V1 حذف کرده و SoftwareProtected را مجاز می‌داند.
 4. PKCS#11/D-055 در حوزه‌های مستقلی که D-107 supersede نکرده باقی است؛ نباید به‌عنوان پیش‌نیاز CNG signer مرکزی یا v5 gate مستند شود.
@@ -34,6 +34,7 @@
 - docs/handoffs/ISSUE-768-vendor-deployment-readiness.md — این گزارش.
 
 ## تصمیم‌های فنی
+- Host از پیشوند محیطی FARANO_VENDOR_ استفاده می‌کند؛ اتصال Vendor DB از FARANO_VENDOR_ConnectionStrings__VendorDb خوانده می‌شود و fallback به Customer DB ندارد.
 - بازنویسی Vendor یا Microservice کردن آن توصیه/اجرا نشد.
 - برای مرحله اول، یک Vendor Host و دو DB مستقل (Vendor/Customer) حفظ می‌شوند.
 - CNG SoftwareProtected مسیر امضای مرکزی V1 است؛ HSM/TPM/Dongle برای این مسیر الزام نیست.
@@ -47,6 +48,7 @@
 | بازبینی D-055/D-056/D-107 | انجام شد | متن ADRها با LICENSING.md و SECURITY.md تطبیق داده شد |
 | بررسی PRهای باز | انجام شد | #765 (Draft، D-117)، #766 (Vendor docs)، #767 (Trade docs)؛ فایل‌های مشترک آن‌ها دست‌نخورده ماند |
 | Build/Test محلی | اجرا نشد | این محیط به working tree و Windows host مالک دسترسی ندارد؛ تغییر Program.cs فقط comment است و رفتار اجرایی تغییر نکرد |
+| GitHub Actions روی PR #769 | در حال اجرا در زمان handoff | Runهای Vendor CI، .NET CI، Semgrep و CodeQL برای HEAD جدید آغاز شده‌اند؛ نتیجه نهایی هنوز دریافت نشده |
 | git diff --check | اجرا نشد | تغییرات از طریق GitHub Contents API اعمال می‌شوند؛ پس از checkout باید در محیط Git اجرا شود |
 | Windows CNG ceremony | اجرا نشد | نیازمند Windows host، service identity و حضور/دسترسی مالک |
 | دو-host E2E | اجرا نشد | نیازمند دو میزبان و دو دیتابیس SQL Server مستقل |
