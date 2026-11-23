@@ -3582,3 +3582,8 @@
 ## 2026-11-23 — Vendor: نرمال‌سازی جداکنندهٔ مسیر در Allow-list PowerShell (GLM، همان PR)
 
 - اجرای CI `publish-windows` نشان داد در Windows مسیر نسبی با `\` با رکوردهای `/` فایل `publish-assembly-allowlist.txt` مطابقت نمی‌کند (`runtimes\linux-x64\native\libmsalruntime.so` falsely rejected در تست Fixture). اصلاح: `Replace('\','/')` پیش از مقایسه در `Assert-FaranouPublishAllowList`. خود Publish ویندوزی در همان اجرا از گارد گذشت؛ نتیجهٔ `publish-windows` پس از اصلاح در CI گزارش می‌شود.
+
+## 2026-11-23 — Vendor: ادغام سخت‌سازی موازی گارد G2 روی همان شاخه (GLM)
+
+- در فاصلهٔ اجرای CI، چهار commit سخت‌سازی مستنداتی/تستی دیگر (سازندهٔ مخزن) روی شاخهٔ همین PR اضافه شد: ورود `.pdb` به دامنهٔ اجباری Allow-list، شمارش فایل‌های مخفی (`-Force` در PowerShell و ردِ فقط marker در bash به‌جای همهٔ dot-fileها) و دو Fixture جدید در هر دو زبان. Push محلی بدون Force Push و با Rebase این commitها روی تغییرِ نرمال‌سازی جداکنندهٔ مسیر انجام شد؛ هر دو مجموعهٔ تغییر حفظ شدند و هیچ چیزی overwrite نشد.
+- پس از ادغام: `bash scripts/tests/publish-content-guard.test.sh` = 16/16 سبز (شامل دو Fixture جدید) و گارد دوباره روی artifact واقعی Linux (۸۹۰۴ فایل) PASS؛ نتیجهٔ Jobهای `publish-scripts` و `publish-windows` پس از push در CI گزارش می‌شود.
