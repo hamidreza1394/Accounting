@@ -3631,3 +3631,10 @@
 - Hash اثبات صحت نیست و در Trade لازم نیست؛ فقط در C2 برای شناسایی فایل Manifest. قاعدهٔ تازه R1: شناسهٔ Tenant با هیچ `Company.Id` برابر نباشد. N-5b مانع T1 نیست.
 - Unknown: رفتار دقیق Transaction/History/قفل داخلی EF 10 روی SQL Server (مستند رسمی دریافت نشد، SQL Server در محیط نبود)؛ داده و حجم جدول‌های Trade در نصب‌ها.
 - بدون Schema/Migration/کد/API/UI؛ هیچ تست یا CI اجرا نشد. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-tenant-company-o1-o4-analysis-2026-11-23.md` §۱۰.
+
+## 2026-11-23 — Vendor: Runbook چرخهٔ اول لایسنس Staging و handoffهای Customer/Trade (GLM)
+
+- **Runbook عملیاتی** `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE.md`: چرخهٔ کامل یک‌مشتملی Staging — آماده‌سازی DB/پیکربندی Vendor با متغیرهای `FARANO_VENDOR_*` و Migration صریح، bootstrap مدیر، کلید CNG Staging با ارجاع به Runbook #236 (بدون دوباره‌پیاده‌سازی)، ایجاد Customer/Installation/لایسنس شرکت‌محور `TRADE_IMPORT` با CompanyReference سرور-تولید، تأیید طبق D-109، صدور، صادرات پاکت (با استفاده از endpoint ادغام‌شده در PR #781)، مسیر Customer-side (Trust `Licensing:TrustedLicenseKeys`، Migration `--migrate`، enrollment، import با حساب Infrastructure)، فعال‌سازی Runtime Gate فقط در Staging با تأیید مالک، Restart، ماتریس منفی ده‌سناریویی و الگوی ثبت شواهد.
+- **handoff Customer** (`ISSUE-UNNUMBERED-vendor-to-customer-first-license-cycle-handoff.md`): قرارداد دقیق تحویل (endpoint صادرات، شکل `LicenseEnvelope`، payload v2)، جدول وضعیت واقعی Customer-side با شکاف‌ها (اجرای Migration، runtime enforcement، توزیع trust)، معیار پذیرش شش‌بندی؛ هیچ تغییر Customer ادعا نشده است.
+- **handoff Trade** (`ISSUE-401-trade-entitlement-handoff.md`): قرارداد `CompanyLicenseEntitlement` (CompanyReference opaque، `TRADE_IMPORT`)، محل resolve mapping، وضعیت واقعی زنجیره، مرز «entitlement ≠ مجوز عملیاتی کاربر»، API پیشنهادی مصرف از لایهٔ تصمیم موجود و تست‌های Company A/B؛ `DenyAllTradeModuleEntitlement` حفظ می‌شود.
+- فقط مستندات: بدون کد، `Server/**`، Migration، Schema، تنظیم runtime یا بازکردن هیچ گیت؛ تا اجرای واقعی روی میزبان Windows همهٔ گام‌های Runbook «Not Run» است.
