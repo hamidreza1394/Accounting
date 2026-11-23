@@ -36,6 +36,7 @@
 | `dotnet build Vendor.sln -c Release` | موفق | SDK 10.0.404 (`global.json`: 10.0.100 rollForward latestFeature) |
 | `dotnet test Vendor.sln --no-build -c Release` | ۴۶۷ کل: ۳۷۵ موفق، ۱۰ ناموفق، ۸۲ Skip | مجموعهٔ ۱۰ شکست با baseline تمیز `main@62b0c3c6` (worktree جدا، همان SDK) بایت‌به‌بایت یکسان است (فقط نام‌ها مقایسه شد)؛ این شکست‌های محیطی HTTP/SPA پیش‌موجود‌اند. ۴ تست جدید + ۴ skip قبلی = ۸۲ Skip؛ تست‌های SQL Server این PR فقط در CI اجرا می‌شوند. |
 | baseline: `dotnet test` روی `main@62b0c3c6` تمیز | ۴۶۳ کل: ۳۷۵ موفق، ۱۰ ناموفق، ۷۸ Skip | اثبات صفر رگرسیون |
+| تست SQL Server چهار سناریو در CI (Vendor CI روی head `796692b0`) | ۲ شکست ← اصلاح شد | علت هر دو در فایل **تست** بود، نه endpoint: (۱) payload تستی با GUIDهای تصادفی ساخته می‌شد و binding Installation در `LicenseEnvelopeValidator` ناسازگار می‌شد (409 `license_envelope_not_currently_valid`) — payload اکنون دقیقاً با licenseId/installationId واقعی seed ساخته می‌شود؛ (۲) انتظار 404 برای لایسنس ناشناخته غلط بود — الگوی مخزن (`VendorResourceAccessEvaluator`) authorization را قبل از وجود بررسی می‌کند و منبع ناشناخته **403** می‌گیرد؛ تست به 403 اصلاح شد. commit اصلاح در همین PR؛ نتیجهٔ اجرای مجدد CI باید از GitHub خوانده شود. |
 | `python3 scripts/check_static_assets.py` | PASS | بدون تغییر دارایی |
 | `git diff --check` | پاک | — |
 | تست SQL Server چهار سناریو | اجرا نشده محلی | Docker در sandbox موجود نیست؛ اجرا در CI الزامی است. |

@@ -84,7 +84,10 @@ public sealed class VendorLicenseEnvelopeExportHttpIntegrationTests
 
         using var unknownResponse = await harness.Client.GetAsync(
             $"/api/vendor/licenses/{Guid.NewGuid():D}/envelope/export", cancellationToken);
-        Assert.Equal(HttpStatusCode.NotFound, unknownResponse.StatusCode);
+        // Resource authorization runs before existence (repo-wide fail-closed pattern of
+        // VendorResourceAccessEvaluator): an unknown license cannot be distinguished from one the
+        // caller may not see, so it is Forbidden, not 404.
+        Assert.Equal(HttpStatusCode.Forbidden, unknownResponse.StatusCode);
     }
 
     [Fact]
@@ -186,11 +189,13 @@ public sealed class VendorLicenseEnvelopeExportHttpIntegrationTests
             });
         });
 
-        Guid licenseId;
-        Guid installationId;
+        Guid licenseId = Guid.NewGuid();
+        Guid installationId = Guid.NewGuid();
         string storedEnvelopeJson;
         var now = DateTimeOffset.UtcNow;
-        var payload = BuildPayload(now);
+        // The payload must carry exactly the seeded license/installation ids: the export endpoint
+        // re-verifies the installation binding via LicenseEnvelopeValidator before delivery.
+        var payload = BuildPayload(licenseId, installationId, now);
         var payloadJson = CanonicalJson.SerializePayload(payload);
         var payloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson))).ToLowerInvariant();
 
@@ -231,7 +236,6 @@ public sealed class VendorLicenseEnvelopeExportHttpIntegrationTests
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };
-            installationId = Guid.NewGuid();
             var installation = new VendorInstallation
             {
                 Id = installationId,
@@ -242,7 +246,6 @@ public sealed class VendorLicenseEnvelopeExportHttpIntegrationTests
                 Status = "Active",
                 CreatedAtUtc = now
             };
-            licenseId = Guid.NewGuid();
             var license = new VendorLicense
             {
                 Id = licenseId,
@@ -294,11 +297,11 @@ public sealed class VendorLicenseEnvelopeExportHttpIntegrationTests
         return new Harness(factory, client, licenseId, storedEnvelopeJson, databaseName, baseConnection);
     }
 
-    private static LicensePayload BuildPayload(DateTimeOffset now) =>
+    private static LicensePayload BuildPayload(Guid licenseId, Guid installationId, DateTimeOffset now) =>
         new(
             LicensePayload.CurrentFormatVersion,
-            Guid.NewGuid().ToString("D"),
-            Guid.NewGuid().ToString("D"),
+            licenseId.ToString("D"),
+            installationId.ToString("D"),
             "farano-accounting",
             LicensePayload.KindPerpetual,
             now,
