@@ -71,7 +71,7 @@
 
 1. Host canonical و verified یا Dedicated Installation config، Tenant را سمت سرور resolve می‌کند (D-103).
 2. Authentication با `TenantId + normalized Username` جستجو می‌کند؛ TenantId از درخواست کاربر پذیرفته نمی‌شود.
-3. پس از اعتبارسنجی رمز و وضعیت حساب، UserSession با UserId و TenantId ایجاد می‌شود.
+3. پس از اعتبارسنجی رمز و وضعیت حساب، `UserSession` فقط با `UserId` ایجاد می‌شود؛ `TenantId` در این گام صرفاً زمینهٔ اعتبارسنجی است و در Session ذخیره نمی‌شود — تعلق Tenant از رابطهٔ `UserId → Users.TenantId` Resolve می‌شود (سازگار با ردیف جدول بالای سند و بندهای 29/59).
 4. فهرست Companyها فقط از Membershipهای Approved و فعال همان Tenant ساخته می‌شود.
 5. انتخاب Company ورودی درخواست است؛ سرور عضویت، وضعیت Company، Role، Permission و FiscalPeriod را دوباره اعتبارسنجی می‌کند.
 6. اگر دو Tenant هر دو `hamid` داشته باشند، دامنه/Installation context مشخص می‌کند کدام حساب lookup شود؛ نام کاربری به‌تنهایی هرگز Tenant را تعیین نمی‌کند.
