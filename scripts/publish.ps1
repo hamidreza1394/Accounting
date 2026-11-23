@@ -44,7 +44,7 @@ Invoke-Step 'Publish output: offline check' {
     node (Join-Path $repoRoot 'ClientApp/scripts/check-offline-build.mjs') --wwwroot (Join-Path $Output 'wwwroot')
 }
 
-Write-Host '==> Publish output: G2 content guard (no Vendor assemblies / private keys)'
+Write-Host '==> Publish output: G2 content guard (D-041 allow-list; no Vendor assemblies / private keys)'
 Assert-FaranouCustomerPublishClean -Output $Output
 
 Write-Host "==> Published to $Output"
