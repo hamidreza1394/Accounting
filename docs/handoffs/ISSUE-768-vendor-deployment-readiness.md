@@ -28,8 +28,9 @@
 8. #235 trust distribution/rotation و آزمون دو میزبان/شبکه واقعی، #236 Key Ceremony، و #107 Production audit sink هنوز باقی‌اند.
 
 ## فایل‌های تغییرکرده
-- docs/VENDOR_OPERATIONAL_READINESS_CHECKLIST.md — اصلاح شرط امضای v5 و تفکیک D-107 از PKCS#11؛ وضعیت Gate و پیش‌نیازها دقیق‌تر شد.
+- docs/VENDOR_OPERATIONAL_READINESS_CHECKLIST.md — اصلاح شرط امضای v5 و تفکیک D-107 از PKCS#11؛ تصحیح وضعیت CompanyReference mapping در برابر Bootstrap D-110؛ حذف الزام اشتباه حضور فیزیکی دو اپراتور برای CNG SoftwareProtected؛ به‌روزرسانی مبنای سند و لینک راهنمای استقرار.
 - docs/VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md — نقشه استقرار Local/Remote و معیارهای Local runnable، Staging deployable، Customer integrated و Operationally verified.
+- Vendor/Vendor.Host/Program.cs — اصلاح comment قدیمی که signer را به KMS/HSM گره می‌زد؛ فقط توضیح کد اصلاح شد و رفتار/ثبت DI تغییر نکرد.
 - docs/handoffs/ISSUE-768-vendor-deployment-readiness.md — این گزارش.
 
 ## تصمیم‌های فنی
@@ -45,7 +46,7 @@
 | GitHub main branch lookup | موفق | SHA دقیق 560ff2890be8bbf87795f30dd85f4eaf3cd1f131 |
 | بازبینی D-055/D-056/D-107 | انجام شد | متن ADRها با LICENSING.md و SECURITY.md تطبیق داده شد |
 | بررسی PRهای باز | انجام شد | #765 (Draft، D-117)، #766 (Vendor docs)، #767 (Trade docs)؛ فایل‌های مشترک آن‌ها دست‌نخورده ماند |
-| Build/Test محلی | اجرا نشد | این محیط به working tree و Windows host مالک دسترسی ندارد |
+| Build/Test محلی | اجرا نشد | این محیط به working tree و Windows host مالک دسترسی ندارد؛ تغییر Program.cs فقط comment است و رفتار اجرایی تغییر نکرد |
 | git diff --check | اجرا نشد | تغییرات از طریق GitHub Contents API اعمال می‌شوند؛ پس از checkout باید در محیط Git اجرا شود |
 | Windows CNG ceremony | اجرا نشد | نیازمند Windows host، service identity و حضور/دسترسی مالک |
 | دو-host E2E | اجرا نشد | نیازمند دو میزبان و دو دیتابیس SQL Server مستقل |
