@@ -3636,3 +3636,5 @@
 - **ایمنی:** فقط مستندات تغییر کردند. هیچ Migration، DB، سرویس، تنظیمات، کلید یا Runtime Gate تغییر نکرد. Runtime Gate OFF و `DenyAllTradeModuleEntitlement` دست‌نخورده باقی ماند. اجرای واقعی Staging، Key Ceremony و آزمون دو میزبان انجام نشد.
 - **اعتبارسنجی:** diff فایل‌های PR از GitHub بازبینی شد؛ `git diff --check` و CI هنوز اجرا/تأیید نشده‌اند. PR #785 به‌صورت Draft باز است.
 - **Git:** شاخه `docs/vendor-staging-readiness-and-evidence-2026-11-23`؛ PR https://github.com/hamidreza1394/Accounting/pull/785.
+
+- **تکمیل بازبینی Runbook:** در `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE.md` وابستگی قدیمی گام Export به PR #781 (که قبلاً Merge شده) اصلاح شد؛ وضعیت «کد موجود» از «اجرای واقعی Staging» جدا شد. توپولوژی آزمایش یک‌میزبانه طبق تصمیم مالک به §0 افزوده و برگهٔ شواهد به Runbook پیوند داده شد.
