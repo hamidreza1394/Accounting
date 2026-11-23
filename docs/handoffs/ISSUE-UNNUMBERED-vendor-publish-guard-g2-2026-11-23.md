@@ -31,7 +31,7 @@
 - `scripts/lib/publish-assembly-allowlist.txt` — جدید؛ دادهٔ Allow-list از شواهد واقعی
 - `scripts/lib/publish-output.sh` — اعمال Allow-list در گارد G2 (bash)
 - `scripts/lib/PublishOutput.ps1` — اعمال Allow-list در گارد G2 (PowerShell)
-- `scripts/tests/publish-content-guard.test.sh` — ۸ Fixture جدید
+- `scripts/tests/publish-content-guard.test.sh` — ۱۰ Fixture جدید
 - `scripts/tests/publish-content-guard.tests.ps1` — جدید؛ mirror PowerShell
 - `.github/workflows/dotnet.yml` — دو گام تست جدید در `publish-scripts` و `publish-windows`
 - `scripts/publish.sh`، `scripts/publish.ps1` — پیام مرحلهٔ گارد
