@@ -11,7 +11,7 @@
 
 - مبنا: `origin/main@950baa3` («build(publish): enforce customer artifact allow-list for G2 (#771)»). Working Tree پیش از شروع تمیز بود.
 - شاخه: `docs/trade-tenant-company-owner-decisions-2026-11-23` (از `main` ساخته شد).
-- PR باز هم‌پوشان (دست نخورد): **#780** (`docs/tenant-company-user-identity-2026-11-23`) ‏D-118 را اضافه و D-091 را بازنگری می‌کند و `DECISIONS.md`، `DATABASE.md`، `INDEX.md`، `WORK_LOG.md` را تغییر می‌دهد. برای جلوگیری از برخورد شماره، این PR از **D-119..D-121** استفاده کرد و D-118 را رزرو شدهٔ #780 گذاشت. در `DECISIONS.md` فقط انتهای فایل (و بخش D-090) تغییر کرد؛ D-091 دست نخورد. Merge هر دو به ترتیب دلخواه، فقط تداخل متنی ساده در انتهای `DECISIONS.md`، `INDEX.md` و `WORK_LOG.md` دارد.
+- **به‌روزرسانی:** PR **#780** (D-118 و بازنگری D-091) پس از نگارش این handoff در `main` ادغام شد (`490224e`). D-118 شمارهٔ خود را دارد و D-119..D-121 با آن تداخل ندارد؛ تداخل متنی `DECISIONS.md`/`INDEX.md`/`WORK_LOG.md` هنگام هماهنگ‌سازی این PR با `main` رفع شد و `DATABASE.md` پس از آن هم‌تراز شد.
 
 ## ۲. ثبت تصمیم‌ها
 
@@ -27,7 +27,7 @@
 - تصمیم‌های باز (بخش ۸) Accepted نشدند: ترتیب دقیق Migrationها و Sequenceهای Core؛ Backfill و رکوردهای بدون نگاشت؛ سیاست حذف/غیرفعال‌سازی؛ جزئیات Unique Index؛ Permission/Authorization/Entitlement؛ `TradeAccessContext`/`TradePeriodScope`؛ D-091..D-096 و G0/G3/G5/G6 و N-5/N-5b.
 
 مستندات هماهنگ‌شده (همه با «به‌روزرسانی 2026-11-23» و بدون پاک‌کردن تاریخچه): `TRADE_TENANT_COMPANY_AUDIT.md`، `TRADE_DECISION_RECONCILIATION.md`، `TRADE_S3_READINESS.md`، `PROJECT_STATUS.md`، `ROADMAP.md` (بند S3-0)، `TRADE_MODULE.md` (به‌علاوهٔ ثبت محدودیت درج مستقیم SQL که معیار پذیرش D-090 بود)، `EXCEL_IMPORT_DESIGN.md` (یک سلول)، `INDEX.md`، `WORK_LOG.md`.
-**هماهنگ‌نشده عمداً:** `DATABASE.md` (در #780 تغییر می‌کند؛ جملهٔ «D-090 … Proposed» در بند وضعیت Tenant پس از Merge #780 اصلاح شود) و handoffهای تاریخی (بازنویسی نمی‌شوند).
+**هماهنگ‌شده پس از Merge #780:** جملهٔ «D-090 … Proposed» در `DATABASE.md` اصلاح شد. handoffهای تاریخی بازنویسی نمی‌شوند.
 
 ## ۳. وضعیت واقعی معماری از سورس (`main@950baa3`)
 
@@ -105,7 +105,7 @@
 | G-8 | Medium | Global Query Filter نیست؛ کنترل فقط محمول در Store (`PartyStore`، `ProductStore`) | Store جدید ممکن است محمول را فراموش کند | P1 تست معماری | — |
 | G-9 | Low | کامنت/تست‌ها «tenant-level master data (D-063 بند ۳)» (`TradePartyEndpoints`، `TradeProductEndpoints`، `ClosedPeriodPartyWritesAreAllowedBecausePartyIsTenantLevelMasterData`) | ناسازگاری واژگانی با D-119؛ رفتار نوشتن در دورهٔ بسته دست‌نخورده | اصلاح در T1؛ رفتار تا تصمیم مالک ثابت | غیرمسدودکننده |
 | G-10 | Low | `ExcludeFromMigrations` برای دو جدول؛ Snapshot آن‌ها را دارد | ساخت بعدی با شکل legacy اشتباه است | T2 | — |
-| G-11 | Info | D-091 متن اولیه (HasColumnName) با Q-2 در تعارض است؛ #780 آن را بازنگری می‌کند | تعارض موقتی | D-120 supersede کرد؛ Merge #780 | — |
+| G-11 | Info | D-091 متن اولیه (HasColumnName) با Q-2 در تعارض بود | رفع‌شده در سطح ستون: D-091 اصلاح‌شدهٔ #780 با D-120 هم‌جهت است؛ نام فیزیکی قیدها همچنان تابع D-095 | D-120 | — |
 
 ## ۷. تست و اثبات
 
@@ -152,8 +152,8 @@
 
 ## ۱۱. ریسک‌ها و کارهای باقی‌مانده
 - بزرگ‌ترین ریسک: T1 و Backfill (G-1، G-4)؛ پیش‌شرط‌ها G0، G5.
-- پس از Merge #780: اصلاح جملهٔ D-090 در `DATABASE.md`؛ و **الزامی**: افزودن ارجاع «superseded by D-120» به D-091 و D-095 (تناقض `HasColumnName`/نام قید). اگر #780 بسته شود یا متن D-091 را حفظ کند، این تناقض فعال می‌ماند.
-- شمارهٔ D-118 برای #780 رزرو است (انحراف کوچک از قاعدهٔ «شمارهٔ بعدی از انتهای فایل»)؛ اگر #780 بسته شود شکاف شماره دائمی می‌ماند و باید ثبت شود.
+- پس از Merge #780 (انجام‌شده): جملهٔ D-090 در `DATABASE.md` اصلاح شد. باقی‌مانده: افزودن ارجاع «هم‌راستا با D-120» به D-095 در PR جدا (D-091 اصلاح‌شدهٔ #780 خودش با D-120 هم‌جهت است).
+- شمارهٔ D-118 متعلق به #780 (ادغام‌شده) است؛ شکاف شماره‌ای باقی نمانده.
 - دستیابی به پنج مورد O-1..O-4 پیش از T1.
 - Dependabot PRهای #774..#779 هنوز به‌دلیل نبود `MSSQL_SA_PASSWORD` در Dependabot secrets ناسبزند (نامرتبط با این کار).
 

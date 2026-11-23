@@ -2445,30 +2445,59 @@ Host فقط زوج اعتبارسنجی‌شدهٔ `(TenantId, CompanyId)` را 
 ### مراجع
 `handoffs/ISSUE-397-s3-0-decision-package.md`، D-087، D-088، D-089؛ `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md`.
 
-## D-091 — تحمل Downtime و Rename فیزیکی ستون‌های legacy (OD-12)
-- **وضعیت تصمیم:** Proposed — تأیید مالک لازم است؛ Accepted نشده.
-- **وضعیت پیاده‌سازی:** NotImplemented
-- **تاریخ:** 2026-11-15
+## D-091 — Rename فیزیکی ستون‌های legacy و افزودن TenantId واقعی (OD-12)
 
-### زمینه و پیشنهاد
-حداقل Downtime: حفظ نام فیزیکی `TenantId` و استفاده از `HasColumnName` (گام P)؛ Rename فیزیکی اختیاری، جدا، Rename-only و فقط پس از اثبات روی SQL Server واقعی (G3) و تأیید مالک. زمان Downtime بدون اندازه‌گیری اعلام نمی‌شود.
+- **وضعیت تصمیم:** جهت معماری نام‌گذاری در گفتگوی مالک در 2026-11-23 تأیید شده است؛ این ADR تا تصویب ترتیب اجرایی، Manifest و گیت‌های SQL Server همچنان `Proposed` می‌ماند.
+- **وضعیت پیاده‌سازی:** NotImplemented؛ هیچ Schema، Migration یا Backfill مجاز یا انجام‌شده‌ای نیست.
+- **تاریخ بازنگری:** 2026-11-23
 
-### گزینه‌های بررسی‌شده و دلایل رد
-- Rename فیزیکی اجباری در همین مرحله: با نسخهٔ قدیمی برنامه ناسازگار و نیازمند پنجرهٔ نگهداری است.
-- حذف دائمی Rename: همان حالت پیشنهادی با تصمیم قطعی؛ بدهی نام‌گذاری می‌ماند.
+### زمینه و تصمیم پیشنهادی
 
-### آثار امنیتی و داده‌ای
-Rename فیزیکی و NOT NULL با نسخهٔ قدیمی ناسازگارند؛ ریسک از دست رفتن دسترسی به داده؛ Rollback = Rename معکوس + کد قدیمی + Backup.
+در مخزن و شواهد قابل دسترس این بازبینی، اطلاعات کافی برای تعیین وضعیت بهره‌برداری و وجود یا عدم وجود دادهٔ Trade در نصب‌های مشتری وجود ندارد (بازبینی O-1 نتیجهٔ قطعی اعلام نکرده است)؛ با این حال ممیزی کد نشان داده در تعدادی از جدول‌ها، ستون فیزیکی/Property با نام `TenantId` در واقع مقدار `Company.Id` را نگهداری می‌کند. نگه‌داشتن این نام اشتباه با `HasColumnName` بدهی معنایی دائمی و منشأ خطای پشتیبانی و توسعه خواهد بود. بنابراین مسیر هدف، اصلاح نام فیزیکی در همان طرح گذار است؛ نه حفظ نام legacy.
 
-### نحوهٔ مهاجرت
-در این PR هیچ Migration/Rename ساخته نمی‌شود. هر Rename آینده فقط با Guard کنترل‌شده، Backup، `Down` آزموده‌شده و مجوز اجرا روی دیتابیس مشتری.
+1. در هر جدول Company-owned که `TenantId` فعلی در واقع `Company.Id` است، ستون قدیمی به‌صورت فیزیکی به `CompanyId` تغییر نام می‌دهد.
+2. در همان مدل هدف، `TenantId` واقعی از رابطه معتبر `Company → Tenant` افزوده و مقداردهی می‌شود. این دو شناسه مستقل‌اند و هیچ‌گاه به‌عنوان دو نام برای یک مقدار استفاده نمی‌شوند.
+3. در `Companies`، `TenantId` واقعی با FK به `Tenants` اضافه می‌شود؛ کلید/قید مرکب لازم برای تضمین تعلق Company به همان Tenant جداگانه طراحی می‌شود.
+4. در `CompanyMembershipRequests`، ستون legacy به نام `DestinationTenantId` که در واقع Company مقصد را نگه می‌دارد به `DestinationCompanyId` تغییر نام می‌دهد و `DestinationTenantId` واقعی مقصد جداگانه اضافه می‌شود. قرارداد API، DTO، Query و مصرف‌کننده‌ها نیز باید همین معنا را منعکس کنند.
+5. در `Users`، طبق D-118، `TenantId` واقعی برای هویت مشتری اضافه می‌شود؛ این ستون legacy rename نیست و نباید با `CompanyId` اشتباه شود.
+6. برای `SecurityAuditEvents` که رویدادهای سیستمی، Tenant و Company را با هم نگه می‌دارد، نگاشت و nullability جداگانه اعمال می‌شود: رویداد سیستمی می‌تواند هر دو Scope را null داشته باشد؛ رویداد Tenant-level فقط TenantId و رویداد Company-level هر دو شناسه را دارد.
+7. همه FKها، AKها، Unique Indexها، Indexهای عادی، Queryها، APIها، provisioning، گزارش‌ها و تست‌هایی که معنای legacy را مصرف می‌کنند باید در همان طرح گذار اصلاح شوند. تغییر نام Property با نگه‌داشتن نام فیزیکی اشتباه از طریق `HasColumnName` راه‌حل نهایی نیست.
+
+### گزینه‌ها و موازنه
+
+- **حفظ ستون فیزیکی TenantId و نگاشت Property به CompanyId:** رد؛ معنای کد و Schema را متفاوت نگه می‌دارد و در طول عمر محصول بدهی نام‌گذاری ایجاد می‌کند.
+- **Rename فیزیکی پیش از افزودن TenantId واقعی:** جهت انتخاب‌شده؛ از ابهام دو ستون هم‌نام جلوگیری می‌کند. ترتیب دقیق Migrationها باید پس از Pin کردن تمام قیود و بررسی SQL Server تعیین شود.
+- **حفظ سازگاری با نسخه قدیمی برنامه پس از Rename:** لازم نیست؛ در مخزن و شواهد قابل دسترس این بازبینی، اطلاعات کافی برای تعیین وضعیت بهره‌برداری نصب‌های مشتری وجود ندارد، بنابراین این گزینه بر هیچ ادعایی دربارهٔ وجود یا عدم وجود دادهٔ عملیاتی اتکا نمی‌کند. در هر حالت، استقرار باید در پنجره کنترل‌شده و با توقف نسخه ناسازگار انجام شود.
+
+### قیود داده‌ای و امنیتی
+
+- مقدار TenantId فقط از نگاشت معتبر و تأییدشده Company→Tenant به‌دست می‌آید؛ از CompanyId، CustomerBoundaryId، نام گروه، دامنه یا حدس استخراج نمی‌شود (D-087/D-089/D-103).
+- زوج `(TenantId, CompanyId)` ناسازگار باید با FK/AK مرکب یا قید معادل در Core رد شود.
+- در جداول چندشرکتی مانند CorporateGroup، OwnershipRelationship و Consolidation، باید تمام Company referenceهای همان رکورد به Tenant معتبر و یکسان تعلق داشته باشند؛ افزودن CompanyId تکراری در کنار فیلدهای دامنه‌ای موجود مجاز نیست.
+- Trade همچنان بدون FK مستقیم به Core باقی می‌ماند؛ قرارداد D-090 و کنترل Host/Store باید رعایت شود. این ADR مجوز تغییر کد Trade یا عبور از گیت‌های آن نیست.
+- Unique Indexها باید بر اساس مالکیت واقعی بازطراحی شوند؛ مثلاً یکتایی نقش، دوره مالی و عضویت در سطح Company باشد، نه کل Tenant.
+
+### مهاجرت، Downtime و Rollback
+
+- هیچ Migration یا Backfill در این ADR ساخته یا اجرا نمی‌شود. ابتدا G0 و گیت‌های مربوطه باید جداگانه بسته شوند.
+- پیش از Rename، نام و تعریف تمام FK/AK/Indexهای وابسته ثبت و Pin می‌شود؛ نام قیدهای جدید باید از برخورد نامی SQL Server (از جمله خطای 1913) جلوگیری کند.
+- Migrationهای Rename و افزودن ستون/قید باید کوچک و قابل بازبینی باشند؛ ترتیب Rename قدیمی، افزودن TenantId واقعی، Backfill و فعال‌سازی NOT NULL باید با Manifest و وابستگی‌های هر جدول هماهنگ شود. `Up` و `Down` هر مرحله باید روی SQL Server واقعی آزموده شوند.
+- Backup قابل‌بازیابی، dry-run، توقف نسخه‌های ناسازگار، اجرای Migration از یک نقطه و ثبت نتیجه عملیاتی الزامی‌اند. `sp_getapplock` جایگزین توقف نسخه‌های قدیمی نیست (D-096).
+- `Down` ساختار و نام ستون‌ها را معکوس می‌کند؛ اما پس از ورود داده عملیاتی جدید با TenantId واقعی، حذف آن اطلاعات مالکیت را از بین می‌برد. پس از Cutover، Roll-forward یا بازیابی Backup معتبر بر Down کورکورانه ترجیح دارد.
+- هیچ Migration روی Production یا دیتابیس مشتری بدون مجوز اجرایی مستقل مالک مجاز نیست.
 
 ### معیار پذیرش و روش تأیید
-- بدون تأیید و G3 هیچ Migration Rename ادغام نشود.
-- اگر Rename تأیید شد: `Up/Down` روی SQL Server واقعی و رویهٔ Rollback مستند آزمون شود.
+
+1. هیچ ستون legacy با نام TenantId که در واقع CompanyId است در مدل نهایی باقی نماند.
+2. همه Company-owned entities در Core دارای TenantId و CompanyId مستقل باشند؛ Tenant-owned entities فقط TenantId داشته باشند. استثنا با همان قیود داده‌ای این ADR هم‌سو است: رکوردهای مالکیت چندشرکتی/گروهی که reference دامنه‌ای Company را نگه می‌دارند (مانند `CorporateGroups.OwnerCompanyId` و جداول Consolidation/OwnershipRelationship) ستون تکراری `CompanyId` نمی‌گیرند؛ الزامات TenantId آن‌ها بدون تغییر باقی می‌ماند.
+3. آزمون SQL Server نشان دهد FK/AK مرکب، زوج ناسازگار را رد می‌کند.
+4. یکتایی عضویت، نقش و FiscalPeriod در سطح Company اعمال شود و دو Company یک Tenant بتوانند کد نقش/بازه مالی یکسان داشته باشند.
+5. تمام `Up/Down`ها، Backfill manifest، dry-run، توقف در داده ناقص و گزارش audit روی SQL Server ایزوله آزموده شوند.
+6. هیچ اجرای مشتری/Production تا مجوز مستقل ثبت نشود.
 
 ### مراجع
-`handoffs/ISSUE-397-s3-0-decision-package.md`، D-087، D-088، D-089؛ `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md`.
+
+D-087، D-089، D-092، D-093، D-095، D-096، D-103، D-105، D-114، D-118؛ `DATABASE.md`؛ `ACCESS_CONTROL_ARCHITECTURE.md`؛ handoffهای S3-0.
 
 ## D-092 — مرجعیت Manifest نگاشت Backfill (OD-13)
 - **وضعیت تصمیم:** Proposed — تأیید مالک لازم است؛ Accepted نشده.
@@ -3330,6 +3359,61 @@ D-030، D-074، D-082، D-084، D-087، D-103، D-105؛ `docs/TRADE_DESIGN_V3_2.
 - تغییر معنای TenantId/CompanyId یا اجرای S3-0 Backfill.
 
 مراجع: D-030، D-062، D-063، D-064، D-074، D-084، D-086، D-087، D-103، D-105، D-111، D-114، D-115، D-116؛ FISCAL_PERIOD_DATA_MODEL.md.
+
+## D-118 — هویت کاربران مشتری در محدوده Tenant (2026-11-23)
+
+- **وضعیت تصمیم:** Accepted — مالک محصول در گفتگوی 2026-11-23 هویت Tenant-scoped کاربران و امکان تکرار Username بین Tenantهای مستقل را صریحاً تأیید کرد.
+- **وضعیت پیاده‌سازی:** NotImplemented؛ این ADR به‌تنهایی مجوز Schema، Migration، Backfill، تغییر Login، Password Recovery یا Runtime نیست.
+- **دامنه:** فقط هویت ورود کاربران مشتری در Customer Host؛ حساب Master زیرساختی و هویت سامانه Vendor خارج از این دامنه‌اند.
+- **مراجع:** D-009، D-029، D-064، D-065، D-087، D-089، D-103، D-105، D-091؛ `ACCESS_CONTROL_ARCHITECTURE.md`، `USER_ACCESS_MANAGEMENT.md` و `DATABASE.md`.
+
+### تصمیم‌های مالک
+
+1. **هویت مشتری Tenant-scoped است:** هر حساب کاربری مشتری دقیقاً به یک Tenant تعلق دارد و در مدل هدف `Users.TenantId` اجباری است. User متعلق به Company نیست و `CompanyId` به جدول Users اضافه نمی‌شود؛ یک کاربر می‌تواند در چند Company همان Tenant عضویت مستقل داشته باشد.
+2. **Username در محدوده Tenant یکتا است:** یکتایی سراسری Username در دیتابیس مشترک حذف و با یکتایی `(TenantId, normalized Username)` جایگزین می‌شود. دو Tenant مستقل می‌توانند Username یکسان، مانند `hamid`، داشته باشند؛ UserId و credential آن‌ها مستقل است.
+3. **عدم پیوند خودکار هویت‌ها:** برابر بودن Username، Email، شماره تلفن، نام شخص، CustomerBoundary، دامنه، مالکیت یا عضویت گروهی هیچ ارتباط هویتی بین دو Tenant ایجاد نمی‌کند. یک شخص در دو Tenant مستقل، دو حساب جدا دارد؛ SSO یا لینک‌کردن حساب‌ها فقط با تصمیم مستقل آینده مجاز است.
+4. **عضویت چندشرکتی در یک Tenant:** یک User می‌تواند برای هر Company همان Tenant یک `UserCompanyMembership` مستقل داشته باشد. عضویت در Company دیگر خودکار ایجاد نمی‌شود. عضویت جدید بین‌شرکتی طبق D-065 در وضعیت PendingApproval قرار می‌گیرد و فقط مدیر مجاز Company مقصد آن را تأیید می‌کند.
+5. **مالکیت و کلیدهای عضویت:** `UserCompanyMembership` در مدل هدف `TenantId` و `CompanyId` مستقل دارد؛ یکتایی عضویت در محدوده `(UserId, TenantId, CompanyId)` است. رابطه مرکب به User همان Tenant و Company همان Tenant باید در DB/قواعد معادل تضمین شود. Role همچنان Company-scoped است و عضویت به‌تنهایی Permission یا Fiscal grant ایجاد نمی‌کند.
+6. **نشست:** `UserSession` از نظر منطقی در محدوده Tenant صاحب User است و با FK موجود `UserId → Users.Id` به همان هویت متصل می‌شود. چون UserId کلید اصلی سراسری و یکتا است، افزودن TenantId یا CompanyId تکراری به Session لازم نیست؛ فهرست‌کردن/ابطال مدیریتی نشست‌ها باید با join به User و فیلتر Tenant انجام شود. Session به Company وابسته نیست؛ انتخاب Company پس از ورود انجام می‌شود و هر بار با عضویت و مجوز سمت سرور اعتبارسنجی می‌شود.
+7. **شرکت پیش‌فرض:** `Users.DefaultCompanyId` فقط ترجیح کاربر است، نه مجوز. اگر حفظ شود، باید تعلق Company به همان Tenant کنترل شود و انتخاب آن همچنان نیازمند عضویت فعال است.
+8. **Resolve Tenant هنگام ورود:** Tenant قبل از جستجوی User از Host canonical و verified طبق D-103، یا پیکربندی معتبر Installation در Dedicated، Resolve می‌شود. سپس User با `TenantId + normalized Username` پیدا می‌شود. TenantId ارسالی از body/query/header/claim کنترل‌نشده مرجع نیست.
+9. **چرخه‌های امنیتی Tenant-aware:** Login، Password Recovery/Reset، lockout، rate-limit، account lookup و مدیریت کاربران باید در Tenant جاری محدود شوند؛ کلید lockout حداقل Tenant و Username نرمال‌شده را شامل می‌شود تا تلاش ناموفق یک Tenant حساب هم‌نام Tenant دیگر را متأثر نکند. پاسخ‌ها نباید وجود حساب در Tenant دیگر را افشا کنند.
+10. **Email و Mobile:** این ADR دامنه یکتایی Email، CellPhoneNumber و verification keyها را تغییر نمی‌دهد. Unique Indexهای فعلی آن‌ها تا تصمیم مستقل مالک حفظ می‌شوند؛ این موضوع یک محدودیت شناخته‌شده برای استفاده از یک Email/شماره در چند Tenant است و نباید بی‌صدا به یکتایی Tenant-scoped تبدیل شود.
+11. **حساب‌های خارج از دامنه:** حساب Master زیرساختی پیکربندی‌شده طبق D-029/D-064 ردیف User مشتری نیست و همچنان از مسیر جداگانه احراز هویت می‌شود؛ هویت Vendor نیز در دیتابیس/Host مستقل خود باقی می‌ماند. `Users.RoleId` قدیمی به‌تنهایی مجوز سراسری یا عبور از Tenant ایجاد نمی‌کند. هیچ حسابی صرفاً با `TenantId = NULL` به مدیر سراسری تبدیل نمی‌شود.
+12. **سوابق ورود:** `LoginLog` می‌تواند با `UserId` به Tenant برسد و صرفاً برای تکرار اطلاعات، TenantId/CompanyId دریافت نمی‌کند؛ هر گزارش باید از رابطه معتبر User و Tenant فیلتر شود. `SecurityAuditEvent` طبق سطح رویداد و قواعد مالکیت خودش Tenant/Company scope می‌گیرد.
+
+### رابطه با تصمیم‌های قبلی
+
+- این ADR فقط گزارهٔ «یک User در هر Installation/Identity Realm» در D-009/D-029/D-065 را برای **کاربران مشتری** با «یک User در هر Tenant» جایگزین می‌کند.
+- تصمیم‌های D-065 درباره عضویت مستقل در هر Company، تأیید مقصد، grant سال/دوره، Company/CorporateGroup domain و مدل RBAC تغییر نمی‌کنند.
+- D-103 مرجع Resolve کردن Tenant باقی می‌ماند؛ دامنه فقط lookup key است، نه اثبات هویت یا مجوز.
+- D-064 و D-029 درباره Master زیرساختی و هویت Vendor تغییر نمی‌کنند.
+- User tenant-owned است؛ UserSession از طریق UserId به User تعلق دارد و ستون TenantId/CompanyId تکراری نمی‌گیرد؛ UserCompanyMembership company-owned است.
+- D-118 هیچ تغییر در Company/Tenant topology، CustomerBoundaryId، مجوزهای عملیاتی، Entitlement یا Trade ایجاد نمی‌کند.
+
+### پیامدها، ریسک‌ها، مهاجرت/Rollback و پرسش باز
+
+- **هویت‌های موجود با عضویت بین‌Tenantی:** ممکن است یک User موجود عضویت‌هایی در Companyهایی داشته باشد که نگاشت تأییدشده Company→Tenant آن‌ها را به Tenantهای متفاوت اختصاص می‌دهد. طبق تصمیم مالک، چنین Userای در مدل هدف به هویت‌های User جداگانه — هر کدام در Tenant خودش — نیاز دارد؛ یک هویت سراسری این الزام را پوشش نمی‌دهد.
+- **پیامدها:** برای یک شخص واقعی چند حساب/credential مستقل ایجاد می‌شود؛ عضویت‌ها و تأییدهای D-065 باید در هر Tenant ثبت و تأیید مجدد شوند؛ رکوردهایی که امروز UserId سراسری را ارجاع می‌دهند (نشست‌ها، لاگ‌های ورود، سوابق عملیاتی) به تصمیم نگاشت و بازسازی ارجاع وابسته‌اند.
+- **مهاجرت و Rollback:** شکستن هویت موجود، Backfill و بازسازی ارجاع‌های UserId و تعیین سرنوشت حساب‌های هم‌نام را نیازمند می‌کند و مانند D-091، `Down` پس از ثبت داده با هویت‌های جدید اطلاعات پیوند را از بین می‌برد (Roll-forward یا Backup معتبر ترجیح دارد). این ADR هیچ Migration، Backfill یا اقدام اجرایی را مجاز، زمان‌بندی‌شده یا آغازشده نمی‌داند؛ هر اقدام نیازمند Issue اجرایی مستقل و مجوز مالک است.
+- **پرسش باز (تصمیم مالک، در محدودهٔ این ADR نیست):** سرنوشت هویت موجودِ دارای عضویت بین‌Tenantی — ادغام، انتقال دستی، یا واگذاری انتخاب به اپراتور — هنوز تصمیم‌گیری نشده است.
+
+### گزینه‌های بررسی‌شده
+
+- **User سراسری در کل Installation:** رد برای کاربران مشتری؛ در Shared Database باعث برخورد Username و وابستگی هویت مشتریان مستقل به یک Realm می‌شود.
+- **User مستقل برای هر Company:** رد به‌عنوان قاعده عمومی؛ کاربر مشترک در دو Company یک Tenant مجبور به داشتن دو حساب می‌شود و مدیریت هویت/رمز بی‌جهت تکثیر می‌شود.
+- **User در سطح Tenant + Membership در سطح Company:** انتخاب شد؛ با مرز مشتری D-103 و عضویت چندشرکتی D-065 سازگار است و کمترین تکرار هویت را دارد.
+
+### معیارهای پذیرش برای Issue اجرایی آینده
+
+1. دو Tenant با Username یکسان در Shared DB بتوانند دو User مستقل داشته باشند و Login هر کدام فقط در Tenant resolveشده موفق شود.
+2. یک User در یک Tenant بتواند دو Membership در دو Company همان Tenant داشته باشد؛ Unique Index مانع عضویت دوم نشود.
+3. User نتواند Membership یا DefaultCompany متعلق به Tenant دیگر داشته باشد.
+4. درخواست عضویت بین دو Tenant حتی با Username یا CustomerBoundary مشترک رد شود.
+5. Password recovery و lockout در Tenant جاری بماند و وجود حساب هم‌نام در Tenant دیگر افشا نشود.
+6. Session با User/Tenant ناسازگار رد شود؛ تغییر Company context همچنان نیازمند membership و authorization زنده باشد.
+7. Master infrastructure account و Vendor identity تحت تأثیر تغییر Userهای مشتری قرار نگیرند.
+8. آزمون‌های Integration و FK/Unique روی SQL Server واقعی اجرا شوند؛ InMemory به‌تنهایی کافی نیست.
 
 ## D-119 — مالکیت Party و Product در Trade: Company-owned بدون اشتراک خودکار (2026-11-23)
 

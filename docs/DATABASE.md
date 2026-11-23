@@ -29,7 +29,7 @@
 
 **وضعیت کد فعلی:** مدل موجود تاریخی، `Company` را عملاً مرز Tenant گرفته و در چند جدول `TenantId` برابر شناسه Company است. این وضعیت با D-087 یکسان نیست و نباید با تغییر نام یا فرض‌گرفتن معنای جدید، سازگار اعلام شود. S3-0 باید همه Entityها، FKها، unique indexها، queryها، هویت/عضویت و migration pipeline را ممیزی کند و طرح گذار افزایشی و سازگار با هر دو نوع استقرار ارائه دهد. تا تصویب طرح گذار، هیچ ستون/کلید/مهاجرت Tenant جدید یا backfill خودکار ساخته نشود.
 
-**وضعیت تصمیم‌های Tenant (2026-11-15):** D-089 (`Accepted`، پیاده‌سازی `NotImplemented`): ایجاد Tenant فقط توسط مدیر نصب؛ نگاشت یکتای `CustomerReference → TenantId`؛ Provisioning فقط به Tenant موجود متصل می‌شود؛ Tenant از `CompanyId`/`CustomerBoundaryId`/گروه/نام استنتاج نمی‌شود؛ ستون‌های `TenantId` فعلی (= `Company.Id`) داده میراثی‌اند و تبدیل آن‌ها فقط در S3 با تأیید جداگانهٔ Schema و Backfill انجام می‌شود. هیچ جدول یا ستون Tenant در Schema وجود ندارد. تصمیم‌های OD-11/12/13/14/17 در D-090..D-094 `Proposed` هستند (PR #671).
+**وضعیت تصمیم‌های Tenant (2026-11-15):** D-089 (`Accepted`، پیاده‌سازی `NotImplemented`): ایجاد Tenant فقط توسط مدیر نصب؛ نگاشت یکتای `CustomerReference → TenantId`؛ Provisioning فقط به Tenant موجود متصل می‌شود؛ Tenant از `CompanyId`/`CustomerBoundaryId`/گروه/نام استنتاج نمی‌شود؛ ستون‌های `TenantId` فعلی (= `Company.Id`) داده میراثی‌اند و تبدیل آن‌ها فقط در S3 با تأیید جداگانهٔ Schema و Backfill انجام می‌شود. هیچ جدول یا ستون Tenant در Schema وجود ندارد. تصمیم‌های OD-11/12/13/14/17 در D-090..D-094 در PR #671 `Proposed` ثبت شدند؛ از آن‌ها D-090 در 2026-11-23 (Q-4) `Accepted` شد (پیاده‌سازی `NotImplemented`) و D-091..D-094 `Proposed` می‌مانند. تفکیک فیزیکی `TenantId`/`CompanyId`: D-120؛ مالکیت Party/Product: D-119؛ ترتیب Core سپس Trade: D-121.
 
 ### قاعده مالکیت پیش‌فرض داده‌های مشتری (D-105)
 
@@ -47,6 +47,19 @@
 - کلید خارجی و unique index در داده company-owned باید مرز Tenant را نیز حفظ کند، مگر ممیزی S3-0 دلیل مستند و آزمون‌پذیر دیگری ارائه دهد.
 - کلاینت حق تعیین TenantId معتبر را ندارد؛ CompanyId ارسالی نیز فقط درخواست انتخاب است و باید با عضویت فعال تطبیق داده شود.
 - هیچ Global Query Filter بدون پوشش صریح مسیرهای ورود، عملیات سیستمی، jobها و دسترسی‌های بدون Company جاری اضافه نشود (D-013).
+
+## هویت کاربران مشتری و عضویت چندشرکتی (D-118؛ مدل هدف)
+
+- هر User مشتری دقیقاً به یک Tenant تعلق دارد؛ `Users.TenantId` در مدل هدف اجباری است و User به Company وابسته نیست.
+- Username در محدوده Tenant یکتا است؛ دو Tenant مستقل می‌توانند Username یکسان داشته باشند. Login ابتدا Tenant را از مسیر معتبر D-103 resolve می‌کند و سپس `TenantId + normalized Username` را جستجو می‌کند.
+- `UserCompanyMemberships` یک رابطه Company-owned است و در مدل هدف `TenantId` و `CompanyId` مستقل دارد. یکتایی آن `(UserId, TenantId, CompanyId)` است؛ FK مرکب به User و Company باید هم‌تعلقی Tenant را تضمین کند.
+- `UserSessions` از طریق FK موجود `UserId → Users.Id` به User و در نتیجه به Tenant او تعلق دارد؛ چون UserId کلید اصلی یکتاست، TenantId/CompanyId تکراری به Session اضافه نمی‌شود. گزارش و ابطال مدیریتی نشست‌ها از طریق join به User و فیلتر Tenant انجام می‌شود. Session به Company وابسته نیست، چون Company پس از Login انتخاب می‌شود.
+- `Users.DefaultCompanyId` صرفاً ترجیح است؛ اگر حفظ شود باید به Company همان Tenant اشاره کند و به‌تنهایی مجوز ایجاد نمی‌کند.
+- `LoginLogs` می‌تواند Tenant را از UserId معتبر resolve کند؛ افزودن TenantId/CompanyId صرفاً برای تکرار داده مجاز نیست.
+- Email، CellPhoneNumber و verification keyها طبق D-118 فعلاً Unique Index سراسری موجود را حفظ می‌کنند؛ تغییر دامنه آن‌ها نیازمند تصمیم مستقل است.
+- Master infrastructure account طبق D-029/D-064 خارج از جدول هویت کاربران مشتری است؛ Vendor identity نیز در سامانه جداگانه می‌ماند.
+
+این قرارداد، هدف معماری است و با وضعیت فعلی Schema اشتباه گرفته نشود. در Schema فعلی هنوز User فاقد TenantId است، Username/Email/Mobile سراسری‌اند، UserSession فاقد TenantId است و `UserCompanyMemberships` از TenantId legacy به‌عنوان CompanyId استفاده می‌کند. تغییرات فقط پس از بسته‌شدن گیت‌های S3-0 و مجوز مستقل Migration انجام می‌شوند.
 
 ## توصیف تاریخی مدل چندمستاجری افزوده‌شده در Issue #16
 - در مدل فعلی `Company` ریشه داده و مرز Tenant تلقی شده است؛ این توصیف، وضعیت تاریخی پیاده‌سازی است و مدل هدف D-087 نیست.

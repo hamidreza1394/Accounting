@@ -7,11 +7,11 @@
 ## 1. اصول و مرزها
 
 - Tenant مرز مالکیت/جداسازی داده مشتری و Company شرکت حقوقی/عملیاتی داخل آن است (D-087). هر Company دقیقاً به یک Tenant تعلق دارد و هر Tenant می‌تواند چند Company داشته باشد.
-- Installation/Identity Realm مرز هویت و استقرار است و با Tenant یکی نیست. در کد فعلی Username و Email در سطح دیتابیس/Identity Realm یکتای سراسری‌اند؛ D-087 این دامنه یکتایی هویت را تغییر نداده است. تکرار Username/Email بین Tenantهای یک دیتابیس مشترک، تا تصمیم جداگانه و تغییر طراحی هویت، پشتیبانی نمی‌شود.
+- هویت کاربران مشتری در محدوده Tenant است (D-118): هر User دقیقاً یک Tenant دارد و Username در همان Tenant یکتا است؛ تکرار Username بین Tenantهای مستقل مجاز است. Email و Mobile طبق D-118 فعلاً همان یکتایی سراسری موجود را حفظ می‌کنند تا تصمیم جداگانه.
 - در Shared Database چند Tenant در یک دیتابیس‌اند؛ در Dedicated Database یک Tenant در دیتابیس مستقل قرار می‌گیرد. هر دو مدل از همان کنترل عضویت و مجوز سمت سرور استفاده می‌کنند؛ جداسازی فیزیکی مجوز حذف کنترل Tenant/Company نیست.
 - انحراف کد فعلی: Entity مستقل Tenant وجود ندارد و TenantId در چند مدل قدیمی عملاً Company.Id است. این وضعیت را مدل هدف تلقی نکن؛ هیچ migration/backfill قبل از S3-0 و طرح گذار مصوب انجام نشود.
 - CorporateGroup فقط ساختار گروهی است؛ عضویت گروه، مالکیت یا دامنه به‌تنهایی مجوز داده ایجاد نمی‌کند.
-- یک User در هر نصب یک هویت دارد و می‌تواند چند UserCompanyMembership مستقل داشته باشد.
+- یک User در هر Tenant یک هویت دارد و می‌تواند در چند Company همان Tenant، Membership مستقل داشته باشد. حساب‌های دو Tenant مستقل—even با Username یکسان—به هم مرتبط نیستند.
 - FiscalPeriod هسته، منبع واحد دوره مالی تمام زیرسیستم‌هاست. TradeOperationalPeriod یا تقویم موازی ممنوع است.
 - CompanyRole، CompanyRolePermission و PermissionDefinition موتور مجوز شرکتی باقی می‌مانند؛ موتور Role/Permission موازی نسازید.
 - entitlement تجاری لایسنس از permission عملیاتی کاربر مستقل است و هر دو شرط لازم‌اند.
@@ -31,7 +31,7 @@
 
 ## 4. هویت و عضویت
 
-- یک User برای هر Identity Realm؛ عضویت و نقش در هر Company مستقل است.
+- یک User برای هر Tenant؛ عضویت و نقش در هر Company مستقل است. Tenant قبل از Login از Host verified یا تنظیم Dedicated سمت سرور resolve می‌شود.
 - تمام عضویت‌های جدید بین‌شرکتی ابتدا PendingApproval هستند.
 - درخواست‌کننده نمی‌تواند درخواست خودش را تأیید کند.
 - فقط مدیر/نقش دارای مجوز صریح در Company مقصد می‌تواند approve/reject کند.
@@ -44,7 +44,7 @@
 ### 4.1 ممیزی S2 — ساختار سازمانی و ارتباط با هویت (2026-11-03)
 
 - Domain شامل User و UserCompanyMembership است، اما Entity مستقل Employee/Personnel، OrganizationalUnit یا Position در مخزن وجود ندارد؛ ماژول Payroll نیز در ساختار فعلی پیدا نشد.
-- User هویت نصب است و می‌تواند در چند Company عضویت مستقل داشته باشد. UserCompanyMembership دسترسی عملیاتی و CompanyRole را نگه می‌دارد؛ employment/HR record نیست.
+- User هویت Tenant است و می‌تواند در چند Company همان Tenant عضویت مستقل داشته باشد. UserCompanyMembership دسترسی عملیاتی و CompanyRole را نگه می‌دارد؛ employment/HR record نیست.
 - D-064 می‌گوید سمت و واحد داده منابع انسانی‌اند و به‌خودی‌خود مجوز نمی‌دهند. بنابراین افزودن مستقیم Position/Unit به User سراسری اشتباه است و اتصال آن‌ها به CompanyRole نیز ممنوع است.
 - طرح پیشنهادی در docs/ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md دو گزینه دارد: فیلدهای ساده روی membership (فقط کاربران دارای login) یا CompanyEmployee مستقل با لینک اختیاری به membership (پشتیبانی از کارکنان بدون حساب). گزینه دوم برای ERP/Payroll آینده مناسب‌تر است، اما نیازمند تأیید مالک محصول است.
 - به‌روزرسانی 2026-11-05 (پیاده‌سازی): مالک اجرای طراحی را صریحاً دستور داد؛ D-072 به `Accepted` ارتقا یافت و گزینه B به‌صورت کامل در Backend پیاده شد — چهار Entity شرکتمحور، Migration زنجیره‌ای `20261104200301_AddHrOrganizationalStructure` (ساختار + CHECK + seed ۱۲ کد `hr.*`)، Endpointهای `/org/*` با مجوزدهی دوحالته D-071، Audit، تست‌های Unit/Endpoint/SQL-gated/E2E. UI در ClientApp در فاز ۴ ادامه می‌یابد.
