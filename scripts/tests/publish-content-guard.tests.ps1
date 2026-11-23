@@ -150,6 +150,22 @@ try {
     Set-File (Join-Path $stray 'Server.dll')
     Set-File (Join-Path $stray 'stray-binary')
     Assert-Rejected 'unlisted extension-less root file rejected' $stray
+
+    # --- negative: dot-prefixed unlisted binary must not bypass the allow-list ----------------
+    $dotEvil = Join-Path $sandbox 'allow-dot-evil'
+    New-Item -ItemType Directory -Path $dotEvil -Force | Out-Null
+    Set-File (Join-Path $dotEvil 'Server.dll')
+    Set-File (Join-Path $dotEvil '.NotListed.Library.dll')
+    Assert-Rejected 'dot-prefixed unlisted binary rejected' $dotEvil
+
+    # --- negative: OS-hidden unlisted binary must not bypass the allow-list -------------------
+    $hiddenEvil = Join-Path $sandbox 'allow-hidden-evil'
+    New-Item -ItemType Directory -Path $hiddenEvil -Force | Out-Null
+    Set-File (Join-Path $hiddenEvil 'Server.dll')
+    $hiddenBinary = Join-Path $hiddenEvil 'Hidden.NotListed.Library.dll'
+    Set-File $hiddenBinary
+    [System.IO.File]::SetAttributes($hiddenBinary, [System.IO.FileAttributes]::Hidden)
+    Assert-Rejected 'OS-hidden unlisted binary rejected' $hiddenEvil
 }
 finally {
     Remove-Item -LiteralPath $sandbox -Recurse -Force -ErrorAction SilentlyContinue
