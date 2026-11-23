@@ -126,10 +126,10 @@ function Assert-FaranouPublishAllowList([string]$Output) {
 
     $binaryExt = @('.dll', '.exe', '.so', '.dylib')
     $violations = @()
-    Get-ChildItem -LiteralPath $Output -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+    Get-ChildItem -LiteralPath $Output -Recurse -File -Force -ErrorAction SilentlyContinue | ForEach-Object {
         $rel = $_.FullName.Substring($Output.Length).TrimStart('\', '/')
         if ($rel -like 'wwwroot/*' -or $rel -like 'wwwroot\*') { return }
-        if ($_.Name.StartsWith('.')) { return }
+        if ($_.Name -ieq $script:FaranouPublishMarker) { return }
         $segments = $rel -split '[\\/]'
         if ($segments[0] -ieq 'runtimes') {
             if (-not $runOk.ContainsKey($rel.ToLowerInvariant())) { $violations += $rel }
@@ -170,14 +170,14 @@ function Assert-FaranouCustomerPublishClean([string]$Output) {
     $found = $false
     $vendorNames = @('Vendor.*.dll', 'Vendor.*.exe', 'Vendor.*.so', 'Vendor.*.dylib', 'Vendor.*.pdb')
     foreach ($pattern in $vendorNames) {
-        Get-ChildItem -LiteralPath $Output -Recurse -File -Filter $pattern -ErrorAction SilentlyContinue | ForEach-Object {
+        Get-ChildItem -LiteralPath $Output -Recurse -File -Force -Filter $pattern -ErrorAction SilentlyContinue | ForEach-Object {
             Write-Error "publish: G2 content guard: forbidden Vendor assembly or library: $($_.FullName.Substring($Output.Length).TrimStart('\','/'))"
             $found = $true
         }
     }
 
     foreach ($ext in @('*.pfx', '*.p12', '*.key')) {
-        Get-ChildItem -LiteralPath $Output -Recurse -File -Filter $ext -ErrorAction SilentlyContinue | ForEach-Object {
+        Get-ChildItem -LiteralPath $Output -Recurse -File -Force -Filter $ext -ErrorAction SilentlyContinue | ForEach-Object {
             Write-Error "publish: G2 content guard: forbidden sensitive file: $($_.FullName.Substring($Output.Length).TrimStart('\','/'))"
             $found = $true
         }
@@ -190,7 +190,7 @@ function Assert-FaranouCustomerPublishClean([string]$Output) {
     # Stop, silently disabling the whole scan (found by the publish-content-guard fixture
     # tests in 2026-11-23). Unreadable files are still skipped as before.
     $pemHits = @()
-    Get-ChildItem -LiteralPath $Output -Recurse -File -ErrorAction SilentlyContinue |
+    Get-ChildItem -LiteralPath $Output -Recurse -File -Force -ErrorAction SilentlyContinue |
         Where-Object { $_.Length -lt 512KB -and ($skipExt -notcontains $_.Extension.ToLowerInvariant()) } |
         ForEach-Object {
             try {
