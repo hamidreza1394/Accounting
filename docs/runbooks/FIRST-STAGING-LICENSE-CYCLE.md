@@ -132,7 +132,9 @@ POST /api/v1/licensing/import   # body: envelope JSON + localInstallationId
 - import فقط پس از پذیرش اعتبارسنج revocation-aware و عبور از وضعیت‌های مجاز (`Valid/ExpiringSoon/Restricted`) ثبت پایدار می‌کند؛ replay و envelope دستکاری‌شده رد می‌شود.
 4. **نگاشت CompanyReference** به Company محلی مسیر #392 است؛ import مادهٔ mapping نمی‌سازد و نباید از آن حدس زده شود.
 
-## 7) فعال‌سازی Runtime Gate (فقط Staging، فقط با تأیید مالک)
+## 7) فعال‌سازی Runtime Gate (خارج از چرخهٔ اول؛ فقط با مجوز جداگانهٔ مالک)
+
+**این بخش را در چرخهٔ اول Staging اجرا نکنید و از آن عبور کنید.** Runtime Gate در تمام چرخهٔ اول خاموش می‌ماند. فعال‌سازی Gate یک رویهٔ مستقل و خارج از دامنهٔ این Runbook است و فقط پس از تصمیم و مجوز کتبی جداگانهٔ مالک، همراه با تأیید آمادگی Recovery، قابل انجام است. وجود دستورات زیر به‌معنی مجوز اجرای آن‌ها نیست.
 
 ```powershell
 $env:Licensing__RuntimeGate__Enabled = "true"
