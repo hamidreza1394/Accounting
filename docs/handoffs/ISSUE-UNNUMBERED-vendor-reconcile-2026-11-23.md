@@ -47,7 +47,7 @@
 | PR #284 merge SHA | 13/13 success |
 | PR #765 HEAD | 14/14 success؛ Draft، خارج از دامنه |
 | اجرای محلی Build/Test | اجرا نشد؛ این شاخه فقط مستندات است |
-| `git diff --check` محلی | اجرا نشد؛ محیط محلی مخزن در این اجرا در دسترس نبود |
+| `git diff --check` محلی | اجرا نشد؛ diff از طریق GitHub compare/patch بازبینی شد |
 
 ## ۵) امنیت و محدودیت‌ها
 
