@@ -94,3 +94,71 @@
 - G0 نیازمند تأیید طرح جامع؛ G3 نیازمند آزمون SQL Server واقعی؛ G5 نیازمند Backup و مجوز دیتابیس مشتری؛ G6 نیازمند آزمون جداسازی Shared Runtime است.
 - هیچ Migration، Backfill، schema change یا اجرای دیتابیس در این کار انجام نشده است.
 
+
+## تحویل وظیفه طبق قالب مخزن
+
+- **Issue:** #397 — https://github.com/hamidreza1394/Accounting/issues/397
+- **Agent/مسئول:** ChatGPT؛ ممیزی و مستندسازی Read-only
+- **تاریخ:** 2026-11-23
+- **وضعیت:** ناقص از نظر ممیزی اجرایی کامل؛ بسته مستنداتی برای Review آماده است.
+
+### هدف و معیارهای پذیرش
+- [x] ثبت تصمیم هویت Tenant-scoped کاربران مشتری در D-118.
+- [x] تفکیک User در سطح Tenant از Membership در سطح Company.
+- [x] ثبت تکرار Username بین Tenantها بدون پیوند هویتی.
+- [x] تعیین تکلیف عدم افزودن TenantId تکراری به UserSession و LoginLog.
+- [x] بازنگری جهت D-091 برای Rename فیزیکی legacy TenantId به CompanyId و افزودن TenantId واقعی.
+- [x] ثبت ماتریس Entity/مالکیت و کلیدهای هدف.
+- [ ] ممیزی کامل همه Queryها، Endpointها، Writers، Migrationها و آزمون‌های SQL Server در Issue اجرایی بعدی.
+- [ ] بستن گیت‌های G0/G3/G5/G6؛ این PR هیچ‌کدام را نمی‌بندد.
+
+### خلاصه تغییرات
+- D-118 به‌عنوان تصمیم Accepted مالک ثبت شد؛ پیاده‌سازی NotImplemented باقی است.
+- D-091 به جهت فیزیکی Rename اصلاح شد؛ جزئیات ترتیب و مجوز عملیاتی Proposed باقی است.
+- اسناد Access Control، User Access، Database و Index با تصمیم جدید هماهنگ شدند.
+- S3-0h به این الحاقیه ارجاع می‌دهد؛ تاریخچه قدیمی حذف یا بازنویسی نشده است.
+
+### فایل‌های مهم تغییرکرده
+- `docs/DECISIONS.md` — D-091 بازنگری و D-118 افزوده شد.
+- `docs/ACCESS_CONTROL_ARCHITECTURE.md` — قرارداد هویت و عضویت.
+- `docs/USER_ACCESS_MANAGEMENT.md` — دامنه هویت کاربران.
+- `docs/DATABASE.md` — مدل هدف User/Membership/Session.
+- `docs/INDEX.md` — پیوند handoff و فهرست D-118.
+- `docs/handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md` — ارجاع به تصمیمات جدیدتر.
+- `docs/handoffs/ISSUE-397-s3-0i-tenant-company-user-identity-matrix.md` — ماتریس تکمیلی و این گزارش.
+- `docs/WORK_LOG.md` — رکورد append-only این وظیفه.
+
+### تصمیم‌های فنی
+- User مشتری Tenant-owned است؛ UserCompanyMembership Company-owned.
+- UserSession و LoginLog از طریق UserId به Tenant تعلق دارند؛ ستون تکراری TenantId/CompanyId برای آن‌ها افزوده نمی‌شود.
+- Email/Mobile و verification keyها فعلاً global باقی می‌مانند؛ تغییر آن‌ها باز است.
+- CompanyMembershipRequest با User و Company مقصد از طریق Tenant مشترک کنترل می‌شود.
+- Trade implementation در این PR خارج از دامنه و همچنان تحت مسئولیت Claude است.
+
+### بررسی و آزمون
+| فرمان/آزمون | نتیجه واقعی | توضیح |
+|---|---|---|
+| بازبینی فایل‌ها و کد GitHub | انجام شد | Read-only روی main@62b0c3c6385e299785d2e56c94d3f8d7bdfff10e |
+| dotnet build | اجرا نشده | فقط مستندات تغییر کرده‌اند؛ محیط clone محلی در دسترس نبود |
+| dotnet test | اجرا نشده | هیچ تستی ادعا نمی‌شود |
+| SQL Server Up/Down/Backfill | اجرا نشده | هیچ Migration یا Schema تغییر نکرد |
+| git diff --check | اجرا نشده | تغییر از طریق GitHub API ثبت شد؛ CI/Review لازم است |
+| GitHub Actions PR checks | در انتظار/در حال اجرا | فقط نتیجه روی head نهایی معتبر است |
+
+### امنیت، داده و سازگاری
+- هیچ C#/TypeScript، Entity، EF Configuration، API، Migration، Schema، داده، Provisioning یا Runtime تغییر نکرد.
+- هیچ Tenant، User یا Company واقعی ساخته/تغییر داده نشد.
+- هیچ گیت امنیتی یا S3-0 باز نشد.
+
+### ریسک‌ها و کارهای باقی‌مانده
+- احراز هویت فعلی Username را بدون Tenant جستجو می‌کند؛ تا پیاده‌سازی D-118، قابلیت تکرار Username در Shared DB عملیاتی نیست.
+- Email/Mobile uniqueness همچنان global است.
+- Provisioning مدیر اولیه، Password Recovery، lockout، صفحات Admin legacy و CorporateGroup/Consolidation نیازمند ممیزی اجرایی دقیق‌اند.
+- D-091 و Backfill manifest هنوز مجوز اجرای Migration نیستند.
+- CI و Review نهایی PR #780 باید بررسی شوند؛ Merge انجام نشده است.
+
+### شناسه‌های Git
+- **Branch:** `docs/tenant-company-user-identity-2026-11-23`
+- **Commit:** تاریخچه Commit در PR #780؛ head نهایی PR مرجع است.
+- **Pull Request:** https://github.com/hamidreza1394/Accounting/pull/780
+
