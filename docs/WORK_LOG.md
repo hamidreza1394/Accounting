@@ -3627,3 +3627,13 @@
 - **شواهد و محدودیت‌ها:** GitHub E2E، آزمون CI است نه اجرای واقعی چرخه روی میزبان‌های Vendor و Customer. Customer Migration، Key Ceremony/ACL/Trust واقعی، صدور و انتقال و Import واقعی هنوز روی Staging اجرا نشده‌اند. Runtime Gate پیش‌فرض OFF باقی می‌ماند و فعال‌سازی آن نیازمند تأیید صریح مالک است.
 - **گیت‌ها:** D-110 Bootstrap مستقل NotImplemented؛ #235 trust distribution/rotation و consumer readiness؛ #107 Production audit sink؛ آزمون Company A/B تا آماده‌شدن mapping/enforcement مربوطه Blocked/Not Run. `DenyAllTradeModuleEntitlement` دست‌نخورده باقی ماند. هیچ مجوز عملیاتی Trade باز نشد.
 - این رکورد وضعیت را به‌روز می‌کند؛ هیچ Migration یا تغییر عملیاتی روی DB هدف اجرا نشده است.
+## 2026-11-23 — بازنگری هویت Tenant-scoped و ماتریس S3-0 (PR #780)
+
+- **D-118 Accepted:** هویت کاربران مشتری در محدوده Tenant قرار می‌گیرد؛ Username در هر Tenant یکتا است و دو Tenant مستقل می‌توانند حساب‌های هم‌نام و مستقل داشته باشند. User در چند Company همان Tenant از طریق Membershipهای جداگانه عضو می‌شود؛ عضویت مقصد طبق D-065 همچنان نیازمند تأیید است.
+- **مرزبندی فیلدها (مدل هدف، نه Schema فعلی):** در مدل هدف، User دارای TenantId و فاقد CompanyId است و UserCompanyMembership دارای TenantId و CompanyId مستقل است؛ در Schema فعلی User هنوز TenantId ندارد (فقط DefaultCompanyId) و UserCompanyMembership از TenantId legacy به‌عنوان CompanyId استفاده می‌کند و CompanyId جداگانه ندارد. UserSession و LoginLog در مدل هدف از طریق UserId به Tenant می‌رسند و برای جلوگیری از داده تکراری TenantId/CompanyId جدید نمی‌گیرند. Email/Mobile/verification keyها فعلاً global می‌مانند.
+- **D-091 بازنگری شد:** ستون legacy موسوم به TenantId که در واقع Company.Id است باید فیزیکی به CompanyId تغییر نام دهد و TenantId واقعی جداگانه اضافه شود؛ راه‌حل دائمی HasColumnName رد شد. D-091 برای ترتیب اجرایی، SQL Server proof و گیت‌های Migration همچنان Proposed است.
+- ماتریس S3-0i، اسناد Access Control، User Access، Database و Index به‌روزرسانی شدند؛ S3-0h به الحاقیه جدید ارجاع می‌دهد.
+- ممیزی Read-only بر مبنای `main@62b0c3c6385e299785d2e56c94d3f8d7bdfff10e` انجام شد. هیچ کد، Entity، API، Migration، Schema، Backfill، داده یا Runtime تغییر نکرد.
+- Build، Test، SQL Server و `git diff --check` اجرا نشدند؛ CI/Review PR #780 در زمان ثبت این رکورد در انتظار/در حال اجراست و هیچ نتیجه موفقی برای head نهایی ادعا نمی‌شود.
+- Issue #397 باز است؛ G0/G3/G5/G6 بسته نشده‌اند و PR #780 فقط مستنداتی است.
+- handoff: `docs/handoffs/ISSUE-397-s3-0i-tenant-company-user-identity-matrix.md`.
