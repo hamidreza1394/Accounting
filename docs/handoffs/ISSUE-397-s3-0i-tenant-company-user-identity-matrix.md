@@ -31,7 +31,7 @@
 | UserCompanyMemberships | Company-owned relationship | UserId + TenantId + CompanyId + RoleId? | ستون TenantId فعلی در واقع CompanyId است؛ Rename فیزیکی و افزودن TenantId واقعی؛ Unique per User+Company؛ FK مرکب به User/Company/Role |
 | CompanyRoles | Company-owned | Id + TenantId + CompanyId | TenantId فعلی در واقع CompanyId است؛ Rename و افزودن TenantId واقعی؛ Code یکتا در محدوده Company |
 | FiscalPeriods | Company-owned | Id + TenantId + CompanyId | TenantId فعلی در واقع CompanyId است؛ Rename و افزودن TenantId؛ بازطراحی AK/Unique بر مبنای Company |
-| CompanyMembershipRequests | درخواست عضویت به مقصد Company | Id + TenantId + DestinationTenantId + DestinationCompanyId | DestinationTenantId فعلی در واقع CompanyId مقصد است؛ Rename به DestinationCompanyId و افزودن TenantId واقعی مقصد؛ API/DTO نیز اصلاح شود |
+| CompanyMembershipRequests | درخواست عضویت به مقصد Company | Id + UserId + DestinationTenantId + DestinationCompanyId | DestinationTenantId فعلی در واقع CompanyId مقصد است؛ Rename به DestinationCompanyId و افزودن TenantId واقعی مقصد؛ User و Company مقصد باید به همان Tenant تعلق داشته باشند |
 | SecurityAuditEvents | Mixed: System/Tenant/Company | Id + TenantId? + CompanyId? + UserId? | System: هر دو null؛ Tenant event: فقط TenantId؛ Company event: هر دو؛ معنای ستون legacy باید جداگانه Backfill شود |
 | CompanyOrganizationalUnit | Company-owned | Id + TenantId + CompanyId | TenantId فعلی legacy CompanyId؛ Rename + TenantId واقعی |
 | CompanyPosition | Company-owned | Id + TenantId + CompanyId | TenantId فعلی legacy CompanyId؛ Rename + TenantId واقعی |
@@ -63,7 +63,7 @@
 - `FiscalPeriods`: Unique بازه/شناسه در محدوده Company، نه کل Tenant.
 - `Users.DefaultCompanyId`: ترجیح است؛ FK مرکب `(DefaultCompanyId,TenantId)` یا کنترل معادل؛ انتخاب نهایی باید membership را نیز بررسی کند.
 - `LoginLogs`: query/report از طریق User و Tenant فیلتر شود؛ از ذخیره Scope تکراری بدون نیاز اجتناب شود.
-- `CompanyMembershipRequests`: مقصد به زوج معتبر `(DestinationTenantId,DestinationCompanyId)` اشاره کند؛ درخواست Cross-Tenant رد شود.
+- `CompanyMembershipRequests`: زوج `(UserId,DestinationTenantId)` باید به User همان Tenant و زوج `(DestinationCompanyId,DestinationTenantId)` به Company مقصد همان Tenant اشاره کند؛ درخواست Cross-Tenant رد شود.
 - `SecurityAuditEvents`: Indexها بر اساس nullable scope و retention policy طراحی شوند؛ هر دو Scope null فقط برای eventهای system-level مجاز است.
 - همه unique indexها و FKهای فعلی که TenantId legacy را CompanyId فرض کرده‌اند باید در D-091 inventory و بازطراحی شوند؛ نام‌های قدیمی قیدها قبل از Migration pin شوند (D-095).
 
