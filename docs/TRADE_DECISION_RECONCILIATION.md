@@ -5,6 +5,8 @@
 **وضعیت سند:** مستندات. هیچ تصمیم `Proposed` در این سند `Accepted` نشده است. تنها تصمیم تازه‌ثبت‌شده، تصمیم یک‌به‌یک Proforma/OrderRegistration (D-104) است که مرجع آن فقط دستور مأموریت 2026-11-18 است.
 **سندهای هم‌خانواده:** `TRADE_TENANT_COMPANY_AUDIT.md`، `TRADE_S3_READINESS.md`، `TRADE_OPEN_DECISIONS.md` (تاریخی؛ بازنویسی نشد)، `TRADE_DESIGN_RECONCILIATION.md` (تاریخی، دور نوامبر 11؛ بازنویسی نشد).
 
+> **به‌روزرسانی 2026-11-23:** مالک چهار تصمیم را تأیید کرد: D-090 (OD-11) از `Proposed` به `Accepted` رفت؛ D-119 (Party/Product Company-owned)، D-120 (Rename فیزیکی و `TenantId` واقعی) و D-121 (ترتیب Core سپس Trade) `Accepted` هستند. ردیف‌های T-10 و OD-11 و ردیف «مالکیت Party/Product» و جملهٔ «D-090..D-096 همچنان Proposed» در این سند **تاریخی‌اند**؛ D-091 و D-092..D-096 همچنان `Proposed` هستند (D-091 فقط در بخش گام P/HasColumnName توسط D-120 جایگزین شده). پیاده‌سازی همه `NotImplemented` است.
+
 ## ۱. تصمیم‌های تصویب‌شده
 
 | تصمیم | موضوع | وضعیت تصمیم | وضعیت پیاده‌سازی |

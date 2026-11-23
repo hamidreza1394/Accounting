@@ -3604,3 +3604,9 @@
 - `ProformaChangeClassifier` افزوده شد: تغییر شرایط تجاری (ارز، Incoterm، خطوط چندکالایی، Snapshot مقدار، طرح پرداخت) ← Revision جدید؛ تمدید صرف اعتبار ← بدون Revision؛ کوتاه‌کردن اعتبار فقط گزارش می‌شود و تصمیم آن با مالک است.
 - بازبینی پس از Merge: #704 و #705 قبلاً در `main` ادغام شده‌اند (برخلاف فرض پرامپت)؛ کد و ۱۳۰ تست آن‌ها محلی موفق است و نقصی دیده نشد. `AwayFromZero` در تخصیص درصدی تصمیم مالک است و تغییری نکرد.
 - بدون Schema/Migration/API/UI؛ گیت‌های S3-0 بسته نشدند. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-proforma-change-classifier.md`.
+
+## 2026-11-23 — Trade: ثبت تصمیم‌های مالک Q-1..Q-4 (D-090، D-119..D-121) — فقط مستندات (Claude)
+
+- D-090 از `Proposed` به `Accepted` رفت؛ D-119 (Party/Product Company-owned)، D-120 (Rename فیزیکی `TenantId→CompanyId` + `TenantId` واقعی؛ `HasColumnName` ممنوع) و D-121 (ترتیب Core سپس Trade) ثبت شدند. پیاده‌سازی هر چهار `NotImplemented`؛ D-091 فقط در بخش `HasColumnName` توسط D-120 جایگزین شد و `Proposed` ماند؛ D-118 برای PR #780 رزرو است.
+- از سورس: در Core هیچ Entity/جدول Tenant و ستون Tenant در `Company` نیست؛ Trade فقط `TenantId` (= `Company.Id`) دارد. بنابراین گام ۱ D-121 آغاز نشده است. هیچ کد، Schema، Migration یا Backfill تغییر نکرد.
+- باز: N-5/N-5b، D-091..D-096، G0/G5/G6، سازوکار انتقال نگاشت به Trade (O-1)، Unique Index جزئی، رکوردهای بدون نگاشت. CI در انتظار. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-tenant-company-owner-decisions-2026-11-23.md`.

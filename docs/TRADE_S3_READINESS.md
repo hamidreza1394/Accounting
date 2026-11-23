@@ -6,6 +6,8 @@
 **مراجع:** `ROADMAP.md` بخش S3، `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md` (طرح مرجع، `Proposed`)، `TRADE_S3_ARCHITECTURE.md`، `TRADE_TENANT_COMPANY_AUDIT.md`، `TRADE_DECISION_RECONCILIATION.md`، D-087..D-104.
 **برچسب‌ها:** **[V]** در این گذر با مخزن بررسی شد؛ **[S]** از ROADMAP/handoffهای قبلی نقل شد و دوباره راستی‌آزمایی نشد.
 
+> **به‌روزرسانی 2026-11-23:** D-090 `Accepted` شد؛ D-119 (Party/Product Company-owned)، D-120 (Rename فیزیکی + `TenantId` واقعی) و D-121 (ترتیب Core سپس Trade) `Accepted` و `NotImplemented` هستند. بنابراین عبارت «D-090..D-096 همچنان Proposed» و بسته‌نبودن گام ۱ جدول بخش ۴ دیگر معتبر نیست؛ D-090 و مالکیت Party/Product تصمیم‌گیری شده‌اند؛ D-091..D-096 و گیت‌های G0، G4 (باقی‌مانده)، G5، G6 باز می‌مانند. شکاف G4/OD-11 اکنون تصمیم نیست؛ پیاده‌سازی است و مسدود به زیرساخت Tenant در Core (که در سورس وجود ندارد). ترتیب PRها: `handoffs/ISSUE-UNNUMBERED-trade-tenant-company-owner-decisions-2026-11-23.md` بخش ۵.
+
 ## ۱. خلاصه
 
 1. **پیش‌نیازهای کدمحور S3-0 تقریباً کامل‌اند [S]:** Guard Migration (PR-2a #656، PR-2b #660)، تست SQL Server ایزوله برای Rename و Migration Tenant (PR-SS-1، PR-D)، قراردادهای مالکیت (PR-3)، دروازهٔ Migration Host (#665) ادغام شده‌اند.
