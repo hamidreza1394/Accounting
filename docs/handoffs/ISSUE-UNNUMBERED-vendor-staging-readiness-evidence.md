@@ -19,6 +19,7 @@
 
 ## فایل‌های مهم تغییرکرده
 - `docs/VENDOR_OPERATIONAL_READINESS_CHECKLIST.md` — اصلاح snapshot و وضعیت G2.
+- `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE.md` — اصلاح وابستگی منسوخ PR #781، ثبت توپولوژی مصوب آزمایش اول و پیوند به برگه شواهد.
 - `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE-EVIDENCE.md` — برگهٔ ثبت محیط، پیش‌شرط‌های ایمنی، مراحل Vendor/Customer، آزمون‌های منفی و تأیید نهایی.
 - `docs/INDEX.md` — ثبت برگهٔ شواهد در فهرست مستندات.
 - `docs/WORK_LOG.md` — ثبت خلاصهٔ این کار.
