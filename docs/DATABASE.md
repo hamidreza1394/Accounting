@@ -53,7 +53,7 @@
 - هر User مشتری دقیقاً به یک Tenant تعلق دارد؛ `Users.TenantId` در مدل هدف اجباری است و User به Company وابسته نیست.
 - Username در محدوده Tenant یکتا است؛ دو Tenant مستقل می‌توانند Username یکسان داشته باشند. Login ابتدا Tenant را از مسیر معتبر D-103 resolve می‌کند و سپس `TenantId + normalized Username` را جستجو می‌کند.
 - `UserCompanyMemberships` یک رابطه Company-owned است و در مدل هدف `TenantId` و `CompanyId` مستقل دارد. یکتایی آن `(UserId, TenantId, CompanyId)` است؛ FK مرکب به User و Company باید هم‌تعلقی Tenant را تضمین کند.
-- `UserSessions` به User همان Tenant تعلق دارد؛ برای تضمین FK مرکب، TenantId در Session یا معادل رابطه‌ای قابل اثبات لازم است. Session به Company وابسته نیست، چون Company پس از Login انتخاب می‌شود.
+- `UserSessions` به User همان Tenant تعلق دارد و در مدل هدف `TenantId` اجباری دارد؛ FK مرکب `(UserId, TenantId) → Users(Id, TenantId)` لازم است. Session به Company وابسته نیست، چون Company پس از Login انتخاب می‌شود.
 - `Users.DefaultCompanyId` صرفاً ترجیح است؛ اگر حفظ شود باید به Company همان Tenant اشاره کند و به‌تنهایی مجوز ایجاد نمی‌کند.
 - `LoginLogs` می‌تواند Tenant را از UserId معتبر resolve کند؛ افزودن TenantId/CompanyId صرفاً برای تکرار داده مجاز نیست.
 - Email، CellPhoneNumber و verification keyها طبق D-118 فعلاً Unique Index سراسری موجود را حفظ می‌کنند؛ تغییر دامنه آن‌ها نیازمند تصمیم مستقل است.
