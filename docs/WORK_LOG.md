@@ -3576,3 +3576,9 @@
 - D-063 §5 / D-074 با تفکیک Context مستقل از دوره و period-scoped به‌صورت معماری هدف توضیح داده شد؛ تغییر کد همچنان Blocked تا Security Review و تست منفی.
 - فقط مستندات تغییر کردند؛ هیچ کد، Entity، DbSet، Permission، API، Schema، Migration یا Backfill ایجاد/تغییر نشد. توپولوژی Tenant+FiscalPeriod و گیت‌های S3-0 همچنان بدون تغییرند.
 - handoff: docs/handoffs/ISSUE-UNNUMBERED-fiscal-period-data-ownership.md.
+
+## 2026-11-23 — Trade: قاعدهٔ خالص تشخیص Revision جدید Proforma (Claude)
+
+- `ProformaChangeClassifier` افزوده شد: تغییر شرایط تجاری (ارز، Incoterm، خطوط چندکالایی، Snapshot مقدار، طرح پرداخت) ← Revision جدید؛ تمدید صرف اعتبار ← بدون Revision؛ کوتاه‌کردن اعتبار فقط گزارش می‌شود و تصمیم آن با مالک است.
+- بازبینی پس از Merge: #704 و #705 قبلاً در `main` ادغام شده‌اند (برخلاف فرض پرامپت)؛ کد و ۱۳۰ تست آن‌ها محلی موفق است و نقصی دیده نشد. `AwayFromZero` در تخصیص درصدی تصمیم مالک است و تغییری نکرد.
+- بدون Schema/Migration/API/UI؛ گیت‌های S3-0 بسته نشدند. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-proforma-change-classifier.md`.
