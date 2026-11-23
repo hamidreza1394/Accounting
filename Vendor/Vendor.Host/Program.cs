@@ -91,8 +91,8 @@ if (bootstrapCommandRequested)
 builder.Services.AddHealthChecks();
 builder.Services.AddSingleton<VendorAuditCheckpointHealthState>();
 builder.Services.AddVendorPersistence(builder.Configuration);
-// Until approved production KMS/HSM adapters are configured, signing is deliberately unavailable.
-// License, provisioning and offline-revocation signing have separate provider registrations and key boundaries.
+// Signing remains unavailable by default until an explicitly configured provider passes its startup checks.
+// D-107 permits Windows CNG SoftwareProtected for central License/Provisioning; offline-revocation signing stays separate.
 builder.Services.TryAddSingleton<ILicenseSigningProvider, UnavailableLicenseSigningProvider>();
 builder.Services.TryAddSingleton<IProvisioningSigningProvider, UnavailableProvisioningSigningProvider>();
 builder.Services.TryAddSingleton<IOfflineRevocationSigningProvider, UnavailableOfflineRevocationSigningProvider>();
