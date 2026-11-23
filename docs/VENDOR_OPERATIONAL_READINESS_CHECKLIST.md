@@ -1,6 +1,6 @@
 # چک‌لیست آمادگی عملیاتی Vendor — Gateها و پیش‌نیازهای Production — `Proposed`
 
-> **وضعیت سند:** خروجی S-G مأموریت؛ اصلاح و تطبیق تکمیلی با main@`560ff289` در Issue #768. این چک‌لیست فقط «وضعیت واقعی + پیش‌نیاز + مسئول + شواهد لازم» را ثبت می‌کند؛ **هیچ Gate یا فلگی را باز نمی‌کند و تکمیل مستندات به‌تنهایی مجوز باز کردن هیچ گیت یا ادعای Production readiness نیست.** مبنای واقعیت: `docs/DECISIONS.md` (D-041/D-055/D-057/D-058/D-107/D-110)، `docs/LICENSING.md`، `docs/SECURITY.md`، `docs/PROJECT_STATUS.md` و کد main@`560ff289`. راهنمای اجرای مرحله‌ای: [`VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md`](VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md).
+> **وضعیت سند:** خروجی S-G؛ به‌روزرسانی وضعیت در main@`d2452642` و تطبیق D-107/D-110 در PR #769؛ G2 در PR جداگانه در حال تکمیل است. این چک‌لیست فقط «وضعیت واقعی + پیش‌نیاز + مسئول + شواهد لازم» را ثبت می‌کند؛ **هیچ Gate یا فلگی را باز نمی‌کند و تکمیل مستندات به‌تنهایی مجوز باز کردن هیچ گیت یا ادعای Production readiness نیست.** مبنای واقعیت: `docs/DECISIONS.md` (D-041/D-055/D-057/D-058/D-107/D-110)، `docs/LICENSING.md`، `docs/SECURITY.md`، `docs/PROJECT_STATUS.md` و کد main@`560ff289`. راهنمای اجرای مرحله‌ای: [`VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md`](VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md).
 
 ## ۰) دسته‌بندی وضعیت موارد مأموریت (واژگان D-030؛ وجود پیاده‌سازی ≠ اثبات آمادگی عملیاتی)
 
@@ -20,12 +20,12 @@
 
 ## ۱) گاردهای جداسازی D-041 (G1..G6)
 
-وضعیت ثبت‌شده در پیگیری گاردهای D-041 (بند «پیگیری گاردها، 2026-10-25») — از آن زمان تغییر وضعیت ثبت‌شدهٔ جدیدی در مستندات وجود ندارد:
+وضعیت جاری گاردهای D-041؛ G2 در شاخهٔ بازبینی 2026-11-23 اصلاح شده و تا CI نهایی/تأیید مالک Verified محسوب نمی‌شود:
 
 | گارد | تعریف | وضعیت فعلی | پیش‌نیاز بسته‌شدن | مسئول | شواهد لازم | تست تأیید | مانع باقی‌مانده | قابل انجام در محیط فعلی؟ |
 |---|---|---|---|---|---|---|---|---|
 | G1 | آزمون وابستگی: گراف `Server` نباید به هیچ پروژهٔ `Vendor/**` برسد؛ `Licensing.Contracts` بدون ProjectReference/link بیرونی | **انجام‌شده** — ادغام PR #96؛ CI run `40214517027` شامل build-and-test و secret-scan موفق | نگهداری تست منفی | نگهدارندهٔ مخزن/CI | تست منفی در CI سبز بماند | افزودن عمدی ارجاع در شاخهٔ موقت باید گارد را بشکند | نیست | بله (تست موجود) |
-| G2 | بررسی خروجی Publish: allow-list اسمبلی‌ها؛ رد `Vendor.*` و الگوهای کلید خصوصی در `scripts/publish.sh/.ps1` و Job publish | **ناقص** — گارد فعلی Vendor DLL/کلید را رد می‌کند اما allow-list کامل همهٔ اسمبلی‌ها تکمیل/اثبات نشده | تکمیل allow-list و اثبات با artifact واقعی | GLM (اسکریپت‌ها) + مالک (تأیید فهرست) | خروجی publish واقعی Linux/Windows با فهرست نهایی | تست fixture موجود (`scripts/tests/publish-content-guard.test.sh`) + اجرای publish واقعی | تکمیل فهرست + راستی‌آزمایی artifact | بله (محلی/CI) |
+| G2 | بررسی خروجی Publish: allow-list assembly/native/PDB/Apphost؛ رد `Vendor.*` و مواد کلید خصوصی در `scripts/publish.sh/.ps1` و Jobهای Publish | **در حال تکمیل (PR G2، 2026-11-23)** — allow-list از artifact واقعی Linux استخراج و در Bash/PowerShell fail-closed اعمال شده؛ runtime و satellite paths دقیق‌اند؛ dotfile و فایل Hidden ویندوز نیز اسکن می‌شوند و فقط marker شناخته‌شده مستثناست؛ تست‌های مثبت/منفی برای اسمبلی ناشناخته، PDB، dotfile و Hidden افزوده شده‌اند. CI روی HEAD نهایی بازسازی‌شده هنوز تأیید نشده است | تأیید فهرست توسط مالک + CI سبز روی Linux/Windows | GLM (اسکریپت‌ها) + مالک (تأیید فهرست) | artifact واقعی Publish در Linux/Windows و فهرست نهایی | تست Bash/PowerShell، تست‌های منفی مخفی/PDB، اجرای واقعی Publish و smoke | CI نهایی + تأیید مالک فهرست | بله (CI/محیط توسعه) |
 | G3 | اسکن اسرار در CI | **انجام‌شده** — Gitleaks فعال و موفق | نگهداری | مالک مخزن | اجرای سبز در هر PR | خود CI | نیست | بله |
 | G4 | CODEOWNERS برای `Vendor/**` و `Licensing.Contracts/**` | **ناقص** — فایل اضافه شده؛ «Require review from Code Owners» قابل فعال‌سازی نیست چون reviewer دوم واجد شرایط وجود ندارد | تنظیم Branch protection با مالک | **مالک مخزن** | screenshot/API تنظیمات protection | یک PR آزمایشی باید بدون review Code Owner merge نشود | نبود reviewer دوم؛ تنظیمات از عامل قابل تغییر نیست | **خیر** — فقط مالک |
 | G5 | Workflow استقرار جدا با فیلتر مسیر؛ **امضای لایسنس هرگز در CI** | **ناقص** — vendor-ci.yml مسیر-محدود موجود؛ deploy واقعی انتخاب/پیکربندی نشده | انتخاب محیط استقرار Vendor + key غیر-CI | **مالک** (تصمیم) + GLM (پیاده‌سازی پس از تصمیم) | تنظیمات محیط + artifact جدا | smoke test استقرار | تصمیم استقرار هنوز گرفته نشده | **خیر** — تصمیم مالک |
