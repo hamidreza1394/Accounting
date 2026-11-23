@@ -3645,6 +3645,6 @@
 - **مستندات:** برگه `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE-EVIDENCE.md` اضافه و در `docs/INDEX.md` ثبت شد؛ handoff در `docs/handoffs/ISSUE-UNNUMBERED-vendor-staging-readiness-evidence.md` ایجاد شد.
 - **ایمنی:** فقط مستندات تغییر کردند. هیچ Migration، DB، سرویس، تنظیمات، کلید یا Runtime Gate تغییر نکرد. Runtime Gate OFF و `DenyAllTradeModuleEntitlement` دست‌نخورده باقی ماند. اجرای واقعی Staging، Key Ceremony و آزمون دو میزبان انجام نشد.
 - **اعتبارسنجی:** diff فایل‌های PR از GitHub بازبینی شد؛ ۱۴ check روی head فعلی PR #786 همگی با نتیجهٔ success تکمیل شدند (از جمله build-and-test، client، publish، publish-windows، e2e، secret-scan و تحلیل‌های امنیتی). `git diff --check` در محیط Git محلی اجرا نشد. CI سبز صرفاً اعتبارسنجی CI است و اجرای عملیاتی Staging یا آزمون دو میزبان را اثبات نمی‌کند. PR #785 به‌علت تعارض با تغییرات جدید main کنار گذاشته شد و PR جایگزین #786 ساخته شد.
-- **Git:** شاخه `docs/vendor-staging-evidence-main-490224e-2026-11-23`؛ PR جایگزین در ادامهٔ همین کار ساخته می‌شود.
+- **Git:** شاخه `docs/vendor-staging-evidence-main-490224e-2026-11-23`؛ PR جایگزین #786 ساخته شده است و در زمان ثبت این رکورد Draft باقی مانده بود.
 
 - **بازاعمال امن مستندات Staging:** PR قبلی #785 با تغییرات هم‌زمان PR #780 در `docs/INDEX.md` و `docs/WORK_LOG.md` تعارض پیدا کرد؛ هیچ Force Push یا بازنویسی شاخه انجام نشد. تغییرات موردنظر روی شاخهٔ تازه از `main@490224e69542624b8e75a86fc83fc522157e1b29` بازاعمال شدند و رکوردهای PR #780 حفظ شدند. PR جایگزین #786 ساخته شده و PR #785 قدیمی بسته شده است؛ PR #785 نباید ادغام شود.
