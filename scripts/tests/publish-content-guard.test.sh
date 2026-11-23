@@ -200,5 +200,17 @@ else
   ok "dot-prefixed unlisted binary rejected"
 fi
 
+
+# --- negative: unlisted PDB must not bypass the root allow-list ----------------------------
+pdb_evil="$sandbox/allow-pdb-evil"
+mkdir -p "$pdb_evil"
+printf 'x' > "$pdb_evil/Server.dll"
+printf 'x' > "$pdb_evil/NotListed.Library.pdb"
+if faranou_assert_customer_publish_clean "$pdb_evil" 2>/dev/null; then
+  fail "unlisted PDB rejected" "guard accepted NotListed.Library.pdb"
+else
+  ok "unlisted PDB rejected"
+fi
+
 echo "$passed passed, $failures failed"
 [ "$failures" -eq 0 ]
