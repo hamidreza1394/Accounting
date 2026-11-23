@@ -26,7 +26,7 @@
 | Tenants | ریشه مشتری | Id | Entity/جدول هدف؛ ایجاد و provisioning طبق D-089/D-110، هنوز NotImplemented |
 | Companies | Tenant-owned entity | Id + TenantId | افزودن TenantId واقعی و FK به Tenants؛ CompanyId همان Id است |
 | Users | Tenant-owned identity | Id + TenantId | افزودن TenantId اجباری؛ حذف Company scope؛ Username unique per Tenant |
-| UserSessions | متعلق به User/Tenant | Id + UserId + TenantId | TenantId اجباری و FK مرکب به User؛ بدون CompanyId، چون انتخاب شرکت بعد از ورود است |
+| UserSessions | وابسته به User (Tenant از رابطه User) | Id + UserId | FK موجود به UserId کافی است؛ TenantId/CompanyId تکراری اضافه نشود؛ query مدیریتی از طریق User فیلتر شود |
 | LoginLogs | وابسته به User | Id + UserId | Tenant از User resolve شود؛ TenantId/CompanyId تکراری لازم نیست مگر نیاز partition/audit اثبات شود |
 | UserCompanyMemberships | Company-owned relationship | UserId + TenantId + CompanyId + RoleId? | ستون TenantId فعلی در واقع CompanyId است؛ Rename فیزیکی و افزودن TenantId واقعی؛ Unique per User+Company؛ FK مرکب به User/Company/Role |
 | CompanyRoles | Company-owned | Id + TenantId + CompanyId | TenantId فعلی در واقع CompanyId است؛ Rename و افزودن TenantId واقعی؛ Code یکتا در محدوده Company |
@@ -56,7 +56,7 @@
 ## 3. قواعد کلیدی و Indexهای هدف
 
 - `Users`: PK فعلی Id حفظ می‌شود؛ AK مرکب `(Id, TenantId)` برای FKهای امن قابل استفاده است؛ Username با canonicalization یکسان در Login و Unique Index، در محدوده Tenant یکتا می‌شود.
-- `UserSessions`: TenantId اجباری و FK مرکب `(UserId, TenantId) → Users(Id, TenantId)`؛ SessionId تصادفی/PK مستقل باقی می‌ماند؛ CompanyId روی Session ذخیره نمی‌شود.
+- `UserSessions`: FK موجود `UserId → Users.Id` کافی است؛ UserId سراسری و یکتا است و Tenant از User resolve می‌شود؛ SessionId تصادفی/PK مستقل باقی می‌ماند؛ TenantId/CompanyId تکراری ذخیره نمی‌شود.
 - `UserCompanyMemberships`: Unique `(UserId, TenantId, CompanyId)`؛ FK به User با `(UserId,TenantId)`؛ FK به Company با `(CompanyId,TenantId)`؛ Role با `(RoleId,TenantId,CompanyId)` یا کلید معادل معتبر.
 - `Companies`: AK `(Id,TenantId)` و FK `TenantId → Tenants.Id`؛ قیود مرکب برای Company-owned children.
 - `CompanyRoles`: Unique `(TenantId,CompanyId,Code)`؛ نقش با Company scope.

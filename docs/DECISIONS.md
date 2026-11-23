@@ -3358,7 +3358,7 @@ D-030، D-074، D-082، D-084، D-087، D-103، D-105؛ `docs/TRADE_DESIGN_V3_2.
 3. **عدم پیوند خودکار هویت‌ها:** برابر بودن Username، Email، شماره تلفن، نام شخص، CustomerBoundary، دامنه، مالکیت یا عضویت گروهی هیچ ارتباط هویتی بین دو Tenant ایجاد نمی‌کند. یک شخص در دو Tenant مستقل، دو حساب جدا دارد؛ SSO یا لینک‌کردن حساب‌ها فقط با تصمیم مستقل آینده مجاز است.
 4. **عضویت چندشرکتی در یک Tenant:** یک User می‌تواند برای هر Company همان Tenant یک `UserCompanyMembership` مستقل داشته باشد. عضویت در Company دیگر خودکار ایجاد نمی‌شود. عضویت جدید بین‌شرکتی طبق D-065 در وضعیت PendingApproval قرار می‌گیرد و فقط مدیر مجاز Company مقصد آن را تأیید می‌کند.
 5. **مالکیت و کلیدهای عضویت:** `UserCompanyMembership` در مدل هدف `TenantId` و `CompanyId` مستقل دارد؛ یکتایی عضویت در محدوده `(UserId, TenantId, CompanyId)` است. رابطه مرکب به User همان Tenant و Company همان Tenant باید در DB/قواعد معادل تضمین شود. Role همچنان Company-scoped است و عضویت به‌تنهایی Permission یا Fiscal grant ایجاد نمی‌کند.
-6. **نشست:** `UserSession` متعلق به حساب Tenant-scoped است و در مدل هدف `TenantId` اجباری را همراه `UserId` نگه می‌دارد؛ FK مرکب `(UserId, TenantId) → Users(Id, TenantId)` تعلق نشست به همان حساب را تضمین می‌کند. Session به Company وابسته نیست؛ انتخاب Company پس از ورود انجام می‌شود و هر بار با عضویت و مجوز سمت سرور اعتبارسنجی می‌شود.
+6. **نشست:** `UserSession` از نظر منطقی در محدوده Tenant صاحب User است و با FK موجود `UserId → Users.Id` به همان هویت متصل می‌شود. چون UserId کلید اصلی سراسری و یکتا است، افزودن TenantId یا CompanyId تکراری به Session لازم نیست؛ فهرست‌کردن/ابطال مدیریتی نشست‌ها باید با join به User و فیلتر Tenant انجام شود. Session به Company وابسته نیست؛ انتخاب Company پس از ورود انجام می‌شود و هر بار با عضویت و مجوز سمت سرور اعتبارسنجی می‌شود.
 7. **شرکت پیش‌فرض:** `Users.DefaultCompanyId` فقط ترجیح کاربر است، نه مجوز. اگر حفظ شود، باید تعلق Company به همان Tenant کنترل شود و انتخاب آن همچنان نیازمند عضویت فعال است.
 8. **Resolve Tenant هنگام ورود:** Tenant قبل از جستجوی User از Host canonical و verified طبق D-103، یا پیکربندی معتبر Installation در Dedicated، Resolve می‌شود. سپس User با `TenantId + normalized Username` پیدا می‌شود. TenantId ارسالی از body/query/header/claim کنترل‌نشده مرجع نیست.
 9. **چرخه‌های امنیتی Tenant-aware:** Login، Password Recovery/Reset، lockout، rate-limit، account lookup و مدیریت کاربران باید در Tenant جاری محدود شوند؛ کلید lockout حداقل Tenant و Username نرمال‌شده را شامل می‌شود تا تلاش ناموفق یک Tenant حساب هم‌نام Tenant دیگر را متأثر نکند. پاسخ‌ها نباید وجود حساب در Tenant دیگر را افشا کنند.
@@ -3372,7 +3372,7 @@ D-030، D-074، D-082، D-084، D-087، D-103، D-105؛ `docs/TRADE_DESIGN_V3_2.
 - تصمیم‌های D-065 درباره عضویت مستقل در هر Company، تأیید مقصد، grant سال/دوره، Company/CorporateGroup domain و مدل RBAC تغییر نمی‌کنند.
 - D-103 مرجع Resolve کردن Tenant باقی می‌ماند؛ دامنه فقط lookup key است، نه اثبات هویت یا مجوز.
 - D-064 و D-029 درباره Master زیرساختی و هویت Vendor تغییر نمی‌کنند.
-- User و UserSession به‌صورت مکانیکی Company-owned نمی‌شوند؛ User tenant-owned است و UserCompanyMembership company-owned.
+- User tenant-owned است؛ UserSession از طریق UserId به User تعلق دارد و ستون TenantId/CompanyId تکراری نمی‌گیرد؛ UserCompanyMembership company-owned است.
 - D-118 هیچ تغییر در Company/Tenant topology، CustomerBoundaryId، مجوزهای عملیاتی، Entitlement یا Trade ایجاد نمی‌کند.
 
 ### گزینه‌های بررسی‌شده
