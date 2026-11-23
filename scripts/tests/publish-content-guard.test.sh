@@ -188,5 +188,17 @@ else
   ok "unlisted extension-less root file rejected"
 fi
 
+
+# --- negative: dot-prefixed unlisted binary must not bypass the allow-list ----------------
+dot_evil="$sandbox/allow-dot-evil"
+mkdir -p "$dot_evil"
+printf 'x' > "$dot_evil/Server.dll"
+printf 'x' > "$dot_evil/.NotListed.Library.dll"
+if faranou_assert_customer_publish_clean "$dot_evil" 2>/dev/null; then
+  fail "dot-prefixed unlisted binary rejected" "guard accepted .NotListed.Library.dll"
+else
+  ok "dot-prefixed unlisted binary rejected"
+fi
+
 echo "$passed passed, $failures failed"
 [ "$failures" -eq 0 ]
