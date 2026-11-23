@@ -19,11 +19,11 @@
 |---|---|
 | `origin/main` | `560ff289` (docs(vendor): sync WORK_LOG and INDEX ... #763)؛ working tree تمیز |
 | PR #764 | merged (طراحی دامنهٔ Proforma) |
-| PR #765 | **Draft، ادغام‌نشده** (`docs/fiscal-period-data-ownership-carryover`، ۶ فایل: `DATABASE.md`، `DECISIONS.md`، `FISCAL_PERIOD_DATA_MODEL.md`، `INDEX.md`، `WORK_LOG.md`، handoff). به هیچ‌کدام دست نزدم. محتوای شاخهٔ آن را فقط خواندم |
+| PR #765 | **Merged** در 2026-11-23 با squash commit `06fdb015ddd113c2b2b5a715310a83759488cfca`؛ D-117 و مدل منطقی در main هستند. |
 | PR #766 | باز، غیر Draft: `docs(vendor): reconcile status against main 560ff289`؛ مربوط به Vendor؛ دست نزدم |
 | شاخهٔ `feat/trade-s2-4-product-slice` | در Remote وجود ندارد؛ چیزی برای Diff یا Merge نبود |
 
-**وابستگی معماری به #765:** تصمیم‌های ۹ تا ۱۹ مالک (بخش ۳ مأموریت) در این سند «ورودی طراحی» هستند. متن مرجع آن‌ها (D-117 و `FISCAL_PERIOD_DATA_MODEL.md`) تا ادغام #765 در main نیست و هیچ وضعیت `Accepted` برای D-117 ادعا نمی‌شود. هر پیشنهاد این سند که به D-117 وابسته است با «پس از ادغام #765» علامت خورده است.
+**وابستگی معماری به #765:** رفع شد؛ D-117 و `FISCAL_PERIOD_DATA_MODEL.md` اکنون در main هستند. تصمیم‌های ۹ تا ۱۹ مالک به‌عنوان ورودی طراحی ثبت شده‌اند؛ پیشنهادهای این سند همچنان `Proposed` یا `NeedsApproval` هستند و ادغام D-117 به معنی تأیید پیشنهادهای Trade نیست.
 
 **تنش مستند که باید ثبت شود:** D-086 §7 «ثبت دورهٔ افتتاح روی ImportCase» را از D-063 supersede کرده است؛ تصمیم ۹ مالک `OriginFiscalPeriodId` را به‌عنوان فیلد تاریخی، اجباری و تغییرناپذیر برمی‌گرداند (بدون `TradeOperationalPeriod` و بدون اثر مجوزی). این دو متناقض نیستند ولی D-117 باید صراحتاً بگوید که فیلد جدید «دورهٔ عملیاتی» نیست. `NeedsApproval` برای ADR شفاف‌ساز، بدون ویرایش بی‌صدای D-086.
 
@@ -115,7 +115,7 @@
 8. رفتار Trade وقتی همهٔ دوره‌ها Archived هستند (سیاست Archived هنوز `NeedsApproval`).
 
 ## ۳. تصمیم‌های قطعی مالک که به‌عنوان ورودی استفاده شد (بدون سؤال مجدد)
-ردیف‌های ۱ تا ۱۹ بخش ۳ مأموریت: Proforma چندکالایی با HS Code متفاوت؛ تمدید صرف = رویداد بدون Revision؛ تغییر شرایط تجاری = Revision؛ Product در Trade؛ پرونده مستقل از دورهٔ عملیاتی و بدون `TradeOperationalPeriod`؛ `OriginFiscalPeriodId` اجباری، تاریخی، تغییرناپذیر و بدون اثر مجوزی؛ `FiscalPeriodId` فقط برای اسناد/عملیات واقعاً دوره‌ای؛ پیش‌فرض ورود پرونده‌های Open به فهرست سال جدید و خروج/ورود مجدد توسط مدیر مجاز؛ Audit و عدم بازنویسی تصمیم مدیر در اجرای مجدد؛ محل پایدار Company-level در Company + FiscalPeriod DB؛ Snapshot بدون شناسهٔ دوم و بدون مرجع حقیقت دوم؛ بدون FK و تراکنش اتمیک بین دو دیتابیس؛ Registry فقط برای Routing؛ پرهیز از dual-write. وضعیت مستند: ورودی طراحی؛ متن مرجع در #765 (Draft).
+ردیف‌های ۱ تا ۱۹ بخش ۳ مأموریت: Proforma چندکالایی با HS Code متفاوت؛ تمدید صرف = رویداد بدون Revision؛ تغییر شرایط تجاری = Revision؛ Product در Trade؛ پرونده مستقل از دورهٔ عملیاتی و بدون `TradeOperationalPeriod`؛ `OriginFiscalPeriodId` اجباری، تاریخی، تغییرناپذیر و بدون اثر مجوزی؛ `FiscalPeriodId` فقط برای اسناد/عملیات واقعاً دوره‌ای؛ پیش‌فرض ورود پرونده‌های Open به فهرست سال جدید و خروج/ورود مجدد توسط مدیر مجاز؛ Audit و عدم بازنویسی تصمیم مدیر در اجرای مجدد؛ محل پایدار Company-level در Company + FiscalPeriod DB؛ Snapshot بدون شناسهٔ دوم و بدون مرجع حقیقت دوم؛ بدون FK و تراکنش اتمیک بین دو دیتابیس؛ Registry فقط برای Routing؛ پرهیز از dual-write. وضعیت مستند: ورودی طراحی؛ متن مرجع در D-117 و `docs/FISCAL_PERIOD_DATA_MODEL.md` در main (پس از Merge PR #765).
 
 ## ۴. C-2 — ماتریس تصمیم‌ها
 
@@ -196,7 +196,7 @@
 
 ## ۸. ریسک‌ها و کارهای باقی‌مانده
 - پاسخ مالک به بخش ۲.۸ و به تصمیم‌های باز بخش ۴ (به‌ویژه A-1، P-4، P-5، A-3، OD-017، PaymentPlan ۱ تا ۳).
-- ادغام #765 و ثبت ADR شفاف‌ساز برای D-063 §5.
+- ثبت ADR شفاف‌ساز برای D-063 §5؛ D-117 اکنون در main است.
 - بدهی تست: F-D و F-E (Entitlement با شناسهٔ درست؛ SQL Server برای IDOR).
 - **ردیف `WORK_LOG.md` و `PROJECT_STATUS.md` اضافه نشد:** این فایل‌های مشترک در PR #765 (و `WORK_LOG` احتمالاً در #766) هم‌زمان در حال تغییرند. طبق مأموریت، به‌جای آن در همین handoff ثبت شد. پس از ادغام #765، ردیف WORK_LOG جدا Append شود.
 - گام بعدی دقیق: تصمیم مالک روی ۲.۸ (۱) و (۲)؛ در صورت تأیید فاز ۱ → PR کوچک `TradeCompanyAccessContext` با TDD و بازبینی `security-reviewer` و `architect` (بدون Schema).
