@@ -33,8 +33,7 @@ $env:FARANO_VENDOR_AllowedHosts = "staging-vendor.example.internal"             
 # 1.4 — اعمال Migrationهای Vendor
 dotnet ef database update --project Vendor/Vendor.Persistence --startup-project Vendor/Vendor.Host
 
-# 1.5 — اجرا
-dotnet run --project Vendor/Vendor.Host
+# 1.5 — Vendor را هنوز اجرا نکنید؛ ابتدا §3 را کامل کنید تا Signing و Trust در محیط پردازهٔ Vendor تنظیم شده باشند.
 ```
 
 - اگر DB خالی بماند یا Connection String نباشد، startup fail-closed می‌شود (رفتار صحیح).
@@ -57,7 +56,7 @@ dotnet Vendor.Host.dll bootstrap-admin   # تعاملی؛ رمز فقط در ter
 dotnet Vendor.Host.dll --signing-certificate export-public
 ```
 
-4. Trust Store و فعال‌سازی امضا (متغیرهای §5 Runbook #236):
+4. Trust Store و فعال‌سازی امضا (متغیرهای §5 Runbook #236). نام‌های دارای خط تیره در PowerShell باید با `${env:...}` نوشته شوند:
 
 ```powershell
 $env:FARANO_VENDOR_Signing__CertificateStore__Enabled = "true"
@@ -67,10 +66,17 @@ $env:FARANO_VENDOR_Signing__CertificateStore__License__KeyId = "vendor-license-v
 $env:FARANO_VENDOR_Signing__CertificateStore__License__Thumbprint = "<THUMBPRINT-LICENSE>"
 $env:FARANO_VENDOR_Signing__CertificateStore__Provisioning__KeyId = "vendor-provisioning-v1"
 $env:FARANO_VENDOR_Signing__CertificateStore__Provisioning__Thumbprint = "<THUMBPRINT-PROVISIONING>"
-$env:FARANO_VENDOR_Licensing__TrustedSigningKeys__vendor-license-v1__PublicKeySubjectPublicKeyInfoBase64 = "<SPKI-License>"
+${env:FARANO_VENDOR_Licensing__TrustedSigningKeys__vendor-license-v1__PublicKeySubjectPublicKeyInfoBase64} = "<SPKI-License>"
 ```
 
 5. آزمون‌های پذیرش گام کلید (همه باید ثبت شوند): امضای موفق با هویت سرویس، Verify با SPKI، Restart سرویس و امضای مجدد، رد امضا با حساب غیرمجاز، رد امضا با کلید حذف‌شده (fail-closed 503).
+6. **پیش از شروع Vendor:** برای اجرای تعاملی، متغیرهای بالا را در همان PowerShell session تنظیم کنید و سپس در همان session اجرا کنید؛ پردازه فقط محیط زمان شروع را به ارث می‌برد. برای Windows Service یا service wrapper، همین مقادیر را در محیط/Secret Store همان سرویس ثبت کنید و سرویس را پس از تغییر تنظیمات Restart کنید؛ تنظیمات session کاربر به سرویس در حال اجرا منتقل نمی‌شود.
+
+```powershell
+dotnet run --project Vendor/Vendor.Host
+```
+
+7. **کلید Staging از کلید Production مجزا است** (KeyId/Thumbprint/گواهی جدا).
 6. **کلید Staging از کلید Production مجزا است** (KeyId/Thumbprint/گواهی جدا).
 
 ## 4) تعریف Customer آزمایشی، Installation و لایسنس شرکت‌محور
@@ -102,7 +108,7 @@ $env.kid; $env.algorithm   # انتظار: vendor-license-v1 / ECDSA-P256-SHA256
 1. **Trust Store لایسنس مشتری** — همان SPKI Vendor، جدا از Trust ACK و revocation:
 
 ```powershell
-$env:Licensing__TrustedLicenseKeys__vendor-license-v1__PublicKeySubjectPublicKeyInfoBase64 = "<SPKI-License>"
+${env:Licensing__TrustedLicenseKeys__vendor-license-v1__PublicKeySubjectPublicKeyInfoBase64} = "<SPKI-License>"
 ```
 
 2. **Migrationهای مشتری** روی DB واقعی (شامل `20261116070805_AddCompanySetupRecords` برای binding شرکت‌محور #392):
@@ -130,8 +136,9 @@ $env:Licensing__RuntimeGate__Enabled = "true"
 $env:Licensing__DeploymentMode = "Dedicated"
 ```
 
-- **پیش‌نیاز بازکردن Gate:** آماده‌بودن مسیر recovery و تأیید مالک. `Licensing:RuntimeGate:Enabled` پیش‌فرض OFF باقی می‌ماند؛ بدون لایسنس معتبر، فقط مسیرهای فعال‌سازی/بازیابی باز می‌مانند (503 `license_required` روی بقیهٔ API و صفحهٔ ورود).
-- کنترل وضعیت: `GET /api/v1/licensing/status` — فقط از payload امضاشده.
+- این دو مقدار باید در **محیط اجرایی خود سرویس Customer** (Service/Service Wrapper یا Secret Store مورد استفادهٔ همان سرویس) ثبت شوند؛ `$env:` در PowerShell فقط session جاری را تغییر می‌دهد و سرویسِ از قبل اجراشده آن را دریافت نمی‌کند. پس از ثبت تنظیمات، سرویس Customer را Restart کنید و سپس وضعیت را بررسی کنید. در اجرای تعاملی، هر دو مقدار را در همان session و پیش از شروع پردازهٔ Customer تنظیم کنید.
+- **پیش‌نیاز بازکردن Gate:** آماده‌بودن مسیر recovery و تأیید صریح مالک. `Licensing:RuntimeGate:Enabled` پیش‌فرض OFF باقی می‌ماند؛ تا پیش از تأیید مالک، مقدار را فعال نکنید. بدون لایسنس معتبر، فقط مسیرهای فعال‌سازی/بازیابی باز می‌مانند (503 `license_required` روی بقیهٔ API و صفحهٔ ورود).
+- پس از Restart و فقط با مجوز مالک، کنترل وضعیت: `GET /api/v1/licensing/status` — فقط از payload امضاشده.
 
 ## 8) Restart و پایداری
 
@@ -147,7 +154,7 @@ $env:Licensing__DeploymentMode = "Dedicated"
 | امضا با کلید دیگر + kid همان | import مشتری | رد (signature_invalid) |
 | KeyId ناشناخته/ابطال‌شده در Trust | export Vendor (503) و import مشتری | رد دو طرف |
 | InstallationId ناسازگار | binding در Validate هر دو طرف | رد |
-| CompanyReference شرکت دوم | entitlement resolution مشتری | دسترسی شرکت دوم به entitlement شرکت اول صفر |
+| **آزمون زوجی Company A/B** | entitlement resolution مشتری | Company A با mapping معتبر و `TRADE_IMPORT` مجاز؛ Company B بدون entitlement متناظر رد شود؛ هر دو نتیجه با هم ثبت شوند. این آزمون تا تأیید تکمیل mapping موضوع #392 و enforcement موضوع #391 **Not Run / Blocked** است؛ بسته‌شدن Issue #391 به‌تنهایی شاهد اجرای enforcement نیست. پس از فراهم‌شدن هر دو پیش‌نیاز، اجرای آزمون و ثبت نتیجه با تأیید مالک انجام شود. |
 | Sequence قدیمی / Replay | state پایدار مشتری + idempotency | رد/بی‌اثر |
 | لایسنس منقضی | ارزیابی زمان | `Invalid`؛ import رد |
 | پاکت بدون `TRADE_IMPORT` | entitlement gate | Trade باز نمی‌شود؛ `DenyAllTradeModuleEntitlement` دست نمی‌خورد |
