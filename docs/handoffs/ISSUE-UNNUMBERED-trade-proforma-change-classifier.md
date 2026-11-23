@@ -17,12 +17,15 @@
 
 ## فایل‌ها
 - `Modules/Trade/Trade.Application/Proformas/ProformaChangeClassifier.cs` (جدید)
-- `tests/Template.Tests/TradeProformaChangeClassifierTests.cs` (جدید؛ ۱۳ تست)
+- `tests/Template.Tests/TradeProformaChangeClassifierTests.cs` (جدید؛ ۱۵ تست)
 
 ## نتایج واقعی (محلی)
-- اجرا شد و موفق: `dotnet restore`، `dotnet build Template.sln -c Release` (۰ خطا)؛ تست‌های جدید ۱۳/۱۳؛ تست‌های #704/#705 (`TradeUnitConversion*`، `TradePaymentPlan*`) ۱۳۰/۱۳۰.
+- اجرا شد و موفق: `dotnet restore`، `dotnet build Template.sln -c Release` (۰ خطا)؛ تست‌های جدید ۱۵/۱۵؛ تست‌های #704/#705 (`TradeUnitConversion*`، `TradePaymentPlan*`) ۱۳۰/۱۳۰.
 - اجرا نشد: کل `dotnet test` روی SQL Server، تست‌های ClientApp، E2E، `check_static_assets.py` (تغییر کلاینت/دارایی ندارد).
 
 ## ریسک و کارهای باقی‌مانده
 - ریسک پایین: کلاس خالص و ناخوانده توسط هیچ مسیر اجرایی است.
 - باقی‌مانده: Entityهای Proforma/Revision/History پشت گیت‌های S3-0 (G0، D-090..D-096) مسدودند.
+
+## بازبینی مستقل
+- سطح: `feature-dev:code-reviewer` (فقط‌خواندنی، بدون اجرای git/test). یافتهٔ مهم: ندارد. شکاف‌های جزئی (اختلاف فقط در Scale، Incoterm تهی، ترتیب مراحل پرداخت) با دو تست جدید پوشانده شد. توکن Agent: ۳۴٬۹۶۳.

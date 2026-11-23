@@ -113,6 +113,24 @@ public sealed class TradeProformaChangeClassifierTests
     }
 
     [Fact]
+    public void ScaleOnlyDifference_IsNotAChange()
+    {
+        var a = Terms(price: 500m);
+        var b = Terms(price: 500.00m);
+        Assert.True(ProformaChangeClassifier.Classify(a, Valid, b, Valid).IsNoChange);
+    }
+
+    [Fact]
+    public void IncotermNullVersusValue_AndStageOrder_AreChanges()
+    {
+        Assert.True(ProformaChangeClassifier.Classify(Terms(), Valid, Terms(incoterm: null), Valid).RequiresNewRevision);
+        var plan = Plan(5000m, ("TT", 30m), ("LC", 70m));
+        var swapped = Plan(5000m, ("LC", 70m), ("TT", 30m));
+        var line = new ProformaLineTerms("100119", "Wheat", Qty(10m), 500m);
+        Assert.True(ProformaChangeClassifier.Classify(new("USD", "FOB", [line], plan), Valid, new("USD", "FOB", [line], swapped), Valid).RequiresNewRevision);
+    }
+
+    [Fact]
     public void NullTerms_Throw()
     {
         Assert.Throws<ArgumentNullException>(() => ProformaChangeClassifier.Classify(null!, Valid, Terms(), Valid));
