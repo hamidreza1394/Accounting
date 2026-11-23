@@ -1,6 +1,6 @@
 # چک‌لیست آمادگی عملیاتی Vendor — Gateها و پیش‌نیازهای Production — `Proposed`
 
-> **وضعیت سند:** خروجی S-G مأموریت. این چک‌لیست فقط «وضعیت واقعی + پیش‌نیاز + مسئول + شواهد لازم» را ثبت می‌کند؛ **هیچ Gate یا فلگی را باز نمی‌کند و تکمیل مستندات به‌تنهایی مجوز باز کردن هیچ گیت یا ادعای Production readiness نیست.** مبنای واقعیت: `docs/DECISIONS.md` (D-041/D-055/D-057/D-058/D-107)، `docs/LICENSING.md` (هدر وضعیت main@`4c91797e`)، `docs/PROJECT_STATUS.md` snapshot 2026-11-22 و کد main@`58a1ccd4`.
+> **وضعیت سند:** خروجی S-G مأموریت؛ اصلاح و تطبیق تکمیلی با main@`560ff289` در Issue #768. این چک‌لیست فقط «وضعیت واقعی + پیش‌نیاز + مسئول + شواهد لازم» را ثبت می‌کند؛ **هیچ Gate یا فلگی را باز نمی‌کند و تکمیل مستندات به‌تنهایی مجوز باز کردن هیچ گیت یا ادعای Production readiness نیست.** مبنای واقعیت: `docs/DECISIONS.md` (D-041/D-055/D-057/D-058/D-107/D-110)، `docs/LICENSING.md`، `docs/SECURITY.md`، `docs/PROJECT_STATUS.md` و کد main@`560ff289`. راهنمای اجرای مرحله‌ای: [`VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md`](VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md).
 
 ## ۰) دسته‌بندی وضعیت موارد مأموریت (واژگان D-030؛ وجود پیاده‌سازی ≠ اثبات آمادگی عملیاتی)
 
@@ -9,7 +9,7 @@
 | مورد | Implemented | Tested | Operationally Verified | وضعیت عملیاتی نهایی | دلیل/مانع |
 |---|---|---|---|---|---|
 | Gate دوکلیدی v5 | بله — `VendorProvisioningCompanyReferenceGate` + interlock کدی | بله — `VendorEntitlementEnforcementGuardTests` و تست‌های Gate در CI | **خیر** — هیچ بستهٔ v5 عملیاتی صادر/apply نشده | **Blocked** (باز شدن = تصمیم صریح مالک) | زنجیرهٔ #392/#235 + تست دو میزبان + تصمیم مالک (§۲) |
-| Customer Migration (#392) | جزئی — فایل Migration `20261116070805` در مخزن؛ mapping/bootstrap نه | **خیر** — روی DB واقعی هرگز اجرا نشده | **خیر** | **Blocked** (+ پیاده‌سازی ناقص) | اجرای migration روی DB واقعی + تصمیم #392 (مالک/DBA) |
+| Customer Migration / Bootstrap (#392/D-110) | جزئی — Migration `20261116070805` در مخزن؛ CompanyReference mapping و v5 Apply در Customer پیاده شده؛ Bootstrap مستقل TenantOwner برای Dedicated/Offline طبق D-110 هنوز NotImplemented است | **خیر** — Migration روی DB واقعی Staging/مشتری اجرا نشده؛ Bootstrap مستقل نیز آزمون نشده | **خیر** | **Blocked** (اجرای Migration و Bootstrap عملیاتی باقی است) | اجرای کنترل‌شده Migration روی DB Staging با backup/rollback + تکمیل Bootstrap D-110 و تأیید مالک |
 | Key Ceremony (#236) | فقط Runbookها و کد signer | تست‌های CNG signer در CI (ماشین CI، نه میزبان Production) | **خیر** — ceremony واقعی، ACL، rotation/recovery روی میزبان هدف انجام نشده | **Blocked** (Not Verified عملیاتی) | زیرساخت میزبان Windows + حضور انسانی + ثبت شواهد (مالک) |
 | Audit Sink (#107) | جزئی — قرارداد checkpoint + startup guard + file store فقط Development/Test | بله — regressionهای قفل checkpoint و تست‌های audit در CI | **خیر** — sink مستقل Production با failure domain مستقل provision نشده | **Blocked** (sink Production `NotImplemented`) | تصمیم زیرساخت sink + provision + drill بازیابی (مالک) |
 | Trust Distribution (#235) | جزئی — trust storeهای دو طرف ACK provisioning در کد | بله — تست‌های ACK دو میزبان SQL Server در CI برای مسیر provisioning | **خیر** — توزیع/چرخش trust و staging واقعی برای amendment/trust مشتری وجود ندارد | **Blocked / Proposed** | قرارداد توزیع/چرخش باز (خروجی S-B: `AMENDMENT_ACK_CONTRACT_ANALYSIS.md`) + میزبان Staging |
