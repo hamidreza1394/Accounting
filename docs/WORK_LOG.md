@@ -3637,3 +3637,12 @@
 - Build، Test، SQL Server و `git diff --check` اجرا نشدند؛ CI/Review PR #780 در زمان ثبت این رکورد در انتظار/در حال اجراست و هیچ نتیجه موفقی برای head نهایی ادعا نمی‌شود.
 - Issue #397 باز است؛ G0/G3/G5/G6 بسته نشده‌اند و PR #780 فقط مستنداتی است.
 - handoff: `docs/handoffs/ISSUE-397-s3-0i-tenant-company-user-identity-matrix.md`.
+
+## 2026-11-23 — هم‌راستاسازی آمادگی Vendor و برگه شواهد چرخه اول Staging (UNNUMBERED)
+- **مبنای بازبینی:** `main@490224e69542624b8e75a86fc83fc522157e1b29`؛ PR #771 (G2) قبلاً ادغام شده بود، اما چک‌لیست آمادگی هنوز وضعیت قدیمی «در حال تکمیل» و snapshot منسوخ داشت.
+- **اصلاح:** `docs/VENDOR_OPERATIONAL_READINESS_CHECKLIST.md` به‌روزرسانی شد تا ادغام PR #771 و تفکیک پیاده‌سازی/CI از پذیرش مالک و شواهد Publish عملیاتی را منعکس کند.
+- **تصمیم محیط آزمایش:** طبق تأیید مالک، اجرای اولیه Staging روی یک Windows Server با دو پردازه/سرویس Vendor و Customer و دو دیتابیس مستقل خواهد بود. معماری محصول همچنان باید دو میزبان Windows Server مستقل را پشتیبانی کند؛ اجرای یک‌میزبانه استقلال سخت‌افزار/سیستم‌عامل را اثبات نمی‌کند.
+- **مستندات:** برگه `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE-EVIDENCE.md` اضافه و در `docs/INDEX.md` ثبت شد؛ handoff در `docs/handoffs/ISSUE-UNNUMBERED-vendor-staging-readiness-evidence.md` ایجاد شد.
+- **ایمنی:** فقط مستندات تغییر کردند. هیچ Migration، DB، سرویس، تنظیمات، کلید یا Runtime Gate تغییر نکرد. Runtime Gate OFF و `DenyAllTradeModuleEntitlement` دست‌نخورده باقی ماند. اجرای واقعی Staging، Key Ceremony و آزمون دو میزبان انجام نشد.
+- **اعتبارسنجی:** diff فایل‌های PR از GitHub بازبینی شد؛ `git diff --check` و CI هنوز اجرا/تأیید نشده‌اند. PR #785 قبلی به‌علت تعارض با تغییرات جدید main کنار گذاشته شد؛ PR جایگزین پس از بازبینی CI اعلام خواهد شد.
+- **Git:** شاخه `docs/vendor-staging-evidence-main-490224e-2026-11-23`؛ PR جایگزین در ادامهٔ همین کار ساخته می‌شود.
