@@ -38,11 +38,13 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 
 ### A. Local Development
 
-- اجرای Vendor از Vendor.sln در Visual Studio 2026 نسخه 18.0 یا بالاتر و .NET 10 SDK.
+- اجرای Vendor.sln در Visual Studio 2026 نسخه 18.0 یا بالاتر و .NET 10 SDK؛ مسیر Host اجرایی Vendor/Vendor.Host/Vendor.Host.csproj است.
+- اجرای مستقیم Host از ریشه مخزن پس از تنظیمات: dotnet run --project Vendor/Vendor.Host/Vendor.Host.csproj.
+- Host فقط از Configuration با پیشوند FARANO_VENDOR_ استفاده می‌کند. کلید اتصال Vendor DB برابر ConnectionStrings:VendorDb و نام متغیر محیطی آن FARANO_VENDOR_ConnectionStrings__VendorDb است؛ هیچ مقدار پیش‌فرض یا fallback به Customer DB وجود ندارد.
+- نمونه تنظیم موقت PowerShell (فقط placeholder؛ مقدار واقعی را در محیط خود وارد کنید): $env:FARANO_VENDOR_ConnectionStrings__VendorDb = '<Vendor-only SQL Server connection string>'. مقدار واقعی را در Git یا گزارش ثبت نکنید.
 - اجرای Customer در پردازه/پورت مستقل؛ برای آزمون integration حداقل دو process مستقل لازم است.
 - استفاده از دو دیتابیس آزمایشی مستقل، مثلاً FaranoVendor_Dev و FaranoCustomer_Dev؛ نام‌ها نمونه‌اند و باید با محیط واقعی هماهنگ شوند.
-- Connection Stringها فقط از User Secrets یا Environment Variables دریافت شوند؛ هیچ مقدار محرمانه در appsettings یا Git قرار نگیرد.
-- اجرای Migration فقط روی دیتابیس Vendor توسعه‌ای و دیتابیس Customer آزمایشی جداگانه، مطابق Issue مالک همان Migration.
+- برای EF Core نیز همان FARANO_VENDOR_ConnectionStrings__VendorDb باید فقط به Vendor DB اشاره کند. Migrationهای Vendor را با ابزار EF و پس از بازبینی فقط روی دیتابیس توسعه‌ای Vendor اجرا کنید؛ Migration مشتری Issue/مسیر مستقل خودش را دارد.
 - در این مرحله از کلید و داده Production استفاده نشود.
 
 ### B. Staging روی Windows Server
