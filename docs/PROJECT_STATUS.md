@@ -1,3 +1,15 @@
+## Snapshot تازه Vendor — 2026-11-23 (مأموریت اولین چرخهٔ لایسنس Staging؛ مبنای `main@62b0c3c6`)
+
+این snapshot، وضعیت قبلی `06fdb015` را پس از Mergeهای 2026-11-23 (#772/#773) و تحویل‌های مأموریت «اولین چرخهٔ لایسنس Staging» به‌روز می‌کند؛ سابقه حفظ شده است.
+
+- **PR #771 (گارد G2):** CI روی HEAD `d2c4716e` کامل سبز شد — ۱۵ Check Run: ۱۴ `success` + ۱ `neutral` (CodeRabbit)، از جمله `publish-windows` موفق پس از اصلاح نرمال‌سازی جداکنندهٔ مسیر Windows (`eb8e7373`). مانع باقی‌مانده Merge فقط تأیید صریح مالک روی فهرست Allow-list است (شواهد فهرست ۹۸فایلی قبلاً در کامنت PR ثبت شده)؛ عامل اجرا Merge نکرده و فهرست را گسترش نداده است.
+- **PR #781 (باز، در انتظار CI/بازبینی مالک):** برش Vendor-side از #394 — endpoint فقط-خواندنی `GET /api/vendor/licenses/{id}/envelope/export` که دقیقاً JSON ذخیره‌شدهٔ آخرین Revision پاکت امضاشده را پس از اعتبارسنجی fail-closed (وضعیت Issued، hash ذخیره‌شده، ساختار/KeyId/Algorithm، Trust Store `Licensing:TrustedSigningKeys`، امضای ECDSA P-256 و binding Installation) برمی‌گرداند. پیش از این PR هیچ مسیر تحویلی برای پاکت لایسنس وجود نداشت (فقط Provisioning Package export داشت) و اولین چرخهٔ صدور→انتقال→اعمال قابل اجرا نبود. شواهد محلی: build Release موفق (SDK 10.0.404)؛ `dotnet test` شاخه = ۴۶۷ کل/۳۷۵ موفق/۱۰ ناموفق؛ مجموعهٔ نام ۱۰ شکست با baseline تمیز `main@62b0c3c6` (worktree جدا، همان SDK) بایت‌به‌بایت یکسان است (صفر رگرسیون؛ شکست‌های محیطی HTTP/SPA پیش‌موجود). اولین اجرای CI دو باگ **فقط-تستی** را نشان داد (payload با GUID تصادفی به‌جای شناسه‌های واقعی seed → شکست binding؛ انتظار نادرست 404 به‌جای 403 الگوی authorization-first مخزن) و در commit `2e995213` اصلاح شد؛ نتیجهٔ اجرای مجدد CI باید از GitHub خوانده شود.
+- **PR #782 (باز، فقط مستندات):** Runbook `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE.md` (چرخهٔ کامل اولین صدور→تحویل→اعمال Staging: دو DB مستقل، پیکربندی `FARANO_VENDOR_*`، کلید CNG با ارجاع به Runbook #236، لایسنس شرکت‌محور `TRADE_IMPORT`، صادرات، مسیر Customer-side، Runtime Gate فقط-Staging، Restart، ماتریس منفی و الگوی شواهد) + handoff Customer (`ISSUE-UNNUMBERED-vendor-to-customer-first-license-cycle-handoff.md`) + handoff Trade (`ISSUE-401-trade-entitlement-handoff.md`). همهٔ گام‌ها تا اجرای واقعی روی میزبان Windows «Not Run» است.
+- **PR A/C از مأموریت:** شکاف کد واقعی در CNG signer و Trust/Delivery/ACK vendor-side یافت نشد (signer و Runbook در main؛ ACK intake و Trust Storeها کامل و fail-closed)؛ به‌جای PRهای پوسته، تحویل در PRهای #781/#782 و همین snapshot ثبت شد.
+- **وضعیت گیت‌ها بدون تغییر:** صدور v5 دوکلیدی بسته (`CustomerConsumerReady=false`)، `Licensing:RuntimeGate:Enabled` پیش‌فرض OFF، Migration مشتری (`20261116070805`) اجرا نشده، Key Ceremony CNG روی میزبان هدف «Not Verified»، sink مستقل #107 و trust distribution/rotation #235 باز، Bootstrap مستقل D-110 `NotImplemented`. هیچ موردی Operationally Verified نشده و هیچ `Server/**`، Migration مشتری، قرارداد مشترک یا گیت امنیتی تغییر نکرده است.
+
+---
+
 ## Snapshot تازه Vendor — 2026-11-23 (مبنای `main@06fdb015ddd113c2b2b5a715310a83759488cfca`)
 
 این snapshot، وضعیت قبلی `be2283d8` را پس از Mergeهای Vendor در 2026-11-22 به‌روز می‌کند. سابقه و snapshotهای تاریخی پایین سند حفظ شده‌اند.

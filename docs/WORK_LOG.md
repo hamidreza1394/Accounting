@@ -3590,3 +3590,10 @@
 - `ProformaChangeClassifier` افزوده شد: تغییر شرایط تجاری (ارز، Incoterm، خطوط چندکالایی، Snapshot مقدار، طرح پرداخت) ← Revision جدید؛ تمدید صرف اعتبار ← بدون Revision؛ کوتاه‌کردن اعتبار فقط گزارش می‌شود و تصمیم آن با مالک است.
 - بازبینی پس از Merge: #704 و #705 قبلاً در `main` ادغام شده‌اند (برخلاف فرض پرامپت)؛ کد و ۱۳۰ تست آن‌ها محلی موفق است و نقصی دیده نشد. `AwayFromZero` در تخصیص درصدی تصمیم مالک است و تغییری نکرد.
 - بدون Schema/Migration/API/UI؛ گیت‌های S3-0 بسته نشدند. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-proforma-change-classifier.md`.
+
+## 2026-11-23 — Vendor: همگام‌سازی وضعیت مأموریت اولین چرخهٔ لایسنس Staging (GLM)
+
+- **#771:** CI روی HEAD `d2c4716e` کامل سبز (۱۴ success + ۱ neutral؛ `publish-windows` پس از اصلاح نرمال‌سازی مسیر سبز شد)؛ مانع باقی‌مانده فقط تأیید مالک روی Allow-list؛ Merge نشده است.
+- **تحویل‌های باز مأموریت:** PR #781 (endpoint صادرات پاکت لایسنس — جزئیات و شواهد در handoff `ISSUE-394-vendor-license-envelope-export.md`؛ اولین CI دو باگ فقط-تستی را نشان داد که در `2e995213` اصلاح شد) و PR #782 (Runbook چرخهٔ اول Staging + handoff Customer/Trade — فقط مستندات).
+- **PR A/C مأموریت:** شکاف کد واقعی CNG/Trust/ACK در main یافت نشد؛ به‌جای PR پوسته، یافته‌ها در snapshot جدید `PROJECT_STATUS.md` و handoffهای #782 ثبت شد.
+- **گیت‌ها بدون تغییر:** v5 بسته، Runtime Gate پیش‌فرض OFF، Migration مشتری اجرا نشده، Key Ceremony «Not Verified»، sink #107 و trust #235 باز، D-110 `NotImplemented`؛ هیچ `Server/**`/Migration/قرارداد مشترک تغییر نکرده و هیچ موردی Operationally Verified نشده است.
