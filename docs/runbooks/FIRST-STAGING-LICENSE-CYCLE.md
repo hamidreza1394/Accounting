@@ -50,7 +50,7 @@ dotnet Vendor.Host.dll bootstrap-admin   # تعاملی؛ رمز فقط در ter
 
 1. با Administrator دو گواهی ECDSA P-256 `NonExportable` در `Cert:\LocalMachine\My` بسازید (دستورهای دقیق: Runbook #236 §3؛ Subjectهای مجزا برای License و Provisioning).
 2. ACL مادهٔ خصوصی فقط برای هویت سرویس Vendor (§4 همان Runbook) — هویت کاربر تعاملی جدا است.
-3. SPKI عمومی را استخراج کنید (فرمان فقط-خواندنی):
+3. SPKI عمومی هر دو کلید را با هویت سرویس Vendor روی همان میزبان استخراج کنید (فرمان فقط-خواندنی؛ هیچ مادهٔ خصوصی چاپ نمی‌شود):
 
 ```powershell
 dotnet Vendor.Host.dll --signing-certificate export-public
@@ -67,6 +67,8 @@ $env:FARANO_VENDOR_Signing__CertificateStore__License__Thumbprint = "<THUMBPRINT
 $env:FARANO_VENDOR_Signing__CertificateStore__Provisioning__KeyId = "vendor-provisioning-v1"
 $env:FARANO_VENDOR_Signing__CertificateStore__Provisioning__Thumbprint = "<THUMBPRINT-PROVISIONING>"
 ${env:FARANO_VENDOR_Licensing__TrustedSigningKeys__vendor-license-v1__PublicKeySubjectPublicKeyInfoBase64} = "<SPKI-License>"
+$env:FARANO_VENDOR_ProvisioningSigningTrust__Keys__0__KeyId = "vendor-provisioning-v1"
+$env:FARANO_VENDOR_ProvisioningSigningTrust__Keys__0__PublicKeySubjectPublicKeyInfoBase64 = "<SPKI-Provisioning>"
 ```
 
 5. آزمون‌های پذیرش گام کلید (همه باید ثبت شوند): امضای موفق با هویت سرویس، Verify با SPKI، Restart سرویس و امضای مجدد، رد امضا با حساب غیرمجاز، رد امضا با کلید حذف‌شده (fail-closed 503).
