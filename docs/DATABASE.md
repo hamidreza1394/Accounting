@@ -176,3 +176,16 @@ dotnet Server.dll --migrate --include-trade # پس از خرید، بدون نص
 - Parse توپولوژی سخت‌گیرانه است: مقدار باید نام عضو تعریف‌شده (case-insensitive) یا مقدار عددی دقیق یک عضو تعریف‌شده باشد؛ رشته‌های عددی تعریف‌نشده مانند `999` با `Enum.IsDefined` رد می‌شوند (`topology_kind_invalid` در Resolve و Validate) — هیچ توپولوژی ناشناخته‌ای به Target معتبر تبدیل نمی‌شود.
 - ثبت DI با اعتبارسنجی fail-fast: `AddDatabaseTopologyResolution` (ValidateOnStart). پیکربندی ناقص (Assignment بدون Connection، کلیدهای ناهم‌خوان با توپولوژی، Assignment تکراری برای یک Scope، توپولوژی Pending، Topology نامعتبر/تعریف‌نشده) و **Routing فعال بدون هیچ Assignment** (`registry_empty`) میزبان را در Startup متوقف می‌کند؛ پیکربندی خالی/غیرفعال معتبر است.
 - تست‌ها: `DatabaseTopologyRoutingTests` — ۳۰ Fact + ۲ Theory (۳۴ اجرای تست) با پوشش سناریوهای الزامی مأموریت: Routing سه توپولوژی مصوب، رد توپولوژی Pending (resolve + validate)، پذیرش عدد تعریف‌شده و رد عدد تعریف‌نشده/رشته نامعتبر/مقدار خالی، Scopeهای ناقص/نامعتبر، ترکیب هویتی نامرتبط و FiscalPeriod شرکت دیگر و Tenant نامرتبط، Assignment تکراری/متناقض/مفقود، Connection نامعتبر، نبود هیچ مسیر عمومی به Secret (بازتاب سطح عمومی)، عدم افشا در ToString/JSON/Logging/Exception، دسترسی محدود از مسیر internal، deterministic بودن Resolveهای مکرر، فعال بدون Assignment، غیرفعال، و ایزوله‌بودن Scope در Resolveهای هم‌زمان. تست‌های مسیر عملیاتی Context (اتصال Resolver به DbContext) در PR سوییچ عملیاتی خواهند آمد.
+
+
+## مالکیت داده بین توپولوژی‌های دیتابیس و ادامه پرونده در سال مالی جدید (D-117)
+
+- تصمیم مالک و مرزهای چهار توپولوژی در DECISIONS.md، D-117 ثبت شده‌اند.
+- مدل منطقی جداول، فیلدها، قیود، ایندکس‌ها، Snapshot، Carry-forward، شماره‌گذاری و افتتاحیه در FISCAL_PERIOD_DATA_MODEL.md است.
+- در Single-DB، داده پایه و پرونده‌های بلندمدت در همان دیتابیس نگهداری می‌شوند و تفکیک سال با شناسه‌های Company/FiscalPeriod انجام می‌شود.
+- در Company + FiscalPeriod DB، داده‌های مرجع و پرونده‌های بلندمدت در Company-level owner باقی می‌مانند؛ اطلاعات پایه موردنیاز سال جدید به‌صورت Snapshot نسخه‌دار با StableId به دیتابیس مقصد منتقل می‌شود؛ اسناد مالی در دیتابیس همان دوره‌اند.
+- OriginFiscalPeriodId در همه پرونده‌های دامنه‌ای اجباری و immutable است و با FiscalPeriodId عملیاتی سند تفاوت دارد. این فیلد Trade را period-scoped نمی‌کند و TradeOperationalPeriod ایجاد نمی‌شود.
+- فهرست ادامه پرونده‌ها از جدول مشارکت تخصصی زیرسیستم‌ها ساخته می‌شود؛ فقط پرونده‌های صریحاً Open به‌صورت پیش‌فرض Included هستند. مدیر مجاز همان Company می‌تواند Excluded/Included کند و Audit الزامی است.
+- شماره‌گذاری پرونده‌ها و اسناد تجاری Company/نوع سند قابل تنظیم و پیش‌فرض CompanyContinuous است؛ شمارنده پیوسته در Company-level owner قرار دارد.
+- افتتاحیه موقت و قابل بازسازی است؛ بازسازی اسناد سال جدید را بی‌قیدوشرط بازنویسی نمی‌کند.
+- این ثبت مستنداتی است: هیچ Schema، Entity، Migration، Backfill یا Runtime تغییر نکرده است. Tenant + FiscalPeriod DB همچنان Pending است؛ S3-0 و Security Review برای N-5 باز می‌مانند.

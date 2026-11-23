@@ -3566,3 +3566,13 @@
 - **S-G (PR #762):** چک‌لیست آمادگی عملیاتی (`docs/VENDOR_OPERATIONAL_READINESS_CHECKLIST.md`) — گاردهای D-041 G1..G6 با وضعیت واقعی، Gate دوکلیدی v5، Migration مشتری، Key Ceremony #236، sink #107، Trust #235 و OD-27؛ هیچ گیت باز نشد. بخش ۰ هر مورد مأموریت را در چهار ستون Implemented/Tested/Operationally Verified/وضعیت نهایی دسته‌بندی می‌کند و هیچ موردی Operationally Verified اعلام نشد.
 - همهٔ تحویل‌ها فقط مستندات‌اند (کد تولیدی، Schema و Workflow تغییر نکردند)، هر کدام با PR مستقل و handoff اختصاصی؛ رکوردهای WORK_LOG/INDEX عمداً در همین PR واحد هم‌گام شد تا PRهای موازی تعارض فایل مشترک نداشته باشند.
 - **همگام‌سازی نهایی (همین PR):** شاخه با آخرین main (پس از mergeهای #755، #758، #764، #757، #759، #760، #761، #762) همگام شد؛ تعارض append-only فایل مشترک با ترکیب کامل حل شد — رکوردهای #755 («ممیزی وضعیت پس از Mergeهای GLM» و «اصلاح همگام‌سازی handoff») بدون هیچ حذف/بازنویسی و رکورد این PR پس از آن‌ها حفظ شدند. ردیف‌های INDEX به هر هفت سند تحویلی به‌روزرسانی شد تا توصیف‌ها با نسخهٔ نهایی اسناد (AC-8a/8b، §۲.۱، §۳.۱، پیشنهاد بدون-cache، OD-29، بخش ۰) سازگار بمانند؛ همهٔ لینک‌ها به فایل‌های موجود در main اشاره می‌کنند.
+
+
+## 2026-11-23 — D-117: مالکیت داده و ادامه پرونده‌های سنواتی در توپولوژی‌های دیتابیس
+
+- تصمیم‌های مالک درباره داده‌های پایه در Single-DB و Snapshot سالانه در Company+FiscalPeriod، Company-level ownership پرونده‌های بلندمدت، OriginFiscalPeriodId اجباری/immutable، فهرست خودکار پرونده‌های Open، اختیار مدیر مجاز Company، جدول‌های مشارکت تخصصی، شماره‌گذاری پیوسته پیش‌فرض، افتتاحیه موقت و جدایی بستن سال از بستن پرونده در D-117 ثبت شد.
+- تعارض ظاهری D-086 رفع شد: پرونده Trade همچنان از FiscalPeriod عملیاتی مستقل است؛ OriginFiscalPeriodId فقط منشأ تاریخی پرونده است و TradeOperationalPeriod یا شرط period-scoped ایجاد نمی‌کند.
+- مدل منطقی جداول و فیلدهای پیشنهادی در docs/FISCAL_PERIOD_DATA_MODEL.md ثبت شد. این سند جایگزین ممیزی مدل واقعی و تصمیم Schema نیست.
+- D-063 §5 / D-074 با تفکیک Context مستقل از دوره و period-scoped به‌صورت معماری هدف توضیح داده شد؛ تغییر کد همچنان Blocked تا Security Review و تست منفی.
+- فقط مستندات تغییر کردند؛ هیچ کد، Entity، DbSet، Permission، API، Schema، Migration یا Backfill ایجاد/تغییر نشد. توپولوژی Tenant+FiscalPeriod و گیت‌های S3-0 همچنان بدون تغییرند.
+- handoff: docs/handoffs/ISSUE-UNNUMBERED-fiscal-period-data-ownership.md.
