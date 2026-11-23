@@ -6,7 +6,7 @@
 #   4. offline-resources check of the client build
 #   5. dotnet publish of the server (net10.0, Release)
 #   6. checks of the publish output: app/index.html, its JS/CSS, fonts and images
-#   7. G2 content guard (D-041): no Vendor assemblies / private-key material
+#   7. G2 content guard (D-041): package allow-list, no Vendor assemblies / private-key material
 # Usage: scripts/publish.sh [output-directory]   (default: artifacts/publish)
 # The output directory is validated before anything is built or deleted
 # (scripts/lib/publish-output.sh). FARANOU_PUBLISH_PREPARE_ONLY=1 stops after that step
@@ -51,7 +51,7 @@ ls "$output"/wwwroot/app/assets/*.css >/dev/null 2>&1 || { echo "no stylesheet i
 # bundle that the client references must be present in the published wwwroot.
 node "$repo_root/ClientApp/scripts/check-offline-build.mjs" --wwwroot "$output/wwwroot"
 
-echo "==> Publish output: G2 content guard (no Vendor assemblies / private keys)"
+echo "==> Publish output: G2 content guard (D-041 allow-list; no Vendor assemblies / private keys)"
 faranou_assert_customer_publish_clean "$output"
 
 echo "==> Published to $output"

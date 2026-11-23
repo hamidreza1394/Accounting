@@ -3577,6 +3577,20 @@
 - فقط مستندات تغییر کردند؛ هیچ کد، Entity، DbSet، Permission، API، Schema، Migration یا Backfill ایجاد/تغییر نشد. توپولوژی Tenant+FiscalPeriod و گیت‌های S3-0 همچنان بدون تغییرند.
 - handoff: docs/handoffs/ISSUE-UNNUMBERED-fiscal-period-data-ownership.md.
 
+## 2026-11-23 — Vendor: راهنمای آمادگی استقرار Local/Remote و اصلاح مرز signer مرکزی (PR #769، Issue #768)
+
+- راهنمای `docs/VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md` برای اجرای Local در Visual Studio 2026/.NET 10 و استقرار مرحله‌ای Windows Server اضافه شد؛ Vendor DB و Customer DB، تنظیمات `FARANO_VENDOR_`، Publish/Run و جداسازی کلیدها/محیط‌ها روشن شدند.
+- چک‌لیست عملیاتی با D-107، D-110 و وضعیت واقعی CompanyReference/v5 هم‌تراز شد: CNG SoftwareProtected برای signer مرکزی مجاز است و PKCS#11 در دامنه‌های جدا باقی می‌ماند؛ Bootstrap مستقل TenantOwner هنوز NotImplemented و Migration مشتری هنوز روی DB Staging اجرا نشده است.
+- CI روی HEAD ادغام‌شده شامل Build/Test، Client، Publish، Publish-Windows، E2E، Semgrep، CodeQL و آزمون‌های اختصاصی CNG/Checkpoint موفق بود. این شواهد فقط Tested را اثبات می‌کنند؛ هیچ اجرای واقعی روی Windows Server کاربر، Key Ceremony، Migration یا End-to-End عملیاتی ادعا نمی‌شود.
+- هیچ Runtime config، Gate، کلید، Schema یا Migration تغییر نکرد؛ Issue #768 برای اجرای واقعی مراحل بعدی باز می‌ماند.
+
+## 2026-11-23 — Vendor: تکمیل گارد Publish G2 (D-041) — در انتظار CI نهایی و تأیید مالک
+
+- Allow-list محتوای خروجی Publish از artifact واقعی استخراج می‌شود و در Bash/PowerShell fail-closed اعمال می‌شود؛ assembly/native binary، PDB و Apphost باید صریحاً فهرست شوند؛ runtime assets و satellite assemblies فقط با مسیر/فرهنگ/نام مشخص پذیرفته می‌شوند.
+- بازبینی امنیتی، bypass ناشی از dotfile و فایل Hidden ویندوز را پیدا کرد: اسکن PowerShell باید `-Force` داشته باشد و فقط marker شناخته‌شدهٔ Publish را مستثنا کند؛ Bash نیز فقط همان marker را مستثنا می‌کند. تست‌های رگرسیون برای dot-prefixed binary، OS-hidden binary و PDB ناشناخته افزوده شدند.
+- تست‌های Bash/PowerShell و workflow CI به‌روزرسانی شده‌اند؛ **CI روی HEAD نهایی بازسازی‌شده هنوز اجرا/تأیید نشده است**. هیچ ادعای سبز بودن تست‌های جدید یا تکمیل عملیاتی G2 مطرح نیست.
+- وضعیت: پیاده‌سازی در شاخهٔ بازبینی؛ تأیید نهایی فهرست توسط مالک و شواهد CI Linux/Windows لازم است. تا آن زمان گارد G2 را `Verified` یا Production-ready اعلام نکنید.
+
 ## 2026-11-23 — Vendor: تعیین تکلیف PRهای باز، تکمیل CI گارد G2 و هماهنگی مستندات (GLM)
 
 - **PR #766** (همگام‌سازی وضعیت Vendor پس از D-117) پس از هماهنگی با main، رفع دو thread بازبینی CodeRabbit (شناسایی SHA شواهد CI و رفع مانع رفع‌شدهٔ #765 در handoff) و سبزی همهٔ Checkها با Squash Merge به `main@8f2fa3d88fb358d794961e8ab63e91da021e51e6` ادغام شد؛ تفکیک خواستهٔ مالک اعمال شد: mapping CompanyReference و Customer v5 Apply «پیاده‌شده» (#684/#686)، Bootstrap مستقل TenantOwner طبق D-110 «NotImplemented»، فایل Migration مشتری فقط در مخزن و بدون اجرای عملیاتی.
@@ -3591,9 +3605,16 @@
 - بازبینی پس از Merge: #704 و #705 قبلاً در `main` ادغام شده‌اند (برخلاف فرض پرامپت)؛ کد و ۱۳۰ تست آن‌ها محلی موفق است و نقصی دیده نشد. `AwayFromZero` در تخصیص درصدی تصمیم مالک است و تغییری نکرد.
 - بدون Schema/Migration/API/UI؛ گیت‌های S3-0 بسته نشدند. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-proforma-change-classifier.md`.
 
+## 2026-11-23 — Vendor: مسیر تحویل LicenseEnvelope امضاشده برای مبادلهٔ آفلاین (GLM)
+
+- **شکاف واقعی شناسایی‌شده:** پس از صدور، پاکت لایسنس امضاشده (`VendorSignedLicenseEnvelopes`) هیچ مسیر مصوب خروج از Vendor نداشت — فقط Provisioning Package مسیر export داشت. اولین چرخهٔ واقعی صدور→انتقال→اعمال (#228/#394) بدون این حلقه قابل اجرا نبود.
+- **تحویل (PR بر `agent/license-envelope-export` از `main@62b0c3c6`، کد `0968375f`):** endpoint فقط-خواندنی `GET /api/vendor/licenses/{id}/envelope/export` که دقیقاً JSON ذخیره‌شدهٔ آخرین Revision را پس از اعتبارسنجی fail-closed برمی‌گرداند: وضعیت Issued، یکپارچگی `PayloadSha256`، ساختار پاکت و هم‌خوانی KeyId/Algorithm، عضویت Trust Store (`Licensing:TrustedSigningKeys`؛ نامعتبر ⇒ 503)، امضای ECDSA P-256 و binding به Installation؛ شکست امضا از شکست ارزیابی زمان کد جداگانه دارد. الگو از export موجود Provisioning و resolver کپی شد؛ تصمیم معماری جدیدی گرفته نشد. خروجی حالت Restricted امضاشده عمداً مجاز است (D-059 §7) و Audit `vendor.license.envelope-exported` در تراکنش ثبت می‌شود.
+- **تست:** چهار سناریوی Integration HTTP روی SQL Server واقعی (برابری بایت‌به‌بایت body + Audit + no-store؛ Draft/tamper-hash/ناشناخته؛ untrusted/tampered-signature؛ منع دسترسی) — محلی فقط Skip (نبود SQL Server/Docker در sandbox) و در CI اجرا می‌شوند. `dotnet build Vendor.sln -c Release` موفق؛ `dotnet test` روی شاخه = ۴۶۷ کل/۳۷۵ موفق/۱۰ ناموفق و روی baseline تمیز `main@62b0c3c6` = ۴۶۳ کل/۳۷۵ موفق/۱۰ ناموفق؛ مجموعهٔ نام ۱۰ شکست محیطی HTTP/SPA دو اجرا بایت‌به‌بایت یکسان است (صفر رگرسیون). `check_static_assets.py` PASS؛ `git diff --check` پاک.
+- بدون تغییر `Server/**`، قرارداد مشترک، Schema، Migration یا گیت امنیتی؛ tracking تحویل/ACK لایسنس عمداً ادعا نشده (#393/#394؛ تصمیم قرارداد S-B با مالک). handoff: `docs/handoffs/ISSUE-394-vendor-license-envelope-export.md`.
+
 ## 2026-11-23 — Vendor: Runbook چرخهٔ اول لایسنس Staging و handoffهای Customer/Trade (GLM)
 
-- **Runbook عملیاتی** `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE.md`: چرخهٔ کامل یک‌مشتملی Staging — آماده‌سازی DB/پیکربندی Vendor با متغیرهای `FARANO_VENDOR_*` و Migration صریح، bootstrap مدیر، کلید CNG Staging با ارجاع به Runbook #236 (بدون دوباره‌پیاده‌سازی)، ایجاد Customer/Installation/لایسنس شرکت‌محور `TRADE_IMPORT` با CompanyReference سرور-تولید، تأیید طبق D-109، صدور، صادرات پاکت (وابسته به PR #781)، مسیر Customer-side (Trust `Licensing:TrustedLicenseKeys`، Migration `--migrate`، enrollment، import با حساب Infrastructure)، فعال‌سازی Runtime Gate فقط در Staging با تأیید مالک، Restart، ماتریس منفی ده‌سناریویی و الگوی ثبت شواهد.
+- **Runbook عملیاتی** `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE.md`: چرخهٔ کامل یک‌مشتملی Staging — آماده‌سازی DB/پیکربندی Vendor با متغیرهای `FARANO_VENDOR_*` و Migration صریح، bootstrap مدیر، کلید CNG Staging با ارجاع به Runbook #236 (بدون دوباره‌پیاده‌سازی)، ایجاد Customer/Installation/لایسنس شرکت‌محور `TRADE_IMPORT` با CompanyReference سرور-تولید، تأیید طبق D-109، صدور، صادرات پاکت (با استفاده از endpoint ادغام‌شده در PR #781)، مسیر Customer-side (Trust `Licensing:TrustedLicenseKeys`، Migration `--migrate`، enrollment، import با حساب Infrastructure)، فعال‌سازی Runtime Gate فقط در Staging با تأیید مالک، Restart، ماتریس منفی ده‌سناریویی و الگوی ثبت شواهد.
 - **handoff Customer** (`ISSUE-UNNUMBERED-vendor-to-customer-first-license-cycle-handoff.md`): قرارداد دقیق تحویل (endpoint صادرات، شکل `LicenseEnvelope`، payload v2)، جدول وضعیت واقعی Customer-side با شکاف‌ها (اجرای Migration، runtime enforcement، توزیع trust)، معیار پذیرش شش‌بندی؛ هیچ تغییر Customer ادعا نشده است.
 - **handoff Trade** (`ISSUE-401-trade-entitlement-handoff.md`): قرارداد `CompanyLicenseEntitlement` (CompanyReference opaque، `TRADE_IMPORT`)، محل resolve mapping، وضعیت واقعی زنجیره، مرز «entitlement ≠ مجوز عملیاتی کاربر»، API پیشنهادی مصرف از لایهٔ تصمیم موجود و تست‌های Company A/B؛ `DenyAllTradeModuleEntitlement` حفظ می‌شود.
 - فقط مستندات: بدون کد، `Server/**`، Migration، Schema، تنظیم runtime یا بازکردن هیچ گیت؛ تا اجرای واقعی روی میزبان Windows همهٔ گام‌های Runbook «Not Run» است.

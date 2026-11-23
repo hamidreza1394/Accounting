@@ -22,7 +22,7 @@
 | حلقه | وضعیت |
 |---|---|
 | ساخت/تأیید/صدور لایسنس شرکت‌محور v2 با `TRADE_IMPORT` در Vendor | Implemented (فرم/UI + payload builder + issuance تراکنشی؛ امضا fail-closed تا کلید CNG Staging طبق D-107 آماده شود) |
-| صادرات پاکت از Vendor | PR #781 باز (در انتظار بازبینی/CI) |
+| صادرات پاکت از Vendor | PR #781 ادغام‌شده در main |
 | اعتبارسنجی و persist پایدار در Customer | کد در main؛ **Operationally NotRun** (بدون Migration واقعی و بدون اجرای واقعی) |
 | Runtime entitlement enforcement شرکت‌محور در call-siteهای Trade | **NotImplemented** (#391؛ `DenyAllTradeModuleEntitlement` فعلی دست‌نخورده می‌ماند) |
 | ACK/Applied tracking لایسنس | بسته به تصمیم قرارداد S-B مالک (#393/#394) |

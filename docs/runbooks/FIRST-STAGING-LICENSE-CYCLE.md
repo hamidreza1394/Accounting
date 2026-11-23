@@ -80,7 +80,7 @@ $env:FARANO_VENDOR_Licensing__TrustedSigningKeys__vendor-license-v1__PublicKeySu
 3. درخواست تأیید و تصمیم تأیید: طبق D-109 همان اپراتور مجاز می‌تواند Maker و Checker باشد (Vendor V1).
 4. نتیجهٔ موفق: `Status=Issued`، `LastIssuedSequence=1` و ردیف امضاشده در `VendorSignedLicenseEnvelopes`. هر شکست امضا یا Audit ⇒ هیچ‌چیز ثبت نمی‌شود (تراکنش واحد).
 
-## 5) تحویل پاکت به مشتری (نیازمند PR #781)
+## 5) تحویل پاکت به مشتری (اکنون در main پس از Merge PR #781)
 
 ```powershell
 # 5.1 — استخراج پاکت (دقیقاً JSON ذخیره‌شده؛ فقط-خواندنی؛ Audit ثبت می‌شود)
