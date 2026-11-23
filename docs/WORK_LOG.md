@@ -3576,3 +3576,17 @@
 - D-063 §5 / D-074 با تفکیک Context مستقل از دوره و period-scoped به‌صورت معماری هدف توضیح داده شد؛ تغییر کد همچنان Blocked تا Security Review و تست منفی.
 - فقط مستندات تغییر کردند؛ هیچ کد، Entity، DbSet، Permission، API، Schema، Migration یا Backfill ایجاد/تغییر نشد. توپولوژی Tenant+FiscalPeriod و گیت‌های S3-0 همچنان بدون تغییرند.
 - handoff: docs/handoffs/ISSUE-UNNUMBERED-fiscal-period-data-ownership.md.
+
+## 2026-11-23 — Vendor: راهنمای آمادگی استقرار Local/Remote و اصلاح مرز signer مرکزی (PR #769، Issue #768)
+
+- راهنمای `docs/VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md` برای اجرای Local در Visual Studio 2026/.NET 10 و استقرار مرحله‌ای Windows Server اضافه شد؛ Vendor DB و Customer DB، تنظیمات `FARANO_VENDOR_`، Publish/Run و جداسازی کلیدها/محیط‌ها روشن شدند.
+- چک‌لیست عملیاتی با D-107، D-110 و وضعیت واقعی CompanyReference/v5 هم‌تراز شد: CNG SoftwareProtected برای signer مرکزی مجاز است و PKCS#11 در دامنه‌های جدا باقی می‌ماند؛ Bootstrap مستقل TenantOwner هنوز NotImplemented و Migration مشتری هنوز روی DB Staging اجرا نشده است.
+- CI روی HEAD ادغام‌شده شامل Build/Test، Client، Publish، Publish-Windows، E2E، Semgrep، CodeQL و آزمون‌های اختصاصی CNG/Checkpoint موفق بود. این شواهد فقط Tested را اثبات می‌کنند؛ هیچ اجرای واقعی روی Windows Server کاربر، Key Ceremony، Migration یا End-to-End عملیاتی ادعا نمی‌شود.
+- هیچ Runtime config، Gate، کلید، Schema یا Migration تغییر نکرد؛ Issue #768 برای اجرای واقعی مراحل بعدی باز می‌ماند.
+
+## 2026-11-23 — Vendor: تکمیل گارد Publish G2 (D-041) — در انتظار CI نهایی و تأیید مالک
+
+- Allow-list محتوای خروجی Publish از artifact واقعی استخراج می‌شود و در Bash/PowerShell fail-closed اعمال می‌شود؛ assembly/native binary، PDB و Apphost باید صریحاً فهرست شوند؛ runtime assets و satellite assemblies فقط با مسیر/فرهنگ/نام مشخص پذیرفته می‌شوند.
+- بازبینی امنیتی، bypass ناشی از dotfile و فایل Hidden ویندوز را پیدا کرد: اسکن PowerShell باید `-Force` داشته باشد و فقط marker شناخته‌شدهٔ Publish را مستثنا کند؛ Bash نیز فقط همان marker را مستثنا می‌کند. تست‌های رگرسیون برای dot-prefixed binary، OS-hidden binary و PDB ناشناخته افزوده شدند.
+- تست‌های Bash/PowerShell و workflow CI به‌روزرسانی شده‌اند؛ **CI روی HEAD نهایی بازسازی‌شده هنوز اجرا/تأیید نشده است**. هیچ ادعای سبز بودن تست‌های جدید یا تکمیل عملیاتی G2 مطرح نیست.
+- وضعیت: پیاده‌سازی در شاخهٔ بازبینی؛ تأیید نهایی فهرست توسط مالک و شواهد CI Linux/Windows لازم است. تا آن زمان گارد G2 را `Verified` یا Production-ready اعلام نکنید.
