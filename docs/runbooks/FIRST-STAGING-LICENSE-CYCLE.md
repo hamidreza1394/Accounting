@@ -77,7 +77,6 @@ dotnet run --project Vendor/Vendor.Host
 ```
 
 7. **کلید Staging از کلید Production مجزا است** (KeyId/Thumbprint/گواهی جدا).
-6. **کلید Staging از کلید Production مجزا است** (KeyId/Thumbprint/گواهی جدا).
 
 ## 4) تعریف Customer آزمایشی، Installation و لایسنس شرکت‌محور
 
@@ -144,7 +143,7 @@ $env:Licensing__DeploymentMode = "Dedicated"
 
 1. سرویس Customer را Restart کنید (و در صورت امکان میزبان را).
 2. انتظار: ورود عادی بدون import مجدد؛ وضعیت از state پایدار + اعتبارسنجی مجدد runtime می‌آید؛ قطع اینترنت لایسنس Dedicated را باطل نمی‌کند.
-3. سرویس Vendor را هم Restart کنید و امضای آزمایشی دوم بگیرید (گام 3.5) — امضا بدون تعامل دستی.
+3. سرویس Vendor را هم Restart کنید و امضای آزمایشی دوم بگیرید (بخش 3) — امضا بدون تعامل دستی.
 
 ## 9) ماتریس منفی (هر مورد با شاهد ثبت شود)
 
