@@ -3578,3 +3578,7 @@
 
 - اولین اجرای CI روی PR گارد G2 (`publish-scripts`, job `137594470529`) نشان داد `Assert-FaranouCustomerPublishClean` در PowerShell زیر `ErrorActionPreference=Stop` Fixture «PEM private key» را نمی‌پذیرد‌ که رد شود: `Write-Error` داخل `try/catch` خواندن فایل به‌عنوان خطای terminating بلعیده می‌شد و اسکن PEM عملاً غیرفعال بود — باگ از پیش موجود مسیر Publish ویندوزی، نه مشکل تست. اصلاح: جمع‌آوری Hits و گزارش پس از حلقه؛ `catch` فقط فایل ناخوانا را می‌گذارد؛ رفتار bash بدون تغییر.
 - این اصلاح بخشی از همین PR گارد G2 است و در handoff `ISSUE-UNNUMBERED-vendor-publish-guard-g2-2026-11-23.md` ثبت شد.
+
+## 2026-11-23 — Vendor: نرمال‌سازی جداکنندهٔ مسیر در Allow-list PowerShell (GLM، همان PR)
+
+- اجرای CI `publish-windows` نشان داد در Windows مسیر نسبی با `\` با رکوردهای `/` فایل `publish-assembly-allowlist.txt` مطابقت نمی‌کند (`runtimes\linux-x64\native\libmsalruntime.so` falsely rejected در تست Fixture). اصلاح: `Replace('\','/')` پیش از مقایسه در `Assert-FaranouPublishAllowList`. خود Publish ویندوزی در همان اجرا از گارد گذشت؛ نتیجهٔ `publish-windows` پس از اصلاح در CI گزارش می‌شود.

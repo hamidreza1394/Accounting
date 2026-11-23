@@ -127,7 +127,9 @@ function Assert-FaranouPublishAllowList([string]$Output) {
     $binaryExt = @('.dll', '.exe', '.so', '.dylib', '.pdb')
     $violations = @()
     Get-ChildItem -LiteralPath $Output -Recurse -File -Force -ErrorAction SilentlyContinue | ForEach-Object {
-        $rel = $_.FullName.Substring($Output.Length).TrimStart('\', '/')
+        # Normalize to '/' so the entries of publish-assembly-allowlist.txt (written with
+        # '/') match on Windows just like on Linux; violations are reported the same way.
+        $rel = $_.FullName.Substring($Output.Length).TrimStart('\', '/').Replace('\', '/')
         if ($rel -like 'wwwroot/*' -or $rel -like 'wwwroot\*') { return }
         if ($_.Name -ieq $script:FaranouPublishMarker) { return }
         $segments = $rel -split '[\\/]'
