@@ -10,9 +10,14 @@
 # Nothing is deleted unless every check passes.
 #
 # Assert-FaranouCustomerPublishClean (G2 / D-041) refuses Vendor assemblies and private-key
-# material in the customer package after a real publish.
+# material in the customer package after a real publish, and enforces the D-041 G2 allow-list
+# of the customer package (publish-assembly-allowlist.txt next to this lib): every managed or
+# native binary (.dll/.exe/.so/.dylib and the extension-less apphost) outside wwwroot/ must be
+# explicitly listed; anything unlisted is refused fail-closed. Non-binary root files are not
+# assemblies and are skipped here; the PEM scan still inspects their content.
 
 $script:FaranouPublishMarker = '.faranou-publish-output'
+$script:FaranouAllowListPath = Join-Path $PSScriptRoot 'publish-assembly-allowlist.txt'
 
 function Get-FaranouComparison {
     if ($IsWindows -or $env:OS -eq 'Windows_NT') { return [System.StringComparison]::OrdinalIgnoreCase }
@@ -94,6 +99,69 @@ function Initialize-FaranouPublishOutput([string]$Output) {
     Set-Content -LiteralPath (Join-Path $Output $script:FaranouPublishMarker) -Value 'Created by scripts/publish.ps1; the whole directory is replaced by the next publish.'
 }
 
+function Assert-FaranouPublishAllowList([string]$Output) {
+    if (-not (Test-Path -LiteralPath $script:FaranouAllowListPath -PathType Leaf)) {
+        throw "publish: G2 content guard: allow-list file missing or unreadable: $script:FaranouAllowListPath"
+    }
+
+    $rootOk = @{}
+    $satOk = @{}
+    $cultOk = @{}
+    $runOk = @{}
+    foreach ($line in (Get-Content -LiteralPath $script:FaranouAllowListPath)) {
+        $trimmed = $line.TrimEnd("`r")
+        if (-not $trimmed -or $trimmed.StartsWith('#')) { continue }
+        $idx = $trimmed.IndexOf(':')
+        if ($idx -le 0) { throw "publish: G2 content guard: malformed allow-list entry: $trimmed" }
+        $kind = $trimmed.Substring(0, $idx).Trim()
+        $value = $trimmed.Substring($idx + 1).Trim()
+        switch ($kind) {
+            'root' { $rootOk[$value.ToLowerInvariant()] = $true }
+            'satellite' { $satOk[$value.ToLowerInvariant()] = $true }
+            'culture' { $cultOk[$value.ToLowerInvariant()] = $true }
+            'runtime' { $runOk[$value.ToLowerInvariant()] = $true }
+            default { throw "publish: G2 content guard: malformed allow-list entry: $trimmed" }
+        }
+    }
+
+    $binaryExt = @('.dll', '.exe', '.so', '.dylib')
+    $violations = @()
+    Get-ChildItem -LiteralPath $Output -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+        $rel = $_.FullName.Substring($Output.Length).TrimStart('\', '/')
+        if ($rel -like 'wwwroot/*' -or $rel -like 'wwwroot\*') { return }
+        if ($_.Name.StartsWith('.')) { return }
+        $segments = $rel -split '[\\/]'
+        if ($segments[0] -ieq 'runtimes') {
+            if (-not $runOk.ContainsKey($rel.ToLowerInvariant())) { $violations += $rel }
+            return
+        }
+        if ($segments.Count -gt 1) {
+            # Nested (not runtimes/, not wwwroot/): only an allowed satellite
+            # <culture>/<base>.resources.dll may live here.
+            $culture = $segments[0].ToLowerInvariant()
+            $name = $_.Name
+            if ($cultOk.ContainsKey($culture) -and $name.ToLowerInvariant().EndsWith('.resources.dll') -and
+                $satOk.ContainsKey($name.Substring(0, $name.Length - '.resources.dll'.Length).ToLowerInvariant())) { return }
+            $violations += $rel
+            return
+        }
+        # Root level: binaries and the extension-less apphost must be allow-listed.
+        if ($_.Extension) {
+            if ($binaryExt -contains $_.Extension.ToLowerInvariant() -and -not $rootOk.ContainsKey($_.Name.ToLowerInvariant())) { $violations += $rel }
+        }
+        else {
+            if (-not $rootOk.ContainsKey($_.Name.ToLowerInvariant())) { $violations += $rel }
+        }
+    }
+
+    foreach ($v in $violations) {
+        Write-Error "publish: G2 content guard: file outside the D-041 publish allow-list: $v"
+    }
+    if ($violations.Count -gt 0) {
+        throw 'publish: G2 content guard failed (D-041): customer package must not contain files outside the publish allow-list'
+    }
+}
+
 function Assert-FaranouCustomerPublishClean([string]$Output) {
     if (-not (Test-Path -LiteralPath $Output -PathType Container)) {
         throw "publish: G2 content guard: output directory does not exist: $Output"
@@ -132,4 +200,6 @@ function Assert-FaranouCustomerPublishClean([string]$Output) {
     if ($found) {
         throw 'publish: G2 content guard failed (D-041): customer package must not contain Vendor assemblies or private keys'
     }
+
+    Assert-FaranouPublishAllowList -Output $Output
 }

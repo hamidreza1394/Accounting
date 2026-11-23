@@ -1,0 +1,116 @@
+# G2 allow-list of the customer publish output (D-041; scripts/lib/publish-output.sh and
+# scripts/lib/PublishOutput.ps1 enforce it). Every managed or native binary in the
+# publish output (.dll/.exe/.so/.dylib and the extension-less apphost) must be listed here;
+# anything else is refused fail-closed. Client static content under wwwroot/ is not part of
+# this list (covered by the offline-asset checks) and neither are non-binary root files
+# (appsettings.json, Server.deps.json, web.config, ...) — private-key material inside them
+# is still caught by the PEM scan.
+#
+# Entries (one per line, '#' starts a comment, comparisons are case-insensitive):
+#   root: <name>       file directly in the output root (assembly, PDB or apphost)
+#   satellite: <base>  <culture>/<base>.resources.dll satellite assembly
+#   culture: <name>    satellite culture directory allowed at the first nesting level
+#   runtime: <path>    exact relative path under runtimes/
+#
+# Source of the entries: the real `dotnet publish Server/Server.csproj -c Release` output
+# (portable framework-dependent; Linux CI + local run, 2026-11-23, main@560ff289).
+# `Server.exe` is the Windows apphost produced by the publish-windows job and is expected
+# only there; the Linux output has the extension-less `Server` instead.
+
+# Application and shared-library assemblies (with their PDBs as actually published)
+root: Application.dll
+root: Application.pdb
+root: Constants.dll
+root: Constants.pdb
+root: Domain.dll
+root: Domain.pdb
+root: Dtat.dll
+root: Dtat.pdb
+root: Dtat.Seedwork.Abstractions.dll
+root: Dtat.Seedwork.Abstractions.pdb
+root: Faranou.Licensing.Contracts.dll
+root: Faranou.Licensing.Contracts.pdb
+root: Infrastructure.Persistence.dll
+root: Infrastructure.Persistence.pdb
+root: Resources.dll
+root: Resources.pdb
+root: Server.dll
+root: Server.pdb
+root: Trade.Application.dll
+root: Trade.Application.pdb
+root: Trade.Domain.dll
+root: Trade.Domain.pdb
+root: Trade.Infrastructure.dll
+root: Trade.Infrastructure.pdb
+root: ViewModels.dll
+root: ViewModels.pdb
+
+# Application hosts (Linux apphost has no extension, Windows apphost is Server.exe)
+root: Server
+root: Server.exe
+
+# NuGet managed assemblies
+root: Azure.Core.dll
+root: Azure.Identity.dll
+root: Castle.Core.dll
+root: Microsoft.AspNetCore.Authentication.Google.dll
+root: Microsoft.Bcl.AsyncInterfaces.dll
+root: Microsoft.Data.SqlClient.dll
+root: Microsoft.EntityFrameworkCore.dll
+root: Microsoft.EntityFrameworkCore.Abstractions.dll
+root: Microsoft.EntityFrameworkCore.Proxies.dll
+root: Microsoft.EntityFrameworkCore.Relational.dll
+root: Microsoft.EntityFrameworkCore.SqlServer.dll
+root: Microsoft.Identity.Client.dll
+root: Microsoft.Identity.Client.Broker.dll
+root: Microsoft.Identity.Client.Extensions.Msal.dll
+root: Microsoft.Identity.Client.NativeInterop.dll
+root: Microsoft.IdentityModel.Abstractions.dll
+root: Microsoft.IdentityModel.JsonWebTokens.dll
+root: Microsoft.IdentityModel.Logging.dll
+root: Microsoft.IdentityModel.Protocols.dll
+root: Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+root: Microsoft.IdentityModel.Tokens.dll
+root: Microsoft.SqlServer.Server.dll
+root: System.ClientModel.dll
+root: System.Configuration.ConfigurationManager.dll
+root: System.IdentityModel.Tokens.Jwt.dll
+root: System.Memory.Data.dll
+root: System.Security.Cryptography.ProtectedData.dll
+root: TSS.Net.dll
+
+# Satellite assemblies (assembly base name, i.e. the file name without .resources.dll)
+satellite: Microsoft.Data.SqlClient
+satellite: Resources
+
+# Satellite culture directories present in the real publish output
+culture: cs
+culture: de
+culture: es
+culture: fa-IR
+culture: fr
+culture: it
+culture: ja
+culture: ko
+culture: pl
+culture: pt-BR
+culture: ru
+culture: tr
+culture: zh-Hans
+culture: zh-Hant
+
+# RID-specific managed and native assets under runtimes/
+runtime: runtimes/linux-arm/lib/netcoreapp2.0/TSS.Net.dll
+runtime: runtimes/linux-musl-x64/lib/netcoreapp2.1/TSS.Net.dll
+runtime: runtimes/linux-x64/lib/netcoreapp2.0/TSS.Net.dll
+runtime: runtimes/linux-x64/native/libmsalruntime.so
+runtime: runtimes/osx-arm64/native/msalruntime_arm64.dylib
+runtime: runtimes/osx-x64/native/msalruntime.dylib
+runtime: runtimes/unix/lib/net9.0/Microsoft.Data.SqlClient.dll
+runtime: runtimes/win-arm64/native/Microsoft.Data.SqlClient.SNI.dll
+runtime: runtimes/win-arm64/native/msalruntime_arm64.dll
+runtime: runtimes/win-x64/native/Microsoft.Data.SqlClient.SNI.dll
+runtime: runtimes/win-x64/native/msalruntime.dll
+runtime: runtimes/win-x86/native/Microsoft.Data.SqlClient.SNI.dll
+runtime: runtimes/win-x86/native/msalruntime_x86.dll
+runtime: runtimes/win/lib/net9.0/Microsoft.Data.SqlClient.dll

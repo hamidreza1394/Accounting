@@ -89,5 +89,104 @@ else
   ok "PEM private key content rejected"
 fi
 
+# --- positive: tree matching the real publish output (allow-list subset) ----------------
+allow_ok="$sandbox/allow-ok"
+mkdir -p "$allow_ok/wwwroot/app/assets" "$allow_ok/fa-IR" "$allow_ok/de" "$allow_ok/runtimes/linux-x64/native" "$allow_ok/runtimes/win-x64/native"
+printf 'marker\n' > "$allow_ok/.faranou-publish-output"
+printf 'x' > "$allow_ok/Server.dll"
+printf 'x' > "$allow_ok/Server"
+printf 'x' > "$allow_ok/Application.dll"
+printf 'x' > "$allow_ok/Faranou.Licensing.Contracts.dll"
+printf 'x' > "$allow_ok/Microsoft.Data.SqlClient.dll"
+printf 'x' > "$allow_ok/fa-IR/Resources.resources.dll"
+printf 'x' > "$allow_ok/de/Microsoft.Data.SqlClient.resources.dll"
+printf 'x' > "$allow_ok/runtimes/linux-x64/native/libmsalruntime.so"
+printf 'x' > "$allow_ok/runtimes/win-x64/native/Microsoft.Data.SqlClient.SNI.dll"
+printf 'ok\n' > "$allow_ok/wwwroot/app/index.html"
+printf 'config\n' > "$allow_ok/web.config"
+printf 'deps\n' > "$allow_ok/Server.deps.json"
+if faranou_assert_customer_publish_clean "$allow_ok"; then
+  ok "allow-listed publish output accepted"
+else
+  fail "allow-listed publish output accepted" "guard rejected a probe-derived tree"
+fi
+
+# --- negative: assembly not in the allow-list --------------------------------------------
+unlisted="$sandbox/allow-unlisted"
+mkdir -p "$unlisted"
+printf 'x' > "$unlisted/Server.dll"
+printf 'x' > "$unlisted/NotListed.Library.dll"
+if faranou_assert_customer_publish_clean "$unlisted" 2>/dev/null; then
+  fail "unlisted assembly rejected" "guard accepted NotListed.Library.dll"
+else
+  ok "unlisted assembly rejected"
+fi
+
+# --- negative: satellite assembly in the wrong place -------------------------------------
+sat_root="$sandbox/allow-sat-root"
+mkdir -p "$sat_root"
+printf 'x' > "$sat_root/Server.dll"
+printf 'x' > "$sat_root/Microsoft.Data.SqlClient.resources.dll"
+if faranou_assert_customer_publish_clean "$sat_root" 2>/dev/null; then
+  fail "misplaced satellite rejected" "guard accepted a root-level resources.dll"
+else
+  ok "misplaced satellite rejected"
+fi
+
+# --- negative: unknown satellite culture ---------------------------------------------------
+sat_cult="$sandbox/allow-sat-culture"
+mkdir -p "$sat_cult/ar"
+printf 'x' > "$sat_cult/Server.dll"
+printf 'x' > "$sat_cult/ar/Microsoft.Data.SqlClient.resources.dll"
+if faranou_assert_customer_publish_clean "$sat_cult" 2>/dev/null; then
+  fail "unknown satellite culture rejected" "guard accepted ar/Microsoft.Data.SqlClient.resources.dll"
+else
+  ok "unknown satellite culture rejected"
+fi
+
+# --- negative: unknown satellite base name -------------------------------------------------
+sat_base="$sandbox/allow-sat-base"
+mkdir -p "$sat_base/fa-IR"
+printf 'x' > "$sat_base/Server.dll"
+printf 'x' > "$sat_base/fa-IR/Foo.resources.dll"
+if faranou_assert_customer_publish_clean "$sat_base" 2>/dev/null; then
+  fail "unknown satellite base rejected" "guard accepted fa-IR/Foo.resources.dll"
+else
+  ok "unknown satellite base rejected"
+fi
+
+# --- negative: unexpected path under runtimes/ ----------------------------------------------
+runtime_evil="$sandbox/allow-runtime-evil"
+mkdir -p "$runtime_evil/runtimes/linux-x64/native"
+printf 'x' > "$runtime_evil/Server.dll"
+printf 'x' > "$runtime_evil/runtimes/linux-x64/native/evil.so"
+if faranou_assert_customer_publish_clean "$runtime_evil" 2>/dev/null; then
+  fail "unexpected runtimes file rejected" "guard accepted runtimes/linux-x64/native/evil.so"
+else
+  ok "unexpected runtimes file rejected"
+fi
+
+# --- negative: binary in an unknown nested directory ----------------------------------------
+nested_evil="$sandbox/allow-nested-evil"
+mkdir -p "$nested_evil/plugins"
+printf 'x' > "$nested_evil/Server.dll"
+printf 'x' > "$nested_evil/plugins/Evil.Plugin.dll"
+if faranou_assert_customer_publish_clean "$nested_evil" 2>/dev/null; then
+  fail "nested unknown binary rejected" "guard accepted plugins/Evil.Plugin.dll"
+else
+  ok "nested unknown binary rejected"
+fi
+
+# --- negative: unlisted extension-less root file ---------------------------------------------
+stray="$sandbox/allow-stray"
+mkdir -p "$stray"
+printf 'x' > "$stray/Server.dll"
+printf 'x' > "$stray/stray-binary"
+if faranou_assert_customer_publish_clean "$stray" 2>/dev/null; then
+  fail "unlisted extension-less root file rejected" "guard accepted stray-binary"
+else
+  ok "unlisted extension-less root file rejected"
+fi
+
 echo "$passed passed, $failures failed"
 [ "$failures" -eq 0 ]

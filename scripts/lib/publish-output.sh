@@ -96,6 +96,14 @@ faranou_prepare_output() {
 #   - PEM private-key headers in text files (BEGIN ... PRIVATE KEY)
 # Does not block ordinary customer DLLs, appsettings, or public certificates without private key.
 # Uses `command grep` so a shell alias (e.g. ugrep) cannot reinterpret the pattern.
+#
+# The same function also enforces the D-041 G2 allow-list of the customer package
+# (scripts/lib/publish-assembly-allowlist.txt, same directory as this lib): every managed or
+# native binary (.dll/.exe/.so/.dylib and the extension-less apphost) outside wwwroot/ must
+# be explicitly listed; anything unlisted is refused fail-closed. Non-binary root files are
+# not assemblies and are skipped here; the PEM scan above still inspects their content.
+FARANOU_PUBLISH_ALLOWLIST="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/publish-assembly-allowlist.txt"
+
 faranou_assert_customer_publish_clean() {
   local output="$1"
   local found=0
@@ -137,6 +145,75 @@ FIND_SENSITIVE
   done <<FIND_TEXT
 $(find "$output" -type f -size -512k 2>/dev/null)
 FIND_TEXT
+
+  # --- allow-list of the whole package (fail-closed on anything unlisted) -----------------
+  local -A root_ok sat_ok cult_ok run_ok
+  local line kind value base ext
+  if [ ! -r "$FARANOU_PUBLISH_ALLOWLIST" ]; then
+    echo "publish: G2 content guard: allow-list file missing or unreadable: $FARANOU_PUBLISH_ALLOWLIST" >&2
+    return 1
+  fi
+  while IFS= read -r line; do
+    line="${line%$'\r'}"
+    case "$line" in ''|'#'*) continue ;; esac
+    kind="${line%%:*}"
+    value="${line#*:}"
+    value="${value#"${value%%[! ]*}"}"
+    value="${value%"${value##*[! ]}"}"
+    case "$kind" in
+      root) root_ok["${value,,}"]=1 ;;
+      satellite) sat_ok["${value,,}"]=1 ;;
+      culture) cult_ok["${value,,}"]=1 ;;
+      runtime) run_ok["${value,,}"]=1 ;;
+      *) echo "publish: G2 content guard: malformed allow-list entry: $line" >&2; return 1 ;;
+    esac
+  done < "$FARANOU_PUBLISH_ALLOWLIST"
+
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    rel="${f#"$output"/}"
+    case "$rel" in wwwroot/*) continue ;; esac
+    base="${rel##*/}"
+    case "$base" in .*) continue ;; esac
+    case "$rel" in
+      runtimes/*)
+        if [ -z "${run_ok["${rel,,}"]:-}" ]; then
+          echo "publish: G2 content guard: file outside the D-041 publish allow-list: $rel" >&2
+          found=1
+        fi
+        continue ;;
+    esac
+    if [[ "$rel" == */* ]]; then
+      # Nested (not runtimes/, not wwwroot/): only an allowed satellite
+      # <culture>/<base>.resources.dll may live here.
+      local dir="${rel%%/*}"
+      if [ -n "${cult_ok["${dir,,}"]:-}" ] && [[ "$base" == *.resources.dll ]]; then
+        value="${base%.resources.dll}"
+        if [ -n "${sat_ok["${value,,}"]:-}" ]; then continue; fi
+      fi
+      echo "publish: G2 content guard: file outside the D-041 publish allow-list: $rel" >&2
+      found=1
+      continue
+    fi
+    # Root level: binaries and the extension-less apphost must be allow-listed.
+    if [[ "$base" == *.* ]]; then
+      ext="${base##*.}"
+      case "${ext,,}" in
+        dll|exe|so|dylib)
+          if [ -z "${root_ok["${base,,}"]:-}" ]; then
+            echo "publish: G2 content guard: file outside the D-041 publish allow-list: $rel" >&2
+            found=1
+          fi ;;
+      esac
+    else
+      if [ -z "${root_ok["${base,,}"]:-}" ]; then
+        echo "publish: G2 content guard: file outside the D-041 publish allow-list: $rel" >&2
+        found=1
+      fi
+    fi
+  done <<FIND_ALL
+$(find "$output" -type f 2>/dev/null)
+FIND_ALL
 
   if [ "$found" -ne 0 ]; then
     echo "publish: G2 content guard failed (D-041): customer package must not contain Vendor assemblies or private keys" >&2
