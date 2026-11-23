@@ -3235,3 +3235,81 @@ D-030، D-074، D-082، D-084، D-087، D-103، D-105؛ `docs/TRADE_DESIGN_V3_2.
 4. **Product در Trade:** Product همچنان در `Trade.Domain` و `TradeDbContext` می‌ماند و هیچ ارجاع، جدول یا DbSet مشترک با Inventory ساخته نمی‌شود. روش: بازبینی Diff، تست معماری وابستگی بین ماژول‌ها در صورت وجود، و grep برای نبود وابستگی جدید.
 
 مراجع: D-030، D-062، D-063، D-080، D-086، D-090، D-104، D-105، D-106؛ `docs/TRADE_S3_ARCHITECTURE.md`؛ `docs/TRADE_OPEN_DECISIONS.md`؛ مأموریت مالک 2026-11-22.
+
+
+## D-117 — مالکیت داده بین توپولوژی‌های دیتابیس و ادامه پرونده در سال مالی جدید (2026-11-23)
+
+- **وضعیت تصمیم:** Accepted برای قواعد کسب‌وکاری و جهت معماری که در بندهای تصمیم مالک آمده است؛ جزئیات فیزیکی جدول‌ها در سند همراه FISCAL_PERIOD_DATA_MODEL.md طراحی منطقی پیشنهادی است و پیش از DDL باید بازبینی شود.
+- **وضعیت پیاده‌سازی:** NotImplemented؛ این ADR هیچ Entity، DbSet، Configuration، Permission، API، UI، Schema، Migration، Backfill یا Runtime جدیدی ایجاد نمی‌کند.
+- **دامنه:** مالکیت داده Company-level و FiscalPeriod-level، انتقال دوره، پرونده‌های بلندمدت، فهرست ادامه پرونده‌ها، شماره‌گذاری و افتتاحیه در توپولوژی‌های D-111.
+- **مراجع پایه:** D-030، D-062، D-063، D-064، D-074، D-084، D-086، D-087، D-103، D-105، D-111، D-114، D-115، D-116؛ DATABASE.md و TRADE_S3_ARCHITECTURE.md.
+
+### تصمیم‌های مالک
+
+1. **داده‌های پایه در توپولوژی Single-DB:** وقتی همه سال‌های یک Company در یک DB هستند (Tenant DB یا Company DB)، داده‌های پایه همان‌جا نگهداری می‌شوند؛ برای هر سال دیتابیس یا نسخه مستقل کامل ایجاد نمی‌شود، مگر Snapshot تاریخی یک سند/عملیات آن را لازم کند.
+2. **Snapshot داده پایه در Company + FiscalPeriod DB:** وقتی هر Company/FiscalPeriod دیتابیس مستقل دارد، اطلاعات پایه موردنیاز سال جدید (از جمله Party و Product) در زمان آماده‌سازی دوره به‌صورت Snapshot به دیتابیس سال مقصد منتقل می‌شوند. شناسه پایدار مرجع حفظ می‌شود؛ Snapshot سال مقصد مستقل از نسخه‌های تاریخی دوره‌های دیگر است و منبع حقیقت Company-level را جایگزین نمی‌کند. مرجع اصلی و داده‌های بلندمدت در Company-level owner باقی می‌مانند. Product فعلاً در Trade باقی می‌ماند (D-116).
+3. **پرونده‌های بلندمدت:** ImportCase، Proforma، Revision، OrderRegistration، تاریخچه تجاری و داده‌های بلندمدت مشابه Company-owned و مستقل از lifecycle دوره مالی‌اند. در توپولوژی Company + FiscalPeriod DB، در Assignment پایدار Company-level نگهداری می‌شوند؛ در Single-DB در همان DB قرار می‌گیرند.
+4. **سال مبدأ پرونده:** همه پرونده‌های دامنه‌ای که در فرایند کسب‌وکار ایجاد می‌شوند باید OriginFiscalPeriodId اجباری و immutable داشته باشند. این فیلد دوره ایجاد پرونده را ثبت می‌کند؛ نه مجوز دسترسی است، نه دوره ثبت مالی و نه به‌تنهایی نشانه period-scoped بودن پرونده. این تصمیم، نداشتن FiscalPeriodId عملیاتی روی ImportCase در D-086 را تغییر نمی‌دهد؛ OriginFiscalPeriodId یک ویژگی تاریخی مستقل است.
+5. **فهرست ادامه در سال جدید:** پرونده‌هایی که وضعیت دامنه‌ای صریحاً Open دارند به‌صورت پیش‌فرض در فهرست کارهای سال مقصد قرار می‌گیرند. مدیر مجاز همان Company می‌تواند پرونده را از فهرست خارج یا مجدداً وارد کند. OnHold تا تعیین قاعده اختصاصی هر زیرسیستم خودکار وارد نمی‌شود؛ Closed و Cancelled وارد نمی‌شوند. رد مجوز/درخواست به‌تنهایی وضعیت پرونده را Closed نمی‌کند.
+6. **جداول مشارکت تخصصی:** هر زیرسیستم مالک جدول مشارکت/ادامه تخصصی خودش است؛ جدول عمومی polymorphic مبتنی بر EntityType/EntityId و Core WorkItem مشترک ایجاد نمی‌شود. فهرست یکپارچه از Read Model/Query تجمیعی ساخته می‌شود. در Multi-DB، ارتباط با پرونده مبدأ با شناسه پایدار و اعتبارسنجی سمت سرور است؛ FK بین دیتابیس‌ها وجود ندارد.
+7. **مدیریت مشارکت و مجوز:** اختیار خارج‌کردن/بازگرداندن متعلق به مدیر مجاز همان Company و با Permission مستقل زیرسیستم (الگوی module.carryover.manage) است. مدیر سراسری نصب صرفاً به‌دلیل نقش سراسری، مجوز عملیاتی Companyها را دریافت نمی‌کند (D-064). هر تغییر Audit و دارای دلیل است.
+8. **بستن سال و ادامه پرونده:** بستن دوره مالی و بستن پرونده تجاری دو lifecycle مستقل‌اند. پرونده Company-owned باز می‌تواند پس از بستن سال مبدأ ادامه یابد. اسناد و عملیات مالی جدید در دوره باز و دیتابیس همان دوره ثبت می‌شوند. داده period-owned سال بسته فقط با بازگشایی کنترل‌شده همان دوره و ثبت دلیل/Actor/زمان قابل ویرایش است.
+9. **شماره‌گذاری:** سیاست شماره‌گذاری پرونده‌ها و اسناد تجاری برای هر Company/نوع سند قابل تنظیم است؛ پیش‌فرض پیوسته در عمر Company است. ریست سالانه گزینه صریح است. در حالت پیوسته، شمارنده باید در Company-level owner قرار گیرد؛ شماره تخصیص‌یافته با ابطال/حذف آزاد نمی‌شود. قالب پیشوند سال صرفاً نمایش است.
+10. **افتتاحیه:** ایجاد سال جدید منتظر بستن قطعی سال قبل نمی‌ماند. افتتاحیه اولیه می‌تواند Provisional باشد و قابل بازسازی/بررسی است. ثبت جدید در سال مبدأ، افتتاحیه مقصد را NeedsReview می‌کند؛ بازسازی نباید اسناد سال جدید را بی‌قیدوشرط بازنویسی کند و اختلاف باید قبل از نهایی‌سازی نمایش داده شود.
+11. **توپولوژی Pending:** Tenant + FiscalPeriod DB همچنان تا تصمیم صریح جداگانه مالک Pending است؛ این ADR آن را فعال یا Accepted نمی‌کند.
+
+### رابطه با تصمیم‌های قبلی و رفع تعارض
+
+- **D-086 / Origin:** D-086 استقلال ImportCase، Proforma و OrderRegistration از FiscalPeriod عملیاتی را حفظ می‌کند. D-117 فقط OriginFiscalPeriodId تاریخی و immutable را برای پرونده‌ها الزامی می‌کند؛ TradeOperationalPeriod یا شرط period-scoped جدید ایجاد نمی‌شود.
+- **D-105 / Company ownership:** Company-owned بودن داده حفظ می‌شود. Snapshot دوره‌ای در Company+FiscalPeriod DB یک کپی مرجع مستقل یا Dual-write نیست؛ تصویر نسخه‌دار و قابل ردیابی از داده Company-level برای مصرف دوره است. مرجع Company-level باقی می‌ماند. این بند فقط استثنای Snapshot موردنیاز را به قاعده عدم تکثیر بی‌دلیل اضافه می‌کند.
+- **D-111 / توپولوژی:** چهار توپولوژی D-111 بدون تغییر می‌مانند؛ Tenant+FiscalPeriod همچنان Pending طبق D-115. برای Company+FiscalPeriod، Assignment پایدار Company-level برای داده‌های بلندمدت و مرجع لازم است.
+- **D-114 / D-115:** مالکیت منطقی FiscalPeriod در Company و Registry سمت سرور همچنان معتبرند. جدول مشارکت پرونده‌ها، Registry مسیریابی نیست و نباید DatabaseId/ConnectionString نگه دارد.
+- **D-063 §5 و D-074:** تعارض با تفکیک Context حل می‌شود: عملیات مستقل از دوره Context بدون FiscalPeriodId دارد؛ عملیات period-scoped Context با FiscalPeriodId معتبر دارد. هر دو مسیر باید تمام کنترل‌های Session، Membership، Tenant/Company Scope، Entitlement، Permission و Data Ownership را حفظ کنند. حذف شرط دوره در مسیر مستقل از دوره، حذف هیچ کنترل دیگری را مجاز نمی‌کند. تغییر اجرایی TradeAccessContext/TradePeriodScope تا بازبینی Security Reviewer و تست منفی حفظ زنجیره کنترل‌ها Blocked می‌ماند.
+- هیچ بند D-117 گیت‌های S3-0 یا تأییدهای لازم برای Tenant/Company migration، Rename، Backfill یا Schema را دور نمی‌زند.
+
+### پیامدها و قیود
+
+- دو مسیر دسترسی داده لازم است: Single-DB query با فیلتر Company/FiscalPeriod؛ و Multi-DB با resolve مبدأ/مقصد از Registry سمت سرور و DbContext مستقل برای هر مقصد.
+- پرونده اصلی، Snapshot Master Data، مشارکت سال مقصد و سند مالی سال جاری چهار نوع داده متفاوت‌اند و نباید در یک جدول/Entity ادغام شوند.
+- هیچ dual-write دائمی بین دیتابیس سال مبدأ و مقصد وجود ندارد.
+- جداول مشارکت، Snapshot و افتتاحیه باید idempotent، concurrency-safe و قابل ممیزی باشند.
+- جداول تخصصی هر زیرسیستم باید TenantId و CompanyId مستقل را نگه دارند؛ کنترل سمت سرور و FK/Unique مرکب در همان DB حفظ شود.
+- جدول‌ها و فیلدهای منطقی پیشنهادی، قیود، ایندکس‌ها، رفتارها و گیت‌ها در FISCAL_PERIOD_DATA_MODEL.md شرح داده شده‌اند.
+
+### گزینه‌های ردشده
+
+- کپی کامل پرونده تجاری و Revisionها به DB سال مقصد به‌عنوان روش عادی انتقال؛
+- همگام‌سازی دائمی دوطرفه یا Dual-write بین دیتابیس مبدأ و مقصد؛
+- جدول عمومی polymorphic برای تمام زیرسیستم‌ها با EntityType/EntityId بدون FK واقعی؛
+- ایجاد Core WorkItem عمومی بدون نیاز دامنه‌ای ثابت‌شده؛
+- استفاده از OriginFiscalPeriodId به‌عنوان مجوز یا شرط اجباری تمام عملیات؛
+- ریست اجباری شماره‌ها در هر سال؛
+- بازنویسی خودکار اسناد سال جدید هنگام بازسازی افتتاحیه؛
+- ویرایش داده مالی سال بسته بدون بازگشایی کنترل‌شده همان دوره.
+
+### معیارهای پذیرش معماری (برای Issue اجرایی آینده)
+
+1. یک پرونده با OriginFiscalPeriodId ثابت در سال‌های بعد قابل نمایش باشد؛ تغییر سال جاری Origin را تغییر ندهد.
+2. Single-DB بدون cross-database routing بتواند پرونده‌ها و اسناد هر سال را با CompanyId/FiscalPeriodId درست query کند.
+3. Company+FiscalPeriod DB بتواند پرونده بلندمدت را از Company owner بخواند و سند مالی را در DB دوره مقصد ثبت کند.
+4. Snapshot Party/Product شناسه پایدار، SourceVersion و دوره مقصد را حفظ کند و بازسازی آن تغییرات مقصد را بی‌قیدوشرط overwrite نکند.
+5. فقط پرونده Open به‌صورت پیش‌فرض Included شود؛ اجرای مجدد rollover تصمیم مدیر را بازنویسی نکند.
+6. مدیر مجاز Company بتواند Included/Excluded را با Permission و Audit تغییر دهد؛ System Administrator بدون grant شرکتی رد شود.
+7. وضعیت Source پرونده هنگام عملیات بررسی شود؛ Participation به‌تنهایی مجوز یا نشانه بازبودن پرونده نباشد.
+8. Closed period نوشتن مالی را رد کند؛ reopen همان دوره با Audit امکان اصلاح period-owned data را بدهد؛ ادامه Company-owned case به reopen نیاز نداشته باشد.
+9. Continuous numbering در چند DB دوره‌ای بدون تکرار اتمیک باشد؛ annual reset فقط با تنظیم صریح اعمال شود.
+10. افتتاحیه provisional با تغییرات مبدأ NeedsReview شود و Rebuild اسناد سال جدید را overwrite نکند.
+11. عملیات تکراری/هم‌زمان با IdempotencyKey، Unique Constraint و RowVersion ایمن باشد.
+12. تست‌های امنیتی نشان دهند حذف FiscalPeriod از Context مستقل، هیچ کنترل دیگری را حذف نکرده است.
+
+### خارج از دامنه
+
+- هرگونه Entity/Schema/Migration/API/UI/Permission/Runtime implementation؛
+- تعیین دقیق فیلدهای Party/Product Snapshot پیش از inventory کد؛
+- تعیین mapping وضعیت تمام زیرسیستم‌ها فراتر از قاعده Open؛
+- باز کردن Tenant+FiscalPeriod topology؛
+- تعیین retention و حذف دیتابیس Company owner؛
+- تغییر D-086 برای period-scope یا ایجاد TradeOperationalPeriod؛
+- تغییر معنای TenantId/CompanyId یا اجرای S3-0 Backfill.
+
+مراجع: D-030، D-062، D-063، D-064، D-074، D-084، D-086، D-087، D-103، D-105، D-111، D-114، D-115، D-116؛ FISCAL_PERIOD_DATA_MODEL.md.
