@@ -3590,3 +3590,10 @@
 - `ProformaChangeClassifier` افزوده شد: تغییر شرایط تجاری (ارز، Incoterm، خطوط چندکالایی، Snapshot مقدار، طرح پرداخت) ← Revision جدید؛ تمدید صرف اعتبار ← بدون Revision؛ کوتاه‌کردن اعتبار فقط گزارش می‌شود و تصمیم آن با مالک است.
 - بازبینی پس از Merge: #704 و #705 قبلاً در `main` ادغام شده‌اند (برخلاف فرض پرامپت)؛ کد و ۱۳۰ تست آن‌ها محلی موفق است و نقصی دیده نشد. `AwayFromZero` در تخصیص درصدی تصمیم مالک است و تغییری نکرد.
 - بدون Schema/Migration/API/UI؛ گیت‌های S3-0 بسته نشدند. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-proforma-change-classifier.md`.
+
+## 2026-11-23 — Vendor: Runbook چرخهٔ اول لایسنس Staging و handoffهای Customer/Trade (GLM)
+
+- **Runbook عملیاتی** `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE.md`: چرخهٔ کامل یک‌مشتملی Staging — آماده‌سازی DB/پیکربندی Vendor با متغیرهای `FARANO_VENDOR_*` و Migration صریح، bootstrap مدیر، کلید CNG Staging با ارجاع به Runbook #236 (بدون دوباره‌پیاده‌سازی)، ایجاد Customer/Installation/لایسنس شرکت‌محور `TRADE_IMPORT` با CompanyReference سرور-تولید، تأیید طبق D-109، صدور، صادرات پاکت (وابسته به PR #781)، مسیر Customer-side (Trust `Licensing:TrustedLicenseKeys`، Migration `--migrate`، enrollment، import با حساب Infrastructure)، فعال‌سازی Runtime Gate فقط در Staging با تأیید مالک، Restart، ماتریس منفی ده‌سناریویی و الگوی ثبت شواهد.
+- **handoff Customer** (`ISSUE-UNNUMBERED-vendor-to-customer-first-license-cycle-handoff.md`): قرارداد دقیق تحویل (endpoint صادرات، شکل `LicenseEnvelope`، payload v2)، جدول وضعیت واقعی Customer-side با شکاف‌ها (اجرای Migration، runtime enforcement، توزیع trust)، معیار پذیرش شش‌بندی؛ هیچ تغییر Customer ادعا نشده است.
+- **handoff Trade** (`ISSUE-401-trade-entitlement-handoff.md`): قرارداد `CompanyLicenseEntitlement` (CompanyReference opaque، `TRADE_IMPORT`)، محل resolve mapping، وضعیت واقعی زنجیره، مرز «entitlement ≠ مجوز عملیاتی کاربر»، API پیشنهادی مصرف از لایهٔ تصمیم موجود و تست‌های Company A/B؛ `DenyAllTradeModuleEntitlement` حفظ می‌شود.
+- فقط مستندات: بدون کد، `Server/**`، Migration، Schema، تنظیم runtime یا بازکردن هیچ گیت؛ تا اجرای واقعی روی میزبان Windows همهٔ گام‌های Runbook «Not Run» است.
