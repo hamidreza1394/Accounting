@@ -1,3 +1,8 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Faranou.Licensing.Contracts;
+using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
@@ -13,6 +18,11 @@ namespace Faranou.Vendor.Host.Authorization;
 /// <summary>Initial Vendor business APIs. Mutations are audited; resource checks always resolve persisted ownership.</summary>
 public static class VendorBusinessEndpoints
 {
+    private static readonly JsonSerializerOptions EnvelopeJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = false
+    };
+
     public static IEndpointRouteBuilder MapVendorBusinessEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var customers = endpoints.MapGroup("/api/vendor/customers");
@@ -488,6 +498,97 @@ public static class VendorBusinessEndpoints
                 VendorLicenseCompanyDraft.EffectiveSubsystems(item.CompanyEntitlementsDraftJson, item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
                 item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion), VendorLicenseCompanyDraft.ToResponse(item.CompanyEntitlementsDraftJson)));
         });
+
+        // Signed-envelope delivery for the offline license exchange (#394): returns the exact stored
+        // envelope JSON of the latest signed revision after re-verifying stored integrity, trust and
+        // signature. Export never mutates license state; delivery/ACK lifecycle tracking stays in the
+        // separate provisioning/amendment flows (#228/#393) and is not claimed here.
+        endpoints.MapGet("/api/vendor/licenses/{licenseId:guid}/envelope/export", async (
+            Guid licenseId, HttpContext context, IAuthorizationService authorization,
+            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit,
+            LicenseSigningTrustStore licenseTrustStore, TimeProvider timeProvider, CancellationToken ct) =>
+        {
+            var access = await authorization.AuthorizeAsync(context.User,
+                new VendorResourceDescriptor("license", licenseId),
+                VendorResourceCatalog.PolicyFor("license", VendorPermissionCatalog.LicensesRead));
+            if (!access.Succeeded) return Results.Forbid();
+
+            var license = await db.Licenses.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == licenseId, ct);
+            if (license is null) return Results.NotFound();
+
+            if (!string.Equals(license.Status, "Issued", StringComparison.Ordinal) ||
+                license.InstallationId is null)
+                return Results.Conflict(new { error = "license_envelope_not_ready" });
+
+            var storedEnvelope = await db.SignedLicenseEnvelopes.AsNoTracking()
+                .Where(item => item.LicenseId == licenseId)
+                .OrderByDescending(item => item.Sequence)
+                .FirstOrDefaultAsync(ct);
+            if (storedEnvelope is null || storedEnvelope.Sequence < 1 ||
+                string.IsNullOrWhiteSpace(storedEnvelope.EnvelopeJson))
+                return Results.Conflict(new { error = "license_envelope_missing" });
+
+            LicenseEnvelope? envelope;
+            try
+            {
+                envelope = JsonSerializer.Deserialize<LicenseEnvelope>(storedEnvelope.EnvelopeJson, EnvelopeJsonOptions);
+            }
+            catch (JsonException)
+            {
+                return Results.Conflict(new { error = "license_envelope_invalid" });
+            }
+
+            if (envelope is null ||
+                envelope.FormatVersion != LicenseAlgorithms.CurrentFormatVersion ||
+                !string.Equals(envelope.Kid, storedEnvelope.KeyId, StringComparison.Ordinal) ||
+                !string.Equals(envelope.Algorithm, storedEnvelope.Algorithm, StringComparison.Ordinal) ||
+                string.IsNullOrWhiteSpace(envelope.PayloadJson) ||
+                !string.Equals(
+                    Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(envelope.PayloadJson))).ToLowerInvariant(),
+                    storedEnvelope.PayloadSha256,
+                    StringComparison.Ordinal))
+                return Results.Conflict(new { error = "license_envelope_invalid" });
+
+            if (!licenseTrustStore.TryGetTrustedPublicKey(envelope.Kid, out var publicKey))
+                return Results.Json(
+                    new { error = "license_envelope_signing_key_untrusted" },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+
+            // Delivery keeps the signed bytes authoritative: signature and installation binding are
+            // re-verified, but the payload is exported exactly as stored — including a currently
+            // Restricted state — because that signed state is what the customer must persist (D-059).
+            var validator = new LicenseEnvelopeValidator(
+                new StaticTrustedKeyResolver([
+                    new TrustedPublicKey(envelope.Kid, envelope.Algorithm, publicKey.ToArray())
+                ]),
+                new EcdsaP256Sha256Verifier(),
+                new LicenseEvaluator(timeProvider));
+            var validation = validator.Validate(envelope, license.InstallationId.Value.ToString("D"));
+            if (!validation.Success || validation.Payload is null)
+                return Results.Conflict(new
+                {
+                    error = string.Equals(validation.ErrorCode, "evaluation_invalid", StringComparison.Ordinal)
+                        ? "license_envelope_not_currently_valid"
+                        : "license_envelope_signature_invalid"
+                });
+
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                actor.Id, "vendor.license.envelope-exported", nameof(VendorLicense),
+                license.Id.ToString("D"),
+                System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
+            await tx.CommitAsync(ct);
+
+            context.Response.Headers["Cache-Control"] = "no-store";
+            context.Response.Headers["Pragma"] = "no-cache";
+            // Exactly the stored envelope JSON: the customer import deserializes the same
+            // LicenseEnvelope contract and re-verifies the signature over the same payload bytes.
+            return Results.Text(storedEnvelope.EnvelopeJson, "application/json");
+        }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.LicensesRead));
 
         return endpoints;
     }
