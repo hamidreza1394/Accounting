@@ -11,8 +11,8 @@
 #
 # Assert-FaranouCustomerPublishClean (G2 / D-041) refuses Vendor assemblies and private-key
 # material in the customer package after a real publish, and enforces the D-041 G2 allow-list
-# of the customer package (publish-assembly-allowlist.txt next to this lib): every managed or
-# native binary (.dll/.exe/.so/.dylib and the extension-less apphost) outside wwwroot/ must be
+# of the customer package (publish-assembly-allowlist.txt next to this lib): every published assembly/native binary or symbol file
+# (.dll/.exe/.so/.dylib/.pdb and the extension-less apphost) outside wwwroot/ must be
 # explicitly listed; anything unlisted is refused fail-closed. Non-binary root files are not
 # assemblies and are skipped here; the PEM scan still inspects their content.
 
