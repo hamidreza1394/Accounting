@@ -3624,3 +3624,10 @@
 - O-1: دربارهٔ خالی‌بودن `trade.*` در نصب‌های مشتری هیچ شاهدی نیست (Unknown)؛ گزینهٔ «فرض خالی‌بودن» کنار گذاشته شد. پیشنهاد (`Proposed`): expand Migration ← فرمان اپراتوری Backfill در Host ← contract Migration با Guard؛ منبع نگاشت `Companies.TenantId` تأییدشدهٔ Core؛ بدون Staging.
 - O-2: همهٔ Unique Indexهای فعلی عملاً Company-scoped هستند؛ پیشنهاد Company-scoped برای همه. O-3: جزء T1 است. O-4: توقف کامل و گزارش، بدون حدس.
 - بدون Schema/Migration/کد/API/UI؛ هیچ تست یا CI اجرا نشد. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-tenant-company-o1-o4-analysis-2026-11-23.md`.
+
+## 2026-11-23 — Trade: اصلاحیهٔ O-1 (هم‌زمانی Backfill، Transaction، Manifest) و نقشهٔ C1..T2 — فقط مستندات (Claude)
+
+- از سورس: `DatabaseMigrationHost.RunAsync` با `MigrateAsync` بدون Target هر Migration pending را پشت‌سرهم اعمال می‌کند؛ قفل `sp_getapplock` (Session، Timeout=0) Advisory است و API/Store/SQL مستقیم از آن پیروی نمی‌کنند؛ Serializable و قفل Advisory توقف نویسنده‌ها نیستند. پس Backfill باید همهٔ ردیف‌ها را (نه فقط NULL) راستی‌آزمایی کند، با `TABLOCKX` حصار بگیرد و زیر Maintenance Window اجرا شود.
+- Hash اثبات صحت نیست و در Trade لازم نیست؛ فقط در C2 برای شناسایی فایل Manifest. قاعدهٔ تازه R1: شناسهٔ Tenant با هیچ `Company.Id` برابر نباشد. N-5b مانع T1 نیست.
+- Unknown: رفتار دقیق Transaction/History/قفل داخلی EF 10 روی SQL Server (مستند رسمی دریافت نشد، SQL Server در محیط نبود)؛ داده و حجم جدول‌های Trade در نصب‌ها.
+- بدون Schema/Migration/کد/API/UI؛ هیچ تست یا CI اجرا نشد. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-tenant-company-o1-o4-analysis-2026-11-23.md` §۱۰.
