@@ -89,6 +89,7 @@ try {
     }
     Set-File (Join-Path $allowOk '.faranou-publish-output') "marker`n"
     Set-File (Join-Path $allowOk 'Server.dll')
+    Set-File (Join-Path $allowOk 'Server.pdb')
     Set-File (Join-Path $allowOk 'Server')
     Set-File (Join-Path $allowOk 'Application.dll')
     Set-File (Join-Path $allowOk 'Faranou.Licensing.Contracts.dll')
