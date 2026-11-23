@@ -29,7 +29,7 @@
 
 ## فایل‌های تغییرکرده
 - docs/VENDOR_OPERATIONAL_READINESS_CHECKLIST.md — اصلاح شرط امضای v5 و تفکیک D-107 از PKCS#11؛ تصحیح وضعیت CompanyReference mapping در برابر Bootstrap D-110؛ حذف الزام اشتباه حضور فیزیکی دو اپراتور برای CNG SoftwareProtected؛ به‌روزرسانی مبنای سند و لینک راهنمای استقرار.
-- docs/VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md — نقشه استقرار Local/Remote و معیارهای Local runnable، Staging deployable، Customer integrated و Operationally verified.
+- docs/VENDOR_LOCAL_REMOTE_DEPLOYMENT_READINESS.md — نقشه استقرار Local/Remote، دستورات واقعی build/publish/run، کلید اتصال Vendor DB، bootstrap اپراتور Vendor و معیارهای Local runnable، Staging deployable، Customer integrated و Operationally verified.
 - Vendor/Vendor.Host/Program.cs — اصلاح comment قدیمی که signer را به KMS/HSM گره می‌زد؛ فقط توضیح کد اصلاح شد و رفتار/ثبت DI تغییر نکرد.
 - docs/handoffs/ISSUE-768-vendor-deployment-readiness.md — این گزارش.
 
@@ -69,4 +69,4 @@
 ## شناسه‌های Git
 - Branch: agent/768-vendor-deployment-readiness
 - Commit: پس از ثبت همه فایل‌ها درج می‌شود.
-- Pull Request: پس از بازبینی نهایی و هماهنگی فایل‌های مشترک ایجاد می‌شود.
+- Pull Request: #769 — Draft؛ CI برای HEAD فعلی در حال اجراست.
