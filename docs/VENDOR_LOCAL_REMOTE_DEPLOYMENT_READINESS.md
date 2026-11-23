@@ -40,7 +40,11 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 
 - اجرای Vendor.sln در Visual Studio 2026 نسخه 18.0 یا بالاتر و .NET 10 SDK؛ مسیر Host اجرایی Vendor/Vendor.Host/Vendor.Host.csproj است.
 - اجرای مستقیم Host از ریشه مخزن پس از تنظیمات: dotnet run --project Vendor/Vendor.Host/Vendor.Host.csproj.
+- برای آماده‌سازی UI مستقل Vendor، دستورات تأییدشده CI عبارت‌اند از: در Vendor/Vendor.Web اجرای npm ci، npm run typecheck، npm test و npm run build؛ سپس از ریشه مخزن اجرای dotnet publish Vendor/Vendor.Host/Vendor.Host.csproj --configuration Release --output <absolute-output-path>. مسیر خروجی باید خارج از سورس و مجزا از Customer publish باشد.
+- خروجی Vendor باید حداقل Faranou.Vendor.Host.dll، wwwroot/index.html و bundleهای JS/CSS در wwwroot/assets داشته باشد. CI این موارد را بررسی می‌کند و فایل‌های private-key با پسوندهای حساس یا PEM private-key marker را رد می‌کند؛ این بررسی جایگزین ممیزی کامل artifact و allow-list مستقل نیست.
+- اجرای Host منتشرشده از پوشه خروجی: dotnet Faranou.Vendor.Host.dll. فرمان bootstrap-admin برای ساخت اولین اپراتور Vendor یک فرمان تعاملی و یک‌بارمصرف است؛ FARANO_VENDOR_Bootstrap__Secret باید از Secret Store/Environment و حداقل ۳۲ بایت باشد. این فرمان فقط مدیر Vendor را می‌سازد و به Bootstrap مدیر Customer طبق D-110 ارتباطی ندارد.
 - Host فقط از Configuration با پیشوند FARANO_VENDOR_ استفاده می‌کند. کلید اتصال Vendor DB برابر ConnectionStrings:VendorDb و نام متغیر محیطی آن FARANO_VENDOR_ConnectionStrings__VendorDb است؛ هیچ مقدار پیش‌فرض یا fallback به Customer DB وجود ندارد.
+- در Production، FARANO_VENDOR_DataProtection__KeysDirectory باید به مسیر absolute و پایدار با ACL محدود به هویت سرویس اشاره کند و FARANO_VENDOR_AllowedHosts باید فهرست صریح میزبان‌های مجاز باشد؛ wildcard پذیرفته نیست. تنظیمات و کلیدهای Data Protection بین Staging و Production مشترک نشوند.
 - نمونه تنظیم موقت PowerShell (فقط placeholder؛ مقدار واقعی را در محیط خود وارد کنید): $env:FARANO_VENDOR_ConnectionStrings__VendorDb = '<Vendor-only SQL Server connection string>'. مقدار واقعی را در Git یا گزارش ثبت نکنید.
 - اجرای Customer در پردازه/پورت مستقل؛ برای آزمون integration حداقل دو process مستقل لازم است.
 - استفاده از دو دیتابیس آزمایشی مستقل، مثلاً FaranoVendor_Dev و FaranoCustomer_Dev؛ نام‌ها نمونه‌اند و باید با محیط واقعی هماهنگ شوند.
