@@ -153,7 +153,7 @@ $env:Licensing__DeploymentMode = "Dedicated"
 | امضا با کلید دیگر + kid همان | import مشتری | رد (signature_invalid) |
 | KeyId ناشناخته/ابطال‌شده در Trust | export Vendor (503) و import مشتری | رد دو طرف |
 | InstallationId ناسازگار | binding در Validate هر دو طرف | رد |
-| **آزمون زوجی Company A/B** | entitlement resolution مشتری | Company A با mapping معتبر و `TRADE_IMPORT` مجاز؛ Company B بدون entitlement متناظر رد شود؛ هر دو نتیجه با هم ثبت شوند. این آزمون تا تأیید تکمیل mapping موضوع #392 و enforcement موضوع #391 **Not Run / Blocked** است؛ بسته‌شدن Issue #391 به‌تنهایی شاهد اجرای enforcement نیست. پس از فراهم‌شدن هر دو پیش‌نیاز، اجرای آزمون و ثبت نتیجه با تأیید مالک انجام شود. |
+| **آزمون زوجی Company A/B** | entitlement resolution مشتری | resolver برای Company A با mapping معتبر و entitlement `TRADE_IMPORT` نتیجهٔ entitled و برای Company B بدون entitlement متناظر نتیجهٔ not-entitled بدهد؛ هر دو نتیجه با هم ثبت شوند. این فقط آزمون entitlement resolution است و مجوز اجرای عملیات Trade نیست؛ `DenyAllTradeModuleEntitlement` بدون تصمیم صریح مالک حفظ می‌شود. آزمون تا تأیید تکمیل mapping موضوع #392 و enforcement موضوع #391 **Not Run / Blocked** است؛ بسته‌شدن Issue #391 به‌تنهایی شاهد اجرای enforcement نیست. پس از فراهم‌شدن هر دو پیش‌نیاز، اجرای آزمون و ثبت نتیجه با تأیید مالک انجام شود. |
 | Sequence قدیمی / Replay | state پایدار مشتری + idempotency | رد/بی‌اثر |
 | لایسنس منقضی | ارزیابی زمان | `Invalid`؛ import رد |
 | پاکت بدون `TRADE_IMPORT` | entitlement gate | Trade باز نمی‌شود؛ `DenyAllTradeModuleEntitlement` دست نمی‌خورد |
