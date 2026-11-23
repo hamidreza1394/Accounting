@@ -98,8 +98,8 @@ faranou_prepare_output() {
 # Uses `command grep` so a shell alias (e.g. ugrep) cannot reinterpret the pattern.
 #
 # The same function also enforces the D-041 G2 allow-list of the customer package
-# (scripts/lib/publish-assembly-allowlist.txt, same directory as this lib): every managed or
-# native binary (.dll/.exe/.so/.dylib and the extension-less apphost) outside wwwroot/ must
+# (scripts/lib/publish-assembly-allowlist.txt, same directory as this lib): every published assembly/native binary or symbol file
+# (.dll/.exe/.so/.dylib/.pdb and the extension-less apphost) outside wwwroot/ must
 # be explicitly listed; anything unlisted is refused fail-closed. Non-binary root files are
 # not assemblies and are skipped here; the PEM scan above still inspects their content.
 FARANOU_PUBLISH_ALLOWLIST="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/publish-assembly-allowlist.txt"
