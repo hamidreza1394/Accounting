@@ -199,7 +199,7 @@ FIND_TEXT
     if [[ "$base" == *.* ]]; then
       ext="${base##*.}"
       case "${ext,,}" in
-        dll|exe|so|dylib)
+        dll|exe|so|dylib|pdb)
           if [ -z "${root_ok["${base,,}"]:-}" ]; then
             echo "publish: G2 content guard: file outside the D-041 publish allow-list: $rel" >&2
             found=1
