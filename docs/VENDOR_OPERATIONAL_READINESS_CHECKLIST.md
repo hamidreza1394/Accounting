@@ -33,9 +33,12 @@
 
 ## ۲) Gate دوکلیدی صدور Provisioning v5
 
-- **سازوکار:** `VendorProvisioningCompanyReferenceGate` = تنظیم `Provisioning:CompanyReferenceIssuance:Enabled` (پیش‌فرض خاموش — کلید اول) **و** interlock کدی `CustomerConsumerReady=false` (`VendorProvisioningCompanyReferenceGate.cs:22` — کلید دوم)؛ شرط امضا با PKCS#11/HSM طبق D-055 با `Signing:Pkcs11:Enabled` به‌عنوان پیش‌نیاز اولیه در همان کلاس مستند شده است.
-- **وضعیت:** هر دو کلید بسته‌اند؛ هیچ بستهٔ v5 عملیاتی صادر نمی‌شود (LICENSING.md هدر وضعیت).
-- **پیش‌نیاز باز شدن (فقط مالک):** تکمیل زنجیرهٔ #392 (mapping/bootstrap و migration مشتری)، trust مشتری و ACK (#235)، تست Staging دو میزبان، و تصمیم صریح مالک. تست interlock موجود (`VendorEntitlementEnforcementGuardTests`) باید با باز شدن گیت هم سبز بماند و هیچ فلگی توسط عامل تغییر نکند.
+- **سازوکار واقعی Gate:** `VendorProvisioningCompanyReferenceGate` دو شرط مستقل دارد: تنظیم `Provisioning:CompanyReferenceIssuance:Enabled` (پیش‌فرض خاموش) و interlock کدی `CustomerConsumerReady=false` در `VendorProvisioningCompanyReferenceGate.cs`. هیچ‌کدام به‌تنهایی برای صدور v5 کافی نیست.
+- **اصلاح مرز امضا بر اساس D-107:** امضای مرکزی License/Provisioning/Amendment در Vendor V1 می‌تواند با Provider ویندوزی CNG و Certificate Store، کلید MachineKey غیرقابل‌استخراج و سطح صریح `SoftwareProtected` انجام شود. فعال‌سازی Provider از مسیر `Signing:CertificateStore:Enabled` است؛ Provider فقط روی Windows و با شرایط Store/KeyUsage/ExportPolicy تعریف‌شده در `docs/SECURITY.md` کار می‌کند. این مسیر به HSM، TPM، دانگل یا `Signing:Pkcs11:Enabled` نیاز ندارد.
+- **تفکیک PKCS#11:** مسیر PKCS#11 و تصمیم‌های D-055/D-056 فقط در دامنه‌هایی که D-107 supersede نکرده (از جمله signer مستقل Offline Revocation و الزامات جداگانه Customer ACK/Installation Identity) باقی می‌مانند. شرط `Signing:Pkcs11:Enabled` را نباید پیش‌نیاز امضای مرکزی License/Provisioning یا Gate شرکت‌محور v5 معرفی کرد.
+- **وضعیت:** Gate همچنان بسته است: `CustomerConsumerReady=false` و `Provisioning:CompanyReferenceIssuance:Enabled` پیش‌فرض خاموش است. وجود CNG Provider به معنی فعال بودن آن، وجود کلید عملیاتی یا آماده‌بودن Key Ceremony نیست. تا بازشدن مجاز Gate، صدور v5 باید fail-closed بماند.
+- **پیش‌نیازهای بازبینی‌شده:** Customer v5 verifier، Mapping و Apply اتمیک در main پیاده‌سازی شده‌اند؛ اما اجرای Migration `20261116070805_AddCompanySetupRecords` روی Staging واقعی، Bootstrap اختصاصی Dedicated/Offline طبق D-110، توزیع/چرخش Trust و آزمون شبکه‌ای دو میزبان طبق #235، و تصمیم/تأیید صریح مالک باقی‌اند. این موارد را با هم یکی نکنید؛ تکمیل کد Consumer به‌تنهایی مجوز بازکردن Gate نیست.
+- **کنترل:** تست interlock موجود (`VendorEntitlementEnforcementGuardTests`) باید سبز بماند. هیچ فلگ، interlock یا رفتار fail-closed برای سبزکردن تست تغییر داده نشود. هر فعال‌سازی صرفاً در Staging ایزوله و پس از شواهد پیش‌نیازها و تأیید مالک مجاز است.
 
 ## ۳) موارد زیرساختی و قراردادی
 
