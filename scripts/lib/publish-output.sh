@@ -174,7 +174,7 @@ FIND_TEXT
     rel="${f#"$output"/}"
     case "$rel" in wwwroot/*) continue ;; esac
     base="${rel##*/}"
-    case "$base" in .*) continue ;; esac
+    case "$base" in .faranou-publish-output) continue ;; esac
     case "$rel" in
       runtimes/*)
         if [ -z "${run_ok["${rel,,}"]:-}" ]; then
