@@ -124,7 +124,7 @@ function Assert-FaranouPublishAllowList([string]$Output) {
         }
     }
 
-    $binaryExt = @('.dll', '.exe', '.so', '.dylib')
+    $binaryExt = @('.dll', '.exe', '.so', '.dylib', '.pdb')
     $violations = @()
     Get-ChildItem -LiteralPath $Output -Recurse -File -Force -ErrorAction SilentlyContinue | ForEach-Object {
         $rel = $_.FullName.Substring($Output.Length).TrimStart('\', '/')
