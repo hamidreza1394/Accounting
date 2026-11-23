@@ -1,13 +1,13 @@
 # تحویل ممیزی Vendor — 2026-11-23
 
 - **Issue:** `UNNUMBERED` — ممیزی و همگام‌سازی وضعیت Vendor؛ Issue جدید یا شماره ساختگی ایجاد نشده است.
-- **مبنای دقیق:** `main@560ff2890be8bbf87795f30dd85f4eaf3cd1f131`.
+- **مبنای دقیق:** `main@06fdb015ddd113c2b2b5a715310a83759488cfca`.
 - **دامنه:** فقط Vendor/Licensing و شکاف‌های مرتبط؛ بدون تغییر کد اجرایی، Schema، Migration، Customer-side consumer یا `Server/**`.
 
 ## ۱) شواهد GitHub
 
-- `main` از GitHub API خوانده شد؛ PR #763 آخرین Merge ثبت‌شده روی آن است.
-- تنها PR باز مخزن #765 است؛ Draft و خارج از دامنه Vendor، با 14/14 Check Run موفق روی HEAD `a85de4a52bb0a80627e3eef43ed3239c90f3b720`. این PR دست‌نخورده ماند.
+- `main` از GitHub API خوانده شد؛ PR #765 پس از بازبینی و 14/14 Check Run موفق با squash commit `06fdb015ddd113c2b2b5a715310a83759488cfca` ادغام شد و D-117 اکنون در main است.
+- PR #763 آخرین Merge کد/قابلیت Vendor پیش از این snapshot است. PRهای باز در زمان آخرین بازبینی: #766 (همین PR)، #767 (Trade)، #769 (Vendor deployment readiness) و #770 (Vendor publish guard G2). وضعیت mergeability و CI آن‌ها باید روی HEAD فعلی بررسی شود.
 - PRهای #281، #282 و #284 همگی Merged هستند. Check Runهای merge commitها به‌ترتیب 12/12، 13/13 و 13/13 موفق‌اند. برای #282، .NET CI پس از Merge روی همان merge SHA نیز `completed/success` است.
 - روی main فعلی 12/12 Check Run موفق‌اند: هفت Job در .NET CI، یک Job در Semgrep و چهار تحلیل CodeQL. Runها:
   - .NET CI: https://github.com/hamidreza1394/Accounting/actions/runs/45060571229
@@ -59,5 +59,5 @@
 ## ۶) گام بعدی
 
 1. پس از تصمیم مالک درباره قرارداد S-B، یک PR کوچک Vendor-only برای Amendment delivery/ACK tracking طراحی شود؛ تست‌های SQL Server، idempotency/replay/conflict و re-delivery همان بایت‌ها لازم‌اند.
-2. CompanyReference mapping/bootstrap و Migration مشتری فقط در #392؛ consumer/trust/ACK فقط در #235.
+2. CompanyReference mapping و Customer v5 Apply در #684/#686 پیاده شده‌اند؛ Bootstrap مستقل TenantOwner طبق D-110 هنوز NotImplemented است و Migration مشتری هنوز روی DB واقعی اجرا نشده. consumer/trust/ACK مشتری فقط در #235 باقی است.
 3. Key Ceremony #236 و Production audit sink #107 فقط با میزبان، identity، مقصد و دسترسی واقعی انجام شوند؛ تا آن زمان fail-closed بمانند.
