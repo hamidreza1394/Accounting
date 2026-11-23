@@ -166,6 +166,13 @@ try {
     Set-File $hiddenBinary
     [System.IO.File]::SetAttributes($hiddenBinary, [System.IO.FileAttributes]::Hidden)
     Assert-Rejected 'OS-hidden unlisted binary rejected' $hiddenEvil
+
+    # --- negative: unlisted PDB must not bypass the root allow-list --------------------------
+    $pdbEvil = Join-Path $sandbox 'allow-pdb-evil'
+    New-Item -ItemType Directory -Path $pdbEvil -Force | Out-Null
+    Set-File (Join-Path $pdbEvil 'Server.dll')
+    Set-File (Join-Path $pdbEvil 'NotListed.Library.pdb')
+    Assert-Rejected 'unlisted PDB rejected' $pdbEvil
 }
 finally {
     Remove-Item -LiteralPath $sandbox -Recurse -Force -ErrorAction SilentlyContinue
