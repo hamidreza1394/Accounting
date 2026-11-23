@@ -48,6 +48,19 @@
 - کلاینت حق تعیین TenantId معتبر را ندارد؛ CompanyId ارسالی نیز فقط درخواست انتخاب است و باید با عضویت فعال تطبیق داده شود.
 - هیچ Global Query Filter بدون پوشش صریح مسیرهای ورود، عملیات سیستمی، jobها و دسترسی‌های بدون Company جاری اضافه نشود (D-013).
 
+## هویت کاربران مشتری و عضویت چندشرکتی (D-118؛ مدل هدف)
+
+- هر User مشتری دقیقاً به یک Tenant تعلق دارد؛ `Users.TenantId` در مدل هدف اجباری است و User به Company وابسته نیست.
+- Username در محدوده Tenant یکتا است؛ دو Tenant مستقل می‌توانند Username یکسان داشته باشند. Login ابتدا Tenant را از مسیر معتبر D-103 resolve می‌کند و سپس `TenantId + normalized Username` را جستجو می‌کند.
+- `UserCompanyMemberships` یک رابطه Company-owned است و در مدل هدف `TenantId` و `CompanyId` مستقل دارد. یکتایی آن `(UserId, TenantId, CompanyId)` است؛ FK مرکب به User و Company باید هم‌تعلقی Tenant را تضمین کند.
+- `UserSessions` به User همان Tenant تعلق دارد؛ برای تضمین FK مرکب، TenantId در Session یا معادل رابطه‌ای قابل اثبات لازم است. Session به Company وابسته نیست، چون Company پس از Login انتخاب می‌شود.
+- `Users.DefaultCompanyId` صرفاً ترجیح است؛ اگر حفظ شود باید به Company همان Tenant اشاره کند و به‌تنهایی مجوز ایجاد نمی‌کند.
+- `LoginLogs` می‌تواند Tenant را از UserId معتبر resolve کند؛ افزودن TenantId/CompanyId صرفاً برای تکرار داده مجاز نیست.
+- Email، CellPhoneNumber و verification keyها طبق D-118 فعلاً Unique Index سراسری موجود را حفظ می‌کنند؛ تغییر دامنه آن‌ها نیازمند تصمیم مستقل است.
+- Master infrastructure account طبق D-029/D-064 خارج از جدول هویت کاربران مشتری است؛ Vendor identity نیز در سامانه جداگانه می‌ماند.
+
+این قرارداد، هدف معماری است و با وضعیت فعلی Schema اشتباه گرفته نشود. در Schema فعلی هنوز User فاقد TenantId است، Username/Email/Mobile سراسری‌اند، UserSession فاقد TenantId است و `UserCompanyMemberships` از TenantId legacy به‌عنوان CompanyId استفاده می‌کند. تغییرات فقط پس از بسته‌شدن گیت‌های S3-0 و مجوز مستقل Migration انجام می‌شوند.
+
 ## توصیف تاریخی مدل چندمستاجری افزوده‌شده در Issue #16
 - در مدل فعلی `Company` ریشه داده و مرز Tenant تلقی شده است؛ این توصیف، وضعیت تاریخی پیاده‌سازی است و مدل هدف D-087 نیست.
 - `UserCompanyMembership`: اتصال شناسه کاربر مرکزی به شرکت و نقش همان شرکت؛ ترکیب UserId/TenantId یکتا است.
