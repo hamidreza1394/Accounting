@@ -2403,12 +2403,28 @@ D-013، D-087، D-088 معتبر می‌مانند. OD-6 و OD-6a در `handoffs
 D-013، D-087، D-088؛ `handoffs/ISSUE-397-s3-0e-tenant-company-ownership-audit.md`، `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md` (OD-6، OD-6a).
 
 ## D-090 — یکپارچگی Tenant و Company در Trade (OD-11)
-- **وضعیت تصمیم:** Proposed — تأیید مالک لازم است؛ Accepted نشده.
-- **وضعیت پیاده‌سازی:** NotImplemented
-- **تاریخ:** 2026-11-15
+- **وضعیت تصمیم:** Accepted — تأیید صریح مالک محصول در 2026-11-23 (Q-4)؛ پیش‌تر `Proposed` بود (2026-11-15). متن پیشنهاد اولیه در پایین حفظ شده و بخش «تصمیم مالک (2026-11-23)» آن را تکمیل می‌کند.
+- **وضعیت پیاده‌سازی:** NotImplemented — این تأیید مجوز Schema، Migration، تغییر کد یا تغییر `TradeAccessContext`/`TradePeriodScope` نیست (بخش «حدود تصمیم»).
+- **تاریخ:** 2026-11-15؛ تأیید: 2026-11-23
 
 ### زمینه و پیشنهاد
 Host فقط زوج اعتبارسنجی‌شدهٔ `(TenantId, CompanyId)` را به Trade می‌دهد؛ Storeها هر دو را در Query و Insert کنترل می‌کنند؛ بدون FK به Core. محدودیت: درج مستقیم SQL ناسازگار در سطح DB متوقف نمی‌شود و باید مستند بماند.
+
+### تصمیم مالک (2026-11-23، Q-4)
+1. Host فقط زوج معتبر `(TenantId, CompanyId)` را از Context سمت سرور و قابل اعتماد به Trade تحویل می‌دهد.
+2. Trade این دو شناسه را به‌عنوان منبع معتبر از ورودی کاربر، Query String، Request Body یا Header غیرقابل اعتماد نمی‌پذیرد.
+3. تمام Queryهای Company-owned هر دو شناسه را کنترل می‌کنند.
+4. تمام Insertها هر دو شناسه را با Context معتبر کنترل می‌کنند.
+5. روابط بین Entityها طوری طراحی می‌شوند که اتصال داده‌های متعلق به Tenant یا Company نامرتبط ممکن نباشد؛ در محل مناسب از Composite Alternate Key و Composite Foreign Key استفاده می‌شود.
+6. Trade برای این کنترل به جداول Core وابستگی مستقیم پیدا نمی‌کند (رد FK/Reference مستقیم به `Companies` بالا همچنان برقرار است).
+7. اعتبار زوج در مرز Host تأمین می‌شود و Trade آن را به‌صورت دفاع در عمق نیز کنترل می‌کند.
+8. این تصمیم به‌معنی اعتماد کورکورانه به هر دو مقدار نیست؛ مسیر فعلی تولید Context (فقط Company؛ Tenant Resolution امروز وجود ندارد)، سازوکارهای فعلی جلوگیری از Context جعلی یا باقی‌مانده و شکاف‌های آن‌ها نسبت به زوج `(TenantId, CompanyId)` در `docs/handoffs/ISSUE-UNNUMBERED-trade-tenant-company-owner-decisions-2026-11-23.md` بخش ۴ ثبت شده است.
+
+### حدود تصمیم (آنچه Accepted نشد)
+- تغییر `TradeAccessContext` و `TradePeriodScope` (N-5/N-5b) و هر تغییر Permission، Authorization یا Entitlement همچنان باز است.
+- سازوکار انتقال نگاشت Company→Tenant به Trade در Backfill (Trade به Core وابسته نمی‌شود) باز است؛ D-121.
+- جزئیات Unique Index هر فیلد، سیاست رکوردهای بدون نگاشت و حذف/غیرفعال‌سازی داده قدیمی باز است.
+- تأیید D-090 مجوز ایجاد جدول، ستون، Migration یا Backfill نیست؛ شکل فیزیکی: D-120، ترتیب: D-121.
 
 ### گزینه‌های بررسی‌شده و دلایل رد
 - FK یا Reference مستقیم به `Companies`: وابستگی Trade→Core می‌سازد و استخراج schema `trade` به دیتابیس مستقل را ناممکن می‌کند؛ فقط با ADR جدا.
@@ -2419,7 +2435,7 @@ Host فقط زوج اعتبارسنجی‌شدهٔ `(TenantId, CompanyId)` را 
 ریسک باقی‌مانده: داده ناسازگار با ورود مستقیم SQL؛ پوشش با آزمون Store/Use Case و مستندسازی. نشت بین Tenantها با آزمون دو-Tenant روی SQL Server بررسی می‌شود.
 
 ### نحوهٔ مهاجرت
-این تصمیم Schema/Migration ندارد. افزودن `CompanyId` به جدول‌های Trade در S3 و با تأیید جداگانهٔ Schema انجام می‌شود.
+این تصمیم Schema/Migration ندارد. افزودن `CompanyId` به جدول‌های Trade در S3 و با تأیید جداگانهٔ Schema انجام می‌شود. *(به‌روزرسانی 2026-11-23: طبق D-120، `CompanyId` از Rename همان ستون قدیمی `TenantId` به‌دست می‌آید و ستون جدید `TenantId` است؛ این جمله در همین بخش superseded است.)*
 
 ### معیار پذیرش و روش تأیید
 - Store با `CompanyId` متعلق به Tenant دیگر رد شود؛ نشت List/Find/Update/Unique آزمون شود (SQL Server).
@@ -3399,3 +3415,77 @@ D-030، D-074، D-082، D-084، D-087، D-103، D-105؛ `docs/TRADE_DESIGN_V3_2.
 7. Master infrastructure account و Vendor identity تحت تأثیر تغییر Userهای مشتری قرار نگیرند.
 8. آزمون‌های Integration و FK/Unique روی SQL Server واقعی اجرا شوند؛ InMemory به‌تنهایی کافی نیست.
 
+## D-119 — مالکیت Party و Product در Trade: Company-owned بدون اشتراک خودکار (2026-11-23)
+
+- **وضعیت تصمیم:** Accepted — تأیید صریح مالک محصول در 2026-11-23 (Q-1).
+- **وضعیت پیاده‌سازی:** NotImplemented؛ این ADR مجوز Entity، ستون، FK، Index، Migration، API، تغییر Permission یا تغییر کد نیست.
+- **دامنه:** فقط `Party`، `PartyRoleAssignment`، `PartyBankAccount`، `Product` و `ProductIdentifier` در Trade.
+- **مراجع:** D-087، D-090، D-105 (بند ۱ و ۲)، D-117 (بند ۲)، D-120.
+
+### تصمیم مالک
+1. `Party` و `Product` هر دو **Company-owned** هستند و اطلاعات اشخاص و کالاها برای هر شرکت مستقل است.
+2. اشتراک خودکار Party یا Product در سطح Tenant وجود ندارد؛ Shared Catalog و Tenant-level shared master data در این مرحله ایجاد نمی‌شود.
+3. عضویت دو شرکت در یک Tenant به‌تنهایی دسترسی یک شرکت به Party یا Product شرکت دیگر ایجاد نمی‌کند.
+4. جهت کلی یکتایی کدها و شناسه‌ها (کد Party، کد Product، IBAN، شماره حساب، GTIN، IRC) بر مبنای مالکیت Company است؛ **دامنهٔ یکتایی هر فیلد تصمیم باز است** (بخش «باز» و O-2 در handoff) و با این بند قطعی نشده است.
+5. روابط میان این موجودیت‌ها (مانند تأمین‌کنندهٔ کالا در `ProductIdentifier.SupplierPartyId`) باید از نظر تعلق به همان Company اعتبارسنجی شوند و در سطح دیتابیس با Alternate Key و Foreign Key مرکب شامل هر دو شناسه پشتیبانی شوند (D-090).
+
+### رابطه با تصمیم‌های قبلی
+- بند ۱ D-105 (پیش‌فرض Company-owned) برای این دو نوع موجودیت قطعی شد؛ بند ۳ همان ADR (اشتراک، تصمیم مستقل هر نوع) در این مرحله برای این دو نوع «اشتراک نمی‌شود» تعیین شد. تغییر آینده تصمیم مستقل می‌خواهد (D-105 بند ۹).
+- D-117 بند ۲ (Snapshot Party/Product هنگام آماده‌سازی دوره در توپولوژی Company+FiscalPeriod DB) تغییر نمی‌کند؛ شناسهٔ پایدار مرجع همچنان باید حفظ شود.
+- D-117 بند ۴ (`OriginFiscalPeriodId`): مشمول‌بودن این پنج جدول **تصمیم نشده** است؛ این ADR آن را اضافه یا رد نمی‌کند؛ این ADR هیچ ستون `FiscalPeriodId` یا دوره‌ای به این جدول‌ها اضافه نمی‌کند (پیشنهاد؛ هر افزودن آینده تصمیم مستقل است).
+
+### باز می‌ماند
+- سیاست Unique Index هر فیلد (برای مثال آیا IBAN در سطح Company یا Tenant یکتا باشد؛ پیش‌فرض این ADR Company است).
+- اینکه نوشتن Party/Product در دورهٔ مالی بسته مجاز بماند: امروز `PeriodIndependent` روی Endpointها است و کامنت‌ها/تست‌ها آن را با عبارت «tenant-level master data (D-063 بند ۳)» توجیه می‌کنند. عبارت با این ADR هم‌خوان نیست؛ **رفتار** تا تصمیم مالک تغییر نمی‌کند (Permission/Authorization باز است).
+- اصلاح کامنت‌ها و نام تست‌ها در PR پیاده‌سازی آینده انجام می‌شود، نه در این ADR.
+
+## D-120 — تفکیک فیزیکی TenantId و CompanyId در Trade (2026-11-23)
+
+- **وضعیت تصمیم:** Accepted — تأیید صریح مالک محصول در 2026-11-23 (Q-2) برای جهت معماری و الزامات Migration آینده.
+- **وضعیت پیاده‌سازی:** NotImplemented؛ هیچ Migration، Schema، Backfill یا تغییر کد مجاز یا انجام‌شده نیست. اجرای هر Migration مجوز جدا و شواهد SQL Server آزمایشی می‌خواهد.
+- **دامنه:** جدول‌ها و مدل Trade. جدول‌های Core تابع ADR خودشان (از جمله D-091) هستند.
+- **مراجع:** D-087، D-090، D-091، D-095، D-105، D-119، D-121.
+
+### زمینه (از سورس، 2026-11-23)
+در `Modules/Trade` فقط `TradeEntity.TenantId` وجود دارد و `TradeAuthorizationAdapter` مقدار `Company.Id` را در آن می‌گذارد؛ هر پنج Entity مدل Trade (سه جدول فیزیکی ساخته‌شده) این ستون را دارند و `CompanyId` وجود ندارد. تست `LegacyTenantIdEntityContractTests` همین معنای legacy را قفل می‌کند.
+
+### تصمیم مالک
+1. ستون فیزیکی قدیمی `TenantId` که در واقع `Company.Id` را نگه می‌دارد باید **واقعاً** به `CompanyId` تغییر نام دهد.
+2. ستون مستقل و واقعی `TenantId` باید افزوده شود.
+3. این تفکیک در Entity، EF Configuration، Migration، Query، FK، AK، Unique Index و تست‌ها یکسان رعایت شود؛ نام Property در C#، نام ستون و معنای داده باید یکی باشد.
+4. استفاده از `HasColumnName("TenantId")` برای حفظ نام فیزیکی اشتباه و پنهان‌کردن معنا ممنوع است؛ سازگاری دائمی با معنای قبلی ایجاد نمی‌شود.
+5. Migration آینده: `Up` و `Down` واقعی؛ انتقال داده با نگاشت معتبر Company→Tenant؛ اصلاح FK، AK، Unique Index و سایر قیود؛ Rollback مستند و آزموده‌شده؛ آزمون روی SQL Server آزمایشی واقعی.
+6. هیچ Migration در این تصمیم ایجاد یا اجرا نمی‌شود.
+
+### رابطه با D-091
+بخش «گام P: حفظ نام فیزیکی و `HasColumnName`» و «Rename اختیاری» در متن Proposed اولیهٔ D-091 با این تصمیم **جایگزین (superseded)** است؛ D-091 به‌عنوان رکورد تاریخی و برای ترتیب عملیاتی، Downtime و گیت‌ها حفظ می‌شود و تا تصویب جداگانه Proposed می‌ماند. هر بازنگری D-091 باید با بند ۴ این ADR سازگار باشد.
+
+### نکات طراحی که این ADR الزام می‌کند
+- دو جدول `PartyBankAccounts` و `ProductIdentifiers` امروز `ExcludeFromMigrations` هستند و فیزیکی نیستند؛ باید مستقیماً با شکل نهایی (دو شناسه، AK/FK مرکب) ساخته شوند و Rename لازم ندارند.
+- ممنوعیت `HasColumnName` و الزام Rename فقط دربارهٔ **ستون‌ها** است. نام فیزیکی قیدهای وابسته به نام قدیمی (`AK_*_TenantId_Id`، `FK_*_TenantId_*`، `UX_*_Tenant_*`) **تصمیم باز و تابع D-095 است** (D-095 هنوز Proposed است؛ گزینهٔ پیشنهادی آن نگه‌داشتن نام فیزیکی قید است و EF عملیات تغییر نام قید ندارد). این ADR گزینهٔ D-095 را انتخاب نمی‌کند.
+- هیچ ستون `TenantId` نباید بدون نگاشت معتبر مقدار بگیرد؛ رکورد بدون نگاشت → توقف Migration (حدس زدن ممنوع، D-089).
+
+## D-121 — ترتیب اجرای Core و Trade برای تفکیک Tenant/Company (2026-11-23)
+
+- **وضعیت تصمیم:** Accepted — تأیید صریح مالک محصول در 2026-11-23 (Q-3) برای ترتیب کلی.
+- **وضعیت پیاده‌سازی:** NotImplemented؛ هیچ مرحله‌ای آغاز نشده است. جزئیات دقیق Migrationها و Sequenceها تصمیم باز است.
+- **مراجع:** D-087، D-089، D-090، D-092، D-120؛ `docs/handoffs/ISSUE-UNNUMBERED-trade-tenant-company-owner-decisions-2026-11-23.md` بخش ۵.
+
+### وضعیت واقعی Core (از سورس، 2026-11-23)
+Entity یا جدول `Tenant` در Core وجود ندارد؛ `Domain/Company.cs` ستون Tenant ندارد (فقط `CustomerBoundaryId` اختیاری که Tenant نیست)؛ در ۲۱ Migration و Snapshot آن در `Infrastructure/Persistence/Migrations` (شمارش `.cs` بدون Designer) نامی از `Tenants` نیست. پس گام ۱ زیر هنوز آغاز نشده و زیرساخت کامل Tenant فرض نمی‌شود.
+
+### تصمیم مالک
+1. ابتدا زیرساخت واقعی Tenant در Core ایجاد یا تکمیل شود.
+2. رابطهٔ معتبر Company→Tenant برقرار و قابل اعتبارسنجی باشد.
+3. نگاشت Company→Tenant برای داده‌های موجود تهیه و اعتبارسنجی شود.
+4. سپس Migration اصلاحی Trade اجرا شود.
+5. تا حد امکان از وضعیت میانی نامعتبر و Migrationهای غیرضروری پرهیز شود.
+
+### الزام‌ها و محدودیت‌ها
+- ترتیب PRها و وابستگی Merge آن‌ها باید صریح باشد و Trade پیش از تکمیل گام ۱–۳ Core تغییر Schema نمی‌گیرد.
+- کارهای بدون Schema (مانند آزمون‌ها یا مستندسازی) می‌توانند پیش از گام ۴ انجام شوند.
+
+### باز می‌ماند
+- ترتیب دقیق Migrationها و Sequenceهای Core؛ جزئیات Backfill و سیاست رکوردهای بدون نگاشت؛ سیاست حذف/غیرفعال‌سازی داده قدیمی.
+- سازوکار رساندن نگاشت معتبر به Trade بدون وابستگی Trade به جدول‌های Core (D-090): پیشنهاد در handoff بخش ۸؛ تصمیم مالک لازم است.
+- تغییر `TradeAccessContext`/`TradePeriodScope` (N-5/N-5b) و هر تغییر Permission/Entitlement.

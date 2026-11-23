@@ -3605,12 +3605,32 @@
 - بازبینی پس از Merge: #704 و #705 قبلاً در `main` ادغام شده‌اند (برخلاف فرض پرامپت)؛ کد و ۱۳۰ تست آن‌ها محلی موفق است و نقصی دیده نشد. `AwayFromZero` در تخصیص درصدی تصمیم مالک است و تغییری نکرد.
 - بدون Schema/Migration/API/UI؛ گیت‌های S3-0 بسته نشدند. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-proforma-change-classifier.md`.
 
+## 2026-11-23 — Trade: ثبت تصمیم‌های مالک Q-1..Q-4 (D-090، D-119..D-121) — فقط مستندات (Claude)
+
+- D-090 از `Proposed` به `Accepted` رفت؛ D-119 (Party/Product Company-owned)، D-120 (Rename فیزیکی `TenantId→CompanyId` + `TenantId` واقعی؛ `HasColumnName` ممنوع) و D-121 (ترتیب Core سپس Trade) ثبت شدند. پیاده‌سازی هر چهار `NotImplemented`؛ D-091 فقط در بخش `HasColumnName` توسط D-120 جایگزین شد و `Proposed` ماند؛ D-118 برای PR #780 رزرو است.
+- از سورس: در Core هیچ Entity/جدول Tenant و ستون Tenant در `Company` نیست؛ Trade فقط `TenantId` (= `Company.Id`) دارد. بنابراین گام ۱ D-121 آغاز نشده است. هیچ کد، Schema، Migration یا Backfill تغییر نکرد.
+- باز: N-5/N-5b، D-091..D-096، G0/G5/G6، سازوکار انتقال نگاشت به Trade (O-1)، Unique Index جزئی، رکوردهای بدون نگاشت. CI در انتظار. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-tenant-company-owner-decisions-2026-11-23.md`.
+
 ## 2026-11-23 — Vendor: مسیر تحویل LicenseEnvelope امضاشده برای مبادلهٔ آفلاین (GLM)
 
 - **شکاف واقعی شناسایی‌شده:** پس از صدور، پاکت لایسنس امضاشده (`VendorSignedLicenseEnvelopes`) هیچ مسیر مصوب خروج از Vendor نداشت — فقط Provisioning Package مسیر export داشت. اولین چرخهٔ واقعی صدور→انتقال→اعمال (#228/#394) بدون این حلقه قابل اجرا نبود.
 - **تحویل (PR بر `agent/license-envelope-export` از `main@62b0c3c6`، کد `0968375f`):** endpoint فقط-خواندنی `GET /api/vendor/licenses/{id}/envelope/export` که دقیقاً JSON ذخیره‌شدهٔ آخرین Revision را پس از اعتبارسنجی fail-closed برمی‌گرداند: وضعیت Issued، یکپارچگی `PayloadSha256`، ساختار پاکت و هم‌خوانی KeyId/Algorithm، عضویت Trust Store (`Licensing:TrustedSigningKeys`؛ نامعتبر ⇒ 503)، امضای ECDSA P-256 و binding به Installation؛ شکست امضا از شکست ارزیابی زمان کد جداگانه دارد. الگو از export موجود Provisioning و resolver کپی شد؛ تصمیم معماری جدیدی گرفته نشد. خروجی حالت Restricted امضاشده عمداً مجاز است (D-059 §7) و Audit `vendor.license.envelope-exported` در تراکنش ثبت می‌شود.
 - **تست:** چهار سناریوی Integration HTTP روی SQL Server واقعی (برابری بایت‌به‌بایت body + Audit + no-store؛ Draft/tamper-hash/ناشناخته؛ untrusted/tampered-signature؛ منع دسترسی) — محلی فقط Skip (نبود SQL Server/Docker در sandbox) و در CI اجرا می‌شوند. `dotnet build Vendor.sln -c Release` موفق؛ `dotnet test` روی شاخه = ۴۶۷ کل/۳۷۵ موفق/۱۰ ناموفق و روی baseline تمیز `main@62b0c3c6` = ۴۶۳ کل/۳۷۵ موفق/۱۰ ناموفق؛ مجموعهٔ نام ۱۰ شکست محیطی HTTP/SPA دو اجرا بایت‌به‌بایت یکسان است (صفر رگرسیون). `check_static_assets.py` PASS؛ `git diff --check` پاک.
 - بدون تغییر `Server/**`، قرارداد مشترک، Schema، Migration یا گیت امنیتی؛ tracking تحویل/ACK لایسنس عمداً ادعا نشده (#393/#394؛ تصمیم قرارداد S-B با مالک). handoff: `docs/handoffs/ISSUE-394-vendor-license-envelope-export.md`.
+
+## 2026-11-23 — Trade: تحلیل O-1..O-4 و نقشهٔ اصلاح‌شدهٔ Core/Trade — فقط مستندات (Claude)
+
+- ادامهٔ PR #784: شاخه با `main@b458a09` هماهنگ شد (فقط تداخل `WORK_LOG.md` حل شد). #780 باز، غیر Draft و CI سبز است ولی نسبت به main `dirty` است؛ D-091 آن با D-120 هم‌جهت است و D-095 در سطح ستون تناقضی ندارد. ترتیب پیشنهادی: #780 سپس #784 (تصمیم Merge با مالک؛ هیچ PR ادغام نشد).
+- O-1: دربارهٔ خالی‌بودن `trade.*` در نصب‌های مشتری هیچ شاهدی نیست (Unknown)؛ گزینهٔ «فرض خالی‌بودن» کنار گذاشته شد. پیشنهاد (`Proposed`): expand Migration ← فرمان اپراتوری Backfill در Host ← contract Migration با Guard؛ منبع نگاشت `Companies.TenantId` تأییدشدهٔ Core؛ بدون Staging.
+- O-2: همهٔ Unique Indexهای فعلی عملاً Company-scoped هستند؛ پیشنهاد Company-scoped برای همه. O-3: جزء T1 است. O-4: توقف کامل و گزارش، بدون حدس.
+- بدون Schema/Migration/کد/API/UI؛ هیچ تست یا CI اجرا نشد. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-tenant-company-o1-o4-analysis-2026-11-23.md`.
+
+## 2026-11-23 — Trade: اصلاحیهٔ O-1 (هم‌زمانی Backfill، Transaction، Manifest) و نقشهٔ C1..T2 — فقط مستندات (Claude)
+
+- از سورس: `DatabaseMigrationHost.RunAsync` با `MigrateAsync` بدون Target هر Migration pending را پشت‌سرهم اعمال می‌کند؛ قفل `sp_getapplock` (Session، Timeout=0) Advisory است و API/Store/SQL مستقیم از آن پیروی نمی‌کنند؛ Serializable و قفل Advisory توقف نویسنده‌ها نیستند. پس Backfill باید همهٔ ردیف‌ها را (نه فقط NULL) راستی‌آزمایی کند، با `TABLOCKX` حصار بگیرد و زیر Maintenance Window اجرا شود.
+- Hash اثبات صحت نیست و در Trade لازم نیست؛ فقط در C2 برای شناسایی فایل Manifest. قاعدهٔ تازه R1: شناسهٔ Tenant با هیچ `Company.Id` برابر نباشد. N-5b مانع T1 نیست.
+- Unknown: رفتار دقیق Transaction/History/قفل داخلی EF 10 روی SQL Server (مستند رسمی دریافت نشد، SQL Server در محیط نبود)؛ داده و حجم جدول‌های Trade در نصب‌ها.
+- بدون Schema/Migration/کد/API/UI؛ هیچ تست یا CI اجرا نشد. handoff: `docs/handoffs/ISSUE-UNNUMBERED-trade-tenant-company-o1-o4-analysis-2026-11-23.md` §۱۰.
 
 ## 2026-11-23 — Vendor: Runbook چرخهٔ اول لایسنس Staging و handoffهای Customer/Trade (GLM)
 

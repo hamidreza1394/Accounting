@@ -6,6 +6,8 @@
 **مرجع تصمیم:** D-087، D-088، D-089 (`Accepted`)، D-103 (`Accepted`)، D-090..D-096 (`Proposed`)، D-030 (واژگان وضعیت).
 **منابع قبلی که این سند یکپارچه می‌کند:** `handoffs/ISSUE-397-s3-0-tenant-company-audit.md`، `…s3-0e-tenant-company-ownership-audit.md`، `…s3-0h-consolidated-tenant-company-migration-plan.md`. این سند آن‌ها را بازنویسی نمی‌کند؛ ادعاهای آن‌ها را فقط جایی «تأییدشده» می‌نویسد که در همین گذر دوباره با کد مقایسه شده باشد.
 
+> **به‌روزرسانی 2026-11-23 (هماهنگی با تصمیم‌های مالک):** این سند ممیزی 2026-11-18 است و بازنویسی نشده؛ عبارت‌های زیر **دیگر معتبر نیستند**: (۱) «D-090 `Proposed`» (بندهای مرجع تصمیم، R-3 و بخش ۷) ← D-090 اکنون `Accepted` است (پیاده‌سازی `NotImplemented`)؛ (۲) «مالکیت Party/Product Unknown / Company یا Tenant-shared» (بخش ۴.۱، R-4، بخش ۱۰) ← `Company-owned` طبق D-119؛ (۳) «افزودن `CompanyId` به Trade» ← شکل نهایی طبق D-120 (Rename فیزیکی `TenantId→CompanyId` + `TenantId` واقعی؛ `HasColumnName` ممنوع) و ترتیب اجرا طبق D-121. وضعیت پیاده‌سازی همهٔ این‌ها `NotImplemented` است و ممیزی تازهٔ سورس در `handoffs/ISSUE-UNNUMBERED-trade-tenant-company-owner-decisions-2026-11-23.md` است.
+
 ## راهنمای برچسب شواهد
 
 | برچسب | معنا |

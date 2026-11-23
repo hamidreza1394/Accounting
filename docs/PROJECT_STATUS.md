@@ -910,3 +910,9 @@
 - جریان `Order → درخواست صریح Amendment → Candidate → Approval → Signing → Delivery` اکنون قابل استفاده است (وضعیت پرداخت هیچ پیش‌شرطی برای Amendment نیست؛ تأیید پرداخت فقط در چرخه مستقل پرداخت باقی می‌ماند — D-108 §1)؛ کاندید همیشه از آخرین پاکت امضاشده و verify‌شده بازسازی می‌شود و هیچ داده entitlement مشتق‌شده در دیتابیس ذخیره نمی‌شود.
 - فقط kinds نصب‌محور (maxCompanies، support/updates) فعال‌اند؛ kinds شرکت‌محور به #392 وابسته و Blocked هستند و builder company-scoped در جریان جدید expose نشده است.
 - کنترل‌های D-108/D-109: وضعیت پرداخت هیچ پیش‌شرطی برای ثبت یا صدور Amendment نیست و تأیید پرداخت به‌صورت خودکار چیزی صادر نمی‌کند؛ صدور مستقل از پرداخت و فقط با مجوز `vendor.licenses.issue`؛ RowVersion روی درخواست و approval؛ unique filtered index یک Amendment فعال برای هر ردیف خرید؛ شکست Audit/Singer fail-closed با Rollback کامل.
+
+## Trade — تصمیم‌های مالک دربارهٔ Tenant/Company (2026-11-23)
+
+- **D-090** (OD-11) از `Proposed` به **`Accepted`** رفت؛ **D-119** (Party و Product Company-owned؛ بدون اشتراک خودکار در Tenant)، **D-120** (Rename فیزیکی `TenantId→CompanyId` + ستون واقعی `TenantId`؛ `HasColumnName` ممنوع) و **D-121** (ابتدا زیرساخت Tenant در Core، سپس Migration اصلاحی Trade) `Accepted` هستند. پیاده‌سازی هر چهار `NotImplemented` است؛ هیچ کد، Schema، Migration یا Backfill تغییر نکرد.
+- وضعیت واقعی Core از سورس: Entity/جدول `Tenant` وجود ندارد و `Company` ستون Tenant ندارد؛ بنابراین گام ۱ D-121 آغاز نشده است. Trade هنوز فقط `TenantId` دارد که `Company.Id` است (پنج Entity، سه جدول فیزیکی) و `DenyAllTradeModuleEntitlement` متصل است.
+- باز می‌مانند: D-091 (ترتیب عملیاتی؛ فقط گام `HasColumnName` آن توسط D-120 جایگزین شد)، D-092..D-096، گیت‌های G0، G5، G6، N-5/N-5b (`TradeAccessContext`/`TradePeriodScope`)، سازوکار انتقال نگاشت Company→Tenant به Trade بدون وابستگی به Core، و جزئیات Backfill/Unique Index. جزئیات و نقشهٔ PRها: `handoffs/ISSUE-UNNUMBERED-trade-tenant-company-owner-decisions-2026-11-23.md`.
