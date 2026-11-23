@@ -1,3 +1,16 @@
+## Snapshot تازه Vendor — 2026-11-23 (مبنای `main@3c0a61e02056e154f52685e1f6cf9797043a1b77`؛ پس از Merge مأموریت اولین چرخهٔ لایسنس Staging)
+
+این snapshot وضعیت سه PR اصلی مأموریت را بر اساس وضعیت واقعی GitHub پس از Merge ثبت می‌کند. Snapshotهای تاریخی پایین سند عمداً حفظ شده‌اند.
+
+- **PR #771 — Publish G2 guard:** با squash commit `950baa3424d193c1a380d6fc2e90cd74886743d4` ادغام شده است. گارد allow-list و نرمال‌سازی مسیر Windows در main قرار دارد؛ این Merge به معنی تأیید اجرای واقعی چرخهٔ لایسنس نیست.
+- **PR #781 — Vendor signed-license-envelope export:** با squash commit `b458a09ad918c1d3fa5c38bb909e25a9d6974978` ادغام شده است. endpoint فقط‌خواندنی صادرات پاکت امضاشده برای انتقال آفلاین در main موجود است؛ CI نهایی PR موفق بود. این قابلیت به‌تنهایی تحویل/ACK سمت Customer یا اعمال واقعی License را ثابت نمی‌کند.
+- **PR #782 — First Staging license-cycle runbook:** با squash commit `3c0a61e02056e154f52685e1f6cf9797043a1b77` ادغام شده است. شامل Runbook چرخهٔ اول، handoff Customer و handoff Trade است. چهار نکتهٔ بازبینی CodeRabbit (ترتیب شروع Vendor، نحو PowerShell برای متغیرهای دارای خط تیره، محیط واقعی سرویس Customer برای Gate، و آزمون زوجی Company A/B) اصلاح و threadها resolve شدند. .NET CI شامل build/test، Client، secret scan، publish scripts، publish، E2E و Windows publish همگی موفق؛ Semgrep نیز موفق شد.
+- **مرز شواهد CI و عملیات واقعی:** E2E در GitHub Actions صرفاً آزمون خودکار CI است و به معنی اجرای صدور/انتقال/اعمال لایسنس روی دو میزبان واقعی Vendor و Customer نیست. اولین چرخهٔ واقعی Staging هنوز اجرا نشده است؛ Migration مشتری `20261116070805_AddCompanySetupRecords` روی DB هدف اجرا نشده، Key Ceremony و ACL/Trust روی Windows هدف Operationally Verified نیستند، import واقعی انجام نشده و Runtime Gate همچنان پیش‌فرض OFF است و نباید بدون تأیید صریح مالک فعال شود.
+- **گیت‌ها و محدودیت‌ها:** Bootstrap مستقل TenantOwner طبق D-110 همچنان NotImplemented؛ trust distribution/rotation و consumer readiness در #235 و sink مستقل Production در #107 همچنان شکاف‌های جدا هستند. `DenyAllTradeModuleEntitlement` بدون تغییر حفظ می‌شود؛ entitlement تجاری `TRADE_IMPORT` به‌تنهایی مجوز عملیاتی Trade یا مجوز کاربر نیست. آزمون زوجی Company A/B تا آماده‌شدن mapping/enforcement مربوطه Blocked/Not Run می‌ماند.
+- **دامنه تغییر این مأموریت:** #771 گارد انتشار، #781 endpoint صادرات Vendor و #782 مستندات Runbook/handoff را وارد main کردند؛ هیچ Customer Migration روی دیتابیس واقعی اجرا نشد، هیچ Key Ceremony عملیاتی انجام نشد و هیچ Runtime Gate یا مجوز Trade باز نشد. وضعیت عملیاتی را فقط با شواهد اجرای Staging می‌توان تغییر داد.
+
+---
+
 ## Snapshot تازه Vendor — 2026-11-23 (مبنای `main@06fdb015ddd113c2b2b5a715310a83759488cfca`)
 
 این snapshot، وضعیت قبلی `be2283d8` را پس از Mergeهای Vendor در 2026-11-22 به‌روز می‌کند. سابقه و snapshotهای تاریخی پایین سند حفظ شده‌اند.

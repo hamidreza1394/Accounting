@@ -3618,3 +3618,12 @@
 - **handoff Customer** (`ISSUE-UNNUMBERED-vendor-to-customer-first-license-cycle-handoff.md`): قرارداد دقیق تحویل (endpoint صادرات، شکل `LicenseEnvelope`، payload v2)، جدول وضعیت واقعی Customer-side با شکاف‌ها (اجرای Migration، runtime enforcement، توزیع trust)، معیار پذیرش شش‌بندی؛ هیچ تغییر Customer ادعا نشده است.
 - **handoff Trade** (`ISSUE-401-trade-entitlement-handoff.md`): قرارداد `CompanyLicenseEntitlement` (CompanyReference opaque، `TRADE_IMPORT`)، محل resolve mapping، وضعیت واقعی زنجیره، مرز «entitlement ≠ مجوز عملیاتی کاربر»، API پیشنهادی مصرف از لایهٔ تصمیم موجود و تست‌های Company A/B؛ `DenyAllTradeModuleEntitlement` حفظ می‌شود.
 - فقط مستندات: بدون کد، `Server/**`، Migration، Schema، تنظیم runtime یا بازکردن هیچ گیت؛ تا اجرای واقعی روی میزبان Windows همهٔ گام‌های Runbook «Not Run» است.
+
+## 2026-11-23 — Vendor: Merge و همگام‌سازی مأموریت اولین چرخهٔ لایسنس Staging
+
+- **PR #771** با squash commit `950baa3424d193c1a380d6fc2e90cd74886743d4` ادغام شد؛ Publish G2 allow-list guard و اصلاح نرمال‌سازی مسیر Windows در main قرار گرفت.
+- **PR #781** با squash commit `b458a09ad918c1d3fa5c38bb909e25a9d6974978` ادغام شد؛ endpoint فقط‌خواندنی صادرات signed license envelope برای انتقال آفلاین در main است. Merge به معنی ACK یا Apply سمت Customer نیست.
+- **PR #782** با squash commit `3c0a61e02056e154f52685e1f6cf9797043a1b77` ادغام شد؛ Runbook چرخهٔ اول Staging و handoffهای Customer/Trade اضافه شدند. چهار نکتهٔ CodeRabbit اصلاح و همهٔ review threads resolve شدند. .NET CI همهٔ هفت Job (از جمله E2E CI و Windows publish) و Semgrep موفق شدند.
+- **شواهد و محدودیت‌ها:** GitHub E2E، آزمون CI است نه اجرای واقعی چرخه روی میزبان‌های Vendor و Customer. Customer Migration، Key Ceremony/ACL/Trust واقعی، صدور و انتقال و Import واقعی هنوز روی Staging اجرا نشده‌اند. Runtime Gate پیش‌فرض OFF باقی می‌ماند و فعال‌سازی آن نیازمند تأیید صریح مالک است.
+- **گیت‌ها:** D-110 Bootstrap مستقل NotImplemented؛ #235 trust distribution/rotation و consumer readiness؛ #107 Production audit sink؛ آزمون Company A/B تا آماده‌شدن mapping/enforcement مربوطه Blocked/Not Run. `DenyAllTradeModuleEntitlement` دست‌نخورده باقی ماند. هیچ مجوز عملیاتی Trade باز نشد.
+- این رکورد وضعیت را به‌روز می‌کند؛ هیچ Migration یا تغییر عملیاتی روی DB هدف اجرا نشده است.
