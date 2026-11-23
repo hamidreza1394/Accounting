@@ -1,6 +1,6 @@
 # G2 allow-list of the customer publish output (D-041; scripts/lib/publish-output.sh and
-# scripts/lib/PublishOutput.ps1 enforce it). Every managed or native binary in the
-# publish output (.dll/.exe/.so/.dylib and the extension-less apphost) must be listed here;
+# scripts/lib/PublishOutput.ps1 enforce it). Every published assembly/native binary or symbol file in the
+# publish output (.dll/.exe/.so/.dylib/.pdb and the extension-less apphost) must be listed here;
 # anything else is refused fail-closed. Client static content under wwwroot/ is not part of
 # this list (covered by the offline-asset checks) and neither are non-binary root files
 # (appsettings.json, Server.deps.json, web.config, ...) — private-key material inside them
