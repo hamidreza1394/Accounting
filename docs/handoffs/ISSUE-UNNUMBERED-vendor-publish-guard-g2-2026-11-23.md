@@ -41,6 +41,7 @@
 
 ## تصمیم‌های فنی
 
+- **باگ از پیش موجود که همین PR پیدا و رفع کرد:** اسکن PEM در `PublishOutput.ps1` زیر `ErrorActionPreference=Stop` بی‌اثر بود — `Write-Error` داخل همان `try/catch` خواندن فایل پرتاب و بلعیده می‌شد و `found` هرگز ست نمی‌شد؛ یعنی مسیر Publish ویندوزی (`publish.ps1` با `EAP=Stop`) تا امروز هرگز محتوای PEM را واقعاً رد نمی‌کرد. این نقص توسط تست Fixture جدید «PEM private key content rejected» و شکست واقعی اولین اجرای CI (`publish-scripts`, job `137594470529`) آشکار شد. اصلاح: Hits ابتدا جمع‌آوری و بعد از حلقه گزارش می‌شوند؛ `catch` فقط فایل‌های ناخوانا را می‌گذارد. رفتار bash از ابتدا درست بود و تغییری نکرد.
 - **Allow-list = مجوز، نه الزام:** گارد فقط «هر فایل موجود باید مجاز باشد» را کنترل می‌کند؛ نبود فایل مجاز خطا نیست (سایر چک‌های الزامی مانند `index.html` و باندل‌ها در `publish.sh` باقی‌اند). این دقیقاً مفاد D-041 («هر اسمبلی خارج از آن رد می‌شود») است و Fixtureهای قدیمی را نمی‌شکند.
 - **مقایسهٔ Case-Insensitive:** در هر دو پیاده‌سازی (bash با کلید lowercase، PowerShell با `ToLowerInvariant`) تا رفتار فایل‌سیستم حساس Linux و غیرحساس Windows یکدست بماند.
 - **`wwwroot/` از Allow-list مستثناست** چون محتوای استاتیک کلاینت است و با `check-offline-build.mjs` و چک‌های فایل الزامی کنترل می‌شود؛ اسکن‌های منفی (`Vendor.*`، `.pfx/.p12/.key`، PEM) همچنان کل درخت را می‌پوشانند.
@@ -53,6 +54,8 @@
 |---|---|---|
 | `bash scripts/tests/publish-content-guard.test.sh` (قبل از پیاده‌سازی) | RED — دقیقاً ۷ مورد منفی جدید شکست خورد (7 passed / 7 failed) | TDD مرحلهٔ RED |
 | `bash scripts/tests/publish-content-guard.test.sh` (بعد از پیاده‌سازی) | سبز — 14 passed, 0 failed | TDD مرحلهٔ GREEN |
+| `./scripts/tests/publish-content-guard.tests.ps1` — اجرای اول در CI (`publish-scripts`, job `137594470529`) | 13 passed / 1 failed — تنها شکست: Fixture PEM؛ ریشه‌یابی: باگ از پیش موجود اسکن PEM زیر `EAP=Stop` (بند تصمیم‌های فنی) | شاهد تفاوت رفتار bash/PowerShell |
+| همان تست پس از اصلاح اسکن PEM | در اجرای بعدی CI گزارش می‌شود | |
 | فراخوانی مستقیم گارد روی خروجی واقعی `artifacts/publish-probe` (۸۹۰۴ فایل) | PASS بدون هیچ پیام | خروجی واقعی با Allow-list می‌گذرد |
 | تزریق `NotListed.Library.dll` در خروجی واقعی | PASS گارد رد شد — پیام: `file outside the D-041 publish allow-list: NotListed.Library.dll` | رفتار Fail-Closed روی artifact واقعی |
 | `scripts/publish.sh artifacts/publish` (کامل: npm ci/typecheck/test/build + dotnet publish + چک‌ها + گارد G2) | موفق — ۱۱۲ فایل تست / ۱۲۸۸ تست کلاینت سبز، Offline check سبز، گارد سبز، خروجی کامل | اجرای واقعی Linux (SDK 10.0.404) |

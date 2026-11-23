@@ -3573,3 +3573,8 @@
 - TDD: ۸ مورد تست جدید در `scripts/tests/publish-content-guard.test.sh` ابتدا RED (۷ شکست منفی) و پس از پیاده‌سازی GREEN (۱۴/۱۴) شدند؛ فایل جدید `scripts/tests/publish-content-guard.tests.ps1` همان ماتریس را برای PowerShell پوشش می‌دهد و در Jobهای `publish-scripts` و `publish-windows` به CI وصل شد.
 - شواهد واقعی: گارد روی artifact واقعی (۸۹۰۴ فایل) PASS؛ تزریق `NotListed.Library.dll` همان‌جا fail-closed رد شد؛ `scripts/publish.sh` کامل (npm ۱۲۸۸ تست سبز + publish + گارد) و `scripts/smoke-published-app.sh` موفق؛ `git diff --check` پاک. NotRun: اجرای pwsh محلی (pwsh نصب نیست؛ در CI اجرا می‌شود) و Publish واقعی Windows (میزبان ویندوز در دسترس نیست؛ معادل CI `publish-windows`).
 - وضعیت G2 «Implemented در انتظار تأیید مالک فهرست + شواهد CI ویندوز» است و گیت به‌خودی‌خود Complete/Verified عملیاتی اعلام نشد؛ جزئیات در `docs/handoffs/ISSUE-UNNUMBERED-vendor-publish-guard-g2-2026-11-23.md` و پیگیری گاردهای D-041 و ردیف G2 چک‌لیست آمادگی.
+
+## 2026-11-23 — Vendor: رفع باگ اسکن PEM در گارد PowerShell که توسط تست G2 کشف شد (GLM، همان PR)
+
+- اولین اجرای CI روی PR گارد G2 (`publish-scripts`, job `137594470529`) نشان داد `Assert-FaranouCustomerPublishClean` در PowerShell زیر `ErrorActionPreference=Stop` Fixture «PEM private key» را نمی‌پذیرد‌ که رد شود: `Write-Error` داخل `try/catch` خواندن فایل به‌عنوان خطای terminating بلعیده می‌شد و اسکن PEM عملاً غیرفعال بود — باگ از پیش موجود مسیر Publish ویندوزی، نه مشکل تست. اصلاح: جمع‌آوری Hits و گزارش پس از حلقه؛ `catch` فقط فایل ناخوانا را می‌گذارد؛ رفتار bash بدون تغییر.
+- این اصلاح بخشی از همین PR گارد G2 است و در handoff `ISSUE-UNNUMBERED-vendor-publish-guard-g2-2026-11-23.md` ثبت شد.

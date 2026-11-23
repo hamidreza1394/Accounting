@@ -185,17 +185,23 @@ function Assert-FaranouCustomerPublishClean([string]$Output) {
 
     $skipExt = @('.dll', '.exe', '.so', '.dylib', '.pdb', '.png', '.jpg', '.jpeg', '.gif', '.woff', '.woff2', '.ttf', '.eot', '.ico', '.zip', '.nupkg')
     $pemPattern = '-----BEGIN ([A-Z0-9 ]+)?PRIVATE KEY-----'
+    # Hits are collected first and reported after the loop: a Write-Error inside this
+    # try/catch would itself be caught by the catch below when ErrorActionPreference is
+    # Stop, silently disabling the whole scan (found by the publish-content-guard fixture
+    # tests in 2026-11-23). Unreadable files are still skipped as before.
+    $pemHits = @()
     Get-ChildItem -LiteralPath $Output -Recurse -File -ErrorAction SilentlyContinue |
         Where-Object { $_.Length -lt 512KB -and ($skipExt -notcontains $_.Extension.ToLowerInvariant()) } |
         ForEach-Object {
             try {
                 $text = Get-Content -LiteralPath $_.FullName -Raw -ErrorAction Stop
-                if ($text -match $pemPattern) {
-                    Write-Error "publish: G2 content guard: private key material detected in: $($_.FullName.Substring($Output.Length).TrimStart('\','/'))"
-                    $found = $true
-                }
+                if ($text -match $pemPattern) { $pemHits += $_.FullName.Substring($Output.Length).TrimStart('\', '/') }
             } catch { }
         }
+    foreach ($hit in $pemHits) {
+        Write-Error "publish: G2 content guard: private key material detected in: $hit"
+        $found = $true
+    }
 
     if ($found) {
         throw 'publish: G2 content guard failed (D-041): customer package must not contain Vendor assemblies or private keys'
