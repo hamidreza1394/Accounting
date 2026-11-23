@@ -2,7 +2,7 @@
 
 - **دامنه:** یک Customer آزمایشی، یک Installation، یک Company، یک License با یک entitlement شرکت‌محور `TRADE_IMPORT`، دو دیتابیس مستقل Vendor/Customer. فقط Staging؛ **هیچ ادعای Production readiness ندارد**.
 - **وضعیت:** تا اجرای واقعی روی میزبان Windows هدف، همهٔ گام‌ها `Not Run` است. هیچ گیت امنیتی در این Runbook باز نمی‌شود؛ گیت‌هایی که بازکردنشان تصمیم مالک است صریحاً علامت خورده‌اند.
-- **وابستگی PR:** گام 5 (صادرات پاکت) نیازمند PR **#781** (`agent/license-envelope-export`) است؛ تا Merge آن، این گام فقط پس از تأیید و ادغام اجرا می‌شود.
+- **وضعیت وابستگی:** گام 5 (صادرات پاکت) با PR **#781** (`agent/license-envelope-export`) و commit `b458a09ad918c1d3fa5c38bb909e25a9d6974978` در `main` ادغام شده است؛ endpoint در کد موجود است، اما اجرای واقعی export در Staging هنوز `Not Run` است.
 - **مراجع اجباری:** [Runbook Key Ceremony CNG (#236/D-107)](ISSUE-236-CNG-KEY-CEREMONY-ROTATION.md) و [LOCALHOST_WINDOWS_TEST_GUIDE.md](../LOCALHOST_WINDOWS_TEST_GUIDE.md)؛ این سند جایگزین آن‌ها نیست.
 
 ## 0) محیط هدف و قواعد ثابت
@@ -11,10 +11,12 @@
 |---|---|---|
 | Vendor Host (API + UI) | Windows Server یا ویندوز توسعه (دسترسی Administrator برای CNG MachineKey) | اتصال به Customer DB؛ کلید خصوصی در Git/Log/بستهٔ مشتری |
 | Vendor SQL Server DB | نمونهٔ مستقل | اشتراک فایل/نمونه با Customer DB |
-| Customer Host (Server.dll) | میزبان دوم یا پردازهٔ دوم | اتصال به Vendor DB؛ دریافت هر مادهٔ خصوصی |
+| Customer Host (Server.dll) | **آزمایش اول:** پردازه/سرویس دوم روی همان Windows Server؛ **مرحلهٔ بعد:** Windows Server مستقل مشتری | اتصال به Vendor DB؛ دریافت هر مادهٔ خصوصی |
 | Customer SQL Server DB | نمونهٔ مستقل | — |
 
 - کل فرآیند بین دو مرز مستقل با **فایل پاکت** انجام می‌شود؛ Vendor هرگز مستقیم به Customer نمی‌نویسد.
+- **توپولوژی اجرای اولیه طبق تصمیم مالک:** یک Windows Server با دو پردازه/سرویس Vendor و Customer، هویت سرویس و تنظیمات مستقل و دو دیتابیس جدا. این آزمایش استقلال سخت‌افزار/سیستم‌عامل یا دو میزبان را اثبات نمی‌کند؛ پشتیبانی و آزمون روی دو Windows Server مستقل در مرحلهٔ بعد الزامی است.
+- برگهٔ ثبت شواهد و نتایج هر اجرا: [`FIRST-STAGING-LICENSE-CYCLE-EVIDENCE.md`](FIRST-STAGING-LICENSE-CYCLE-EVIDENCE.md).
 - پیکربندی Vendor فقط با متغیرهای محیطی `FARANO_VENDOR_*` (User Secrets/Secret Store)؛ هیچ secret در فایل مخزن.
 
 ## 1) آماده‌سازی Vendor DB و اجرا
