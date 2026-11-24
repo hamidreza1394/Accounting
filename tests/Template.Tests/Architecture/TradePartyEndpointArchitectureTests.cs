@@ -131,7 +131,7 @@ public sealed class TradePartyEndpointArchitectureTests : IClassFixture<FaranouA
         AssertOnlyTheGateCalls(typeof(ITradeAuthorization).GetMethod(nameof(ITradeAuthorization.ResolveCurrentCompanyContextAsync))!);
     }
 
-    private static void AssertOnlyTheGateCalls(MethodInfo target)
+    private static List<string> FindCallers(MethodInfo target)
     {
         var assemblies = new[]
         {
@@ -176,9 +176,33 @@ public sealed class TradePartyEndpointArchitectureTests : IClassFixture<FaranouA
             }
         }
 
+        return callers;
+    }
+
+    private static void AssertOnlyTheGateCalls(MethodInfo target)
+    {
+        var callers = FindCallers(target);
+
         // Positive control: the scan really sees the gate's call (its async state machine).
         Assert.Contains(typeof(TradeAccessGate).FullName, callers);
         Assert.All(callers, caller => Assert.Equal(typeof(TradeAccessGate).FullName, caller));
+    }
+
+    [Fact]
+    public void NoProductionCodeCallsTheCompanyScopedGateYet()
+    {
+        // Tripwire for the first consumer of the company-scoped path. The path has no write allowlist and its
+        // resolve still needs a selected period (N-5b), so the first consumer must update this test consciously
+        // and pass a security review. The scan sees direct calls only (not reflection, DI factories or delegates);
+        // it complements, and does not replace, review. Its ability to see calls is proven by the positive
+        // controls of the sibling scans.
+        var gateMethod = typeof(TradeAccessGate).GetMethod(nameof(TradeAccessGate.AuthorizeCompanyScopedAsync))!;
+        Assert.Empty(FindCallers(gateMethod));
+
+        // The same members called on the concrete adapter would bypass the interface scans above.
+        var adapter = typeof(Infrastructure.Trade.TradeAuthorizationAdapter);
+        Assert.Empty(FindCallers(adapter.GetMethod(nameof(ITradeAuthorization.ResolveCurrentCompanyContextAsync))!));
+        Assert.Empty(FindCallers(adapter.GetMethod(nameof(ITradeAuthorization.HasCompanyPermissionAsync))!));
     }
 
     [Fact]

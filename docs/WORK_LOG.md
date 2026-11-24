@@ -3683,3 +3683,7 @@
 - **تست:** ۵۵۶ اجرا/۰ ناموفق/۲۷ Skip (SQL Server، NotRun)؛ اجرای مجدد پس از اصلاح: ۸۳ اجرا/۰ ناموفق. CI کامل و SQL Server: NotRun.
 - **محدودیت:** Tenant تا C4 با DB سنجیده نمی‌شود؛ Resolve هنوز به دوره وابسته است (N-5b). جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-trade-n5a-type-company-access-context-2026-11-24.md`.
 - **ادغام:** ردیف‌های WORK_LOG در #789/#790/#791 و این PR همه به انتهای فایل افزوده می‌شوند؛ هنگام ادغام ممکن است تعارض متنی ساده رخ دهد و باید هر دو ردیف نگه داشته شوند.
+
+## 2026-11-24 — Trade: تثبیت PR #792 پس از بازبینی (N-5a-type)
+- **اجرا:** تست دیده‌بان فراخواننده‌های Gate شرکت‌محور و Resolve (شامل نوع Concrete Adapter)، حذف دو تست کم‌ارزش، یادداشت نام `tenantId` پورت Entitlement؛ بدون تغییر رفتار. L-1 و L-2 Deferred با دلیل در handoff.
+- **محدودیت:** Tenant تا C4 اعتبار مستقل ندارد و `WorkContext.Ownership` غیرمستقیم از معادلهٔ Legacy می‌آید؛ این در handoff صریح ثبت شد.

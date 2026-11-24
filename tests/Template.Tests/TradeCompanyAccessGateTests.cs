@@ -115,15 +115,6 @@ public sealed class TradeCompanyAccessGateTests
     }
 
     [Fact]
-    public async Task AReadPermissionCanNotAuthorizeAWriteIntent()
-    {
-        var decision = await Gate(Context()).AuthorizeCompanyScopedAsync(
-            Guid.NewGuid(), ReadCode, TradeAccessIntent.Write, TestContext.Current.CancellationToken);
-
-        Assert.Equal(TradeAccessOutcome.Forbidden, decision.Outcome);
-    }
-
-    [Fact]
     public async Task TheCompanyPathNeverTouchesAnythingPeriodScoped()
     {
         // CompanyOnlyAuthorization throws NotSupportedException from every period-scoped member, so any call
@@ -133,19 +124,6 @@ public sealed class TradeCompanyAccessGateTests
 
         Assert.Equal(TradeAccessOutcome.Allowed, decision.Outcome);
         Assert.DoesNotContain("resolve", calls);
-    }
-
-    [Fact]
-    public async Task TheCompanyPathNeverReportsAPeriodDecision()
-    {
-        foreach (var intent in new[] { TradeAccessIntent.Read, TradeAccessIntent.Write })
-        {
-            var decision = await Gate(Context()).AuthorizeCompanyScopedAsync(
-                Guid.NewGuid(), intent == TradeAccessIntent.Read ? ReadCode : WriteCode, intent,
-                TestContext.Current.CancellationToken);
-
-            Assert.NotEqual(TradeAccessOutcome.PeriodReadOnly, decision.Outcome);
-        }
     }
 
     private sealed class CompanyOnlyAuthorization(

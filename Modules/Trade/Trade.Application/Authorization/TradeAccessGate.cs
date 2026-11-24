@@ -92,6 +92,9 @@ public sealed class TradeAccessGate(
             return new TradeCompanyAccessDecision(TradeAccessOutcome.ContextRequired, null);
         }
 
+        // NOTE: the entitlement port names its parameter 'tenantId' although the method is per company and the
+        // legacy path passes a company id there. This path passes the CompanyId explicitly; which identifier the
+        // entitlement is keyed by is an open decision (D-059/D-060) and is not decided here.
         var (enabled, fault) = await IsEntitledAsync(context.CompanyId, cancellationToken);
         if (!enabled)
         {

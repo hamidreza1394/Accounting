@@ -22,7 +22,6 @@ public sealed class TradeCompanyAccessContextTests
         Assert.Equal(user, context.UserId);
         Assert.Equal(tenant, context.TenantId);
         Assert.Equal(company, context.CompanyId);
-        Assert.NotEqual(context.TenantId, context.CompanyId);
     }
 
     [Fact]

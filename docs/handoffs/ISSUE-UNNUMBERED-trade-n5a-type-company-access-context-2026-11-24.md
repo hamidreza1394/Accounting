@@ -58,3 +58,22 @@
 ## شناسه‌های Git
 - Branch: `feat/trade-company-access-context`
 - Commit / Pull Request: در گزارش نهایی و بدنهٔ PR
+
+## تثبیت پس از بازبینی (ادامهٔ مأموریت، 2026-11-24)
+
+### اعتبار OwnershipScope (بررسی از روی کد)
+- `WorkContext` در Production فقط در `WorkContextService.ResolveAsync` ساخته می‌شود، پس از `CompanyAccessService.FindAccessibleCompanyAsync` (عضویت فعال از DB). `GetCurrentAsync` این اعتبارسنجی را در هر درخواست دوباره انجام می‌دهد؛ Cookie فقط شناسهٔ درخواستی را می‌آورد و به کاربر و نشست بسته است.
+- **CompanyId**: از عضویت فعال DB اعتبار دارد و `HasCompanyPermissionAsync` هم دوباره عضویت و نقش را از DB می‌سنجد.
+- **TenantId**: منبع مستقل ندارد. `WorkContext.Ownership` همان `OwnershipScope.FromLegacyCompany(this)` است، پس مسیر جدید **به‌طور غیرمستقیم** به معادلهٔ Legacy (Tenant=Company) وابسته است. مسیر جدید خودش `FromLegacyCompany` را صدا نمی‌زند و Tenant را از Company حدس نمی‌زند، اما تا C4 مقدار Tenant اعتبار مستقل ندارد و در بررسی مجوز هم به کار نمی‌رود (مجوز و Entitlement با `CompanyId`). هیچ مقدار ساختگی یا اعتبارسنجی ظاهری اضافه نشد.
+- `ReferenceEquals`: کنترل هویت درون‌حافظه‌ای در محدودهٔ یک درخواست است (نمونه‌ای که Adapter در همین درخواست ساخته). جفت Tenant/Company را اعتبارسنجی نمی‌کند؛ فقط تضمین می‌کند Context جعلی یا متعلق به درخواست دیگر پذیرفته نشود. `WorkContext` و `CompanyAccess` رکورد عمومی‌اند، پس جلوگیری از ساخت دستی در کد درون‌پردازه با نوع‌ها ممکن نیست؛ تضمین فقط محدود بودن محل ساخت در Production است.
+- قابل‌اثبات تا C4 نیست: استقلال Tenant از Company در Adapter، تست «Tenant اشتباه + Company معتبر» به‌عنوان جداسازی واقعی، و تست تفکیک Tenant و Company دو Scope متفاوت (Blocked تا C4).
+
+### وضعیت یافته‌ها
+| مورد | وضعیت | اقدام/دلیل |
+|---|---|---|
+| L-1 Allowlist Write | Deferred | محتوای Allowlist تصمیم دامنه‌ای است (کدام عملیات مستقل از دوره‌اند؛ D-086 بند ۷). تغییر رفتار Legacy نشد. تست دیده‌بان `NoProductionCodeCallsTheCompanyScopedGateYet` افزوده شد تا اولین مصرف‌کننده آگاهانه و با بازبینی امنیتی وارد شود. |
+| L-2 نام `tenantId` پورت Entitlement | Deferred | تغییر نام پورت Entitlement (و `DenyAll…`) خارج از مجوز و وابسته به تصمیم کلید Entitlement (D-059/D-060) است. یادداشت صریح در `AuthorizeCompanyScopedAsync` افزوده شد؛ رفتار بدون تغییر. |
+| L-3 ادعای «cross-tenant» تست | Fixed (کامنت) / Blocked (اثبات) | کامنت تست اصلاح شد. سنجش `TenantId` با `Ownership.Tenant` تا C4 قابل تفکیک نیست (مقادیر برابرند). |
+| L-4 شکاف اسکن IL | Fixed (بخشی) / Deferred (بقیه) | اسکن `ResolveCurrentCompanyContextAsync` و فراخوانی روی نوع Concrete Adapter افزوده شد. فراخوانی از طریق Reflection، DI Factory، پارامتر Delegate و `GetRequiredService` همچنان دیده نمی‌شود (شکاف از پیش موجود، Deferred؛ اسکن جایگزین بازبینی نیست). |
+| تست‌های کم‌ارزش | Fixed | حذف `TheCompanyPathNeverReportsAPeriodDecision` (Assertion تهی)، `AReadPermissionCanNotAuthorizeAWriteIntent` (وابسته به منطق Fake؛ تست واقعی در Adapter است) و `Assert.NotEqual` تصادفی. تست قفل شکل `TradeAccessContext/TradePeriodScope` عمداً ماند: دیده‌بان محدودیت مالک (O-3 فقط در T1) است و در T1 باید آگاهانه به‌روز شود. |
+| تکرار مقدمهٔ Resolve | Not an issue فعلی | دو بدنهٔ کوتاه؛ استخراج Helper ریسک رگرسیون مسیر موجود دارد (YAGNI تا مسیر سوم). |
