@@ -35,9 +35,11 @@
 | تأیید وجود Backup معتبر از DBهای هدف و روش Restore | Not Run | | |
 | تأیید عدم استفاده از کلید/گواهی Production | Not Run | | |
 | تأیید عدم وجود secret در command history، log یا فایل شاهد | Not Run | | |
-| تأیید Runtime Gate خاموش است | Not Run | | |
+| تأیید مقدار مؤثر `Licensing:RuntimeGate:Enabled=false` در پیکربندی سرویس Customer (نه صرفاً default یا نبود متغیر)، پس از Restart | Not Run | | |
 | تأیید `DenyAllTradeModuleEntitlement` بدون تغییر باقی است | Not Run | | |
 | تأیید عدم دسترسی متقاطع DB بین Vendor و Customer | Not Run | | |
+
+**کنترل Gate:** پیش از شروع چرخه، مقدار مؤثر `Licensing:RuntimeGate:Enabled` در منبع پیکربندی همان سرویس Customer باید صریحاً `false` باشد؛ مقدار قبلی `true` یا منبع نامشخص یعنی توقف تا اصلاح و تأیید. شاهد باید منبع تنظیم و تأیید مقدار پس از Restart را نشان دهد، بدون ثبت secret.
 
 **توقف اجباری:** این برگه مجوز اجرای Migration، تغییر تنظیمات سرویس، ساخت/حذف کلید، صدور لایسنس یا روشن‌کردن Gate نیست. هر اقدام عملیاتی باید طبق Runbook و پس از تأیید مالک انجام شود. Runtime Gate در این چرخه OFF می‌ماند؛ فعال‌سازی آن خارج از دامنهٔ این برگه است و به تصمیم و مجوز جداگانهٔ صریح مالک نیاز دارد.
 
