@@ -84,7 +84,7 @@ try {
 
     # --- positive: tree matching the real publish output (allow-list subset) -----------------
     $allowOk = Join-Path $sandbox 'allow-ok'
-    foreach ($d in @('wwwroot/app/assets', 'fa-IR', 'de', 'runtimes/linux-x64/native', 'runtimes/win-x64/native')) {
+    foreach ($d in @('wwwroot/app/assets', 'fa-IR', 'de', 'runtimes/linux-x64/native', 'runtimes/win-x64/native', 'runtimes/win/lib/net10.0')) {
         New-Item -ItemType Directory -Path (Join-Path $allowOk $d) -Force | Out-Null
     }
     Set-File (Join-Path $allowOk '.faranou-publish-output') "marker`n"
@@ -94,6 +94,9 @@ try {
     Set-File (Join-Path $allowOk 'Application.dll')
     Set-File (Join-Path $allowOk 'Faranou.Licensing.Contracts.dll')
     Set-File (Join-Path $allowOk 'Microsoft.Data.SqlClient.dll')
+    Set-File (Join-Path $allowOk 'Microsoft.Extensions.Hosting.WindowsServices.dll')
+    Set-File (Join-Path $allowOk 'System.ServiceProcess.ServiceController.dll')
+    Set-File (Join-Path $allowOk 'runtimes/win/lib/net10.0/System.ServiceProcess.ServiceController.dll')
     Set-File (Join-Path $allowOk 'fa-IR/Resources.resources.dll')
     Set-File (Join-Path $allowOk 'de/Microsoft.Data.SqlClient.resources.dll')
     Set-File (Join-Path $allowOk 'runtimes/linux-x64/native/libmsalruntime.so')

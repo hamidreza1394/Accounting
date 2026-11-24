@@ -17,6 +17,8 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.15" />
+    <!-- Native Windows Service lifetime for the Vendor and Customer ASP.NET Core hosts. -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.15" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.15" />
     <!-- Test-only: in-process HTTP host of the integration tests (same servicing line as ASP.NET Core). -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
