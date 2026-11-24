@@ -41,6 +41,9 @@ if (Infrastructure.Licensing.WindowsCngLicenseInstallationKeyCommand.IsCommand(a
     return;
 }
 
+// Run as a native Windows Service when launched by SCM; interactive development remains unchanged.
+builder.Host.UseWindowsService(options => options.ServiceName = "Farano Customer");
+
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddRouting(options =>
