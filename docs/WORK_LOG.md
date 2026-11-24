@@ -3676,3 +3676,10 @@
 - **اصلاح مستنداتی:** Runbook اکنون الزام می‌کند پیش از چرخه مقدار مؤثر تنظیم در پیکربندی واقعی سرویس Customer صریحاً `false` باشد؛ اگر مقدار `true` یا منبع آن نامشخص است، اجرا متوقف شود. Worksheet نیز شاهد مقدار مؤثر پس از Restart را ثبت می‌کند. فعال‌سازی Gate همچنان خارج از چرخه و نیازمند مجوز کتبی جداگانهٔ مالک و Recovery readiness است.
 - **دامنه/ایمنی:** فقط مستندات؛ بدون تغییر کد، Migration، Schema، DB، تنظیمات عملیاتی، کلید یا Runtime Gate. `DenyAllTradeModuleEntitlement` بدون تغییر باقی است.
 - **اعتبارسنجی:** تغییرات مستنداتی در GitHub ثبت شدند؛ CI روی head جدید باید تکمیل و بررسی شود. این اصلاح هیچ اجرای عملیاتی Staging را ادعا نمی‌کند.
+
+## 2026-11-24 — Trade: N-5a-type فاز ۱ (`TradeCompanyAccessContext`)
+- **اجرا:** نوع Context جدا (`UserId, TenantId, CompanyId`)، Overload جدا در Gate (`AuthorizeCompanyScopedAsync`)، و دو عضو جدید `ITradeAuthorization`؛ Context فقط از `WorkContext.Ownership` ساخته می‌شود. `TradeAccessContext`/`TradePeriodScope`، Entitlement، Schema، Migration و Backfill دست‌نخورده‌اند؛ مصرف‌کننده‌ای وجود ندارد.
+- **بازبینی:** امنیتی (بدون Critical/High/Medium، ۴ Low ثبت‌شده در handoff) و کیفیت مستقل؛ یک تست اسکن IL برای `ResolveCurrentCompanyContextAsync` افزوده شد.
+- **تست:** ۵۵۶ اجرا/۰ ناموفق/۲۷ Skip (SQL Server، NotRun)؛ اجرای مجدد پس از اصلاح: ۸۳ اجرا/۰ ناموفق. CI کامل و SQL Server: NotRun.
+- **محدودیت:** Tenant تا C4 با DB سنجیده نمی‌شود؛ Resolve هنوز به دوره وابسته است (N-5b). جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-trade-n5a-type-company-access-context-2026-11-24.md`.
+- **ادغام:** ردیف‌های WORK_LOG در #789/#790/#791 و این PR همه به انتهای فایل افزوده می‌شوند؛ هنگام ادغام ممکن است تعارض متنی ساده رخ دهد و باید هر دو ردیف نگه داشته شوند.

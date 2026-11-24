@@ -37,6 +37,29 @@ public interface ITradeAuthorization
         CancellationToken cancellationToken = default,
         bool periodIndependent = false);
 
+    /// <summary>
+    /// Resolves the tenant and company of the current request for operations that belong to no fiscal period
+    /// (N-5a-type). The same session, authenticated-user and active-membership checks apply as for
+    /// <see cref="ResolveCurrentContextAsync" />; the pair comes from the server-side ownership of the verified
+    /// work context. Returns null when the user is empty, is not the authenticated principal, has no sign-in
+    /// session or has no valid context. The returned instance is the only one
+    /// <see cref="HasCompanyPermissionAsync" /> accepts.
+    /// </summary>
+    Task<TradeCompanyAccessContext?> ResolveCurrentCompanyContextAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fails closed unless <paramref name="context" /> is the exact instance resolved for this request, the
+    /// permission matches the intent and the company role holds the permission. There is no period check.
+    /// This is a user-permission check only; the commercial entitlement is checked by TradeAccessGate.
+    /// </summary>
+    Task<bool> HasCompanyPermissionAsync(
+        TradeCompanyAccessContext context,
+        string permissionCode,
+        TradeAccessIntent accessIntent,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Granted <c>trade.*</c> codes of the resolved context; empty for a forged or foreign context.</summary>
     Task<IReadOnlyList<string>> GetGrantedTradePermissionsAsync(
         TradeAccessContext context,

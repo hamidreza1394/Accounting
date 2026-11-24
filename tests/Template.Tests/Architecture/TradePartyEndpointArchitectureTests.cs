@@ -112,7 +112,27 @@ public sealed class TradePartyEndpointArchitectureTests : IClassFixture<FaranouA
     {
         // IL scan: every call of ITradeAuthorization.HasPermissionAsync in the host and Trade assemblies must come
         // from TradeAccessGate (the only place that may pass periodIndependent: true).
-        var target = typeof(ITradeAuthorization).GetMethod(nameof(ITradeAuthorization.HasPermissionAsync))!;
+        AssertOnlyTheGateCalls(typeof(ITradeAuthorization).GetMethod(nameof(ITradeAuthorization.HasPermissionAsync))!);
+    }
+
+    [Fact]
+    public void OnlyTradeAccessGateCallsTheCompanyScopedPermissionCheck()
+    {
+        // The company-scoped check is not entitlement-aware either; only the gate (which checks the entitlement
+        // first) may call it.
+        AssertOnlyTheGateCalls(typeof(ITradeAuthorization).GetMethod(nameof(ITradeAuthorization.HasCompanyPermissionAsync))!);
+    }
+
+    [Fact]
+    public void OnlyTradeAccessGateResolvesTheCompanyScopedContext()
+    {
+        // Resolving the context checks identity and membership only (no entitlement, no permission); only the gate
+        // may call it, so a caller cannot use the context for data scope without the remaining controls.
+        AssertOnlyTheGateCalls(typeof(ITradeAuthorization).GetMethod(nameof(ITradeAuthorization.ResolveCurrentCompanyContextAsync))!);
+    }
+
+    private static void AssertOnlyTheGateCalls(MethodInfo target)
+    {
         var assemblies = new[]
         {
             typeof(Program).Assembly,
