@@ -3657,3 +3657,22 @@
 - Build، Test، SQL Server و `git diff --check` اجرا نشدند؛ CI/Review PR #780 در زمان ثبت این رکورد در انتظار/در حال اجراست و هیچ نتیجه موفقی برای head نهایی ادعا نمی‌شود.
 - Issue #397 باز است؛ G0/G3/G5/G6 بسته نشده‌اند و PR #780 فقط مستنداتی است.
 - handoff: `docs/handoffs/ISSUE-397-s3-0i-tenant-company-user-identity-matrix.md`.
+
+## 2026-11-23 — هم‌راستاسازی آمادگی Vendor و برگه شواهد چرخه اول Staging (UNNUMBERED)
+- **مبنای بازبینی:** `main@490224e69542624b8e75a86fc83fc522157e1b29`؛ PR #771 (G2) قبلاً ادغام شده بود، اما چک‌لیست آمادگی هنوز وضعیت قدیمی «در حال تکمیل» و snapshot منسوخ داشت.
+- **اصلاح:** `docs/VENDOR_OPERATIONAL_READINESS_CHECKLIST.md` به‌روزرسانی شد تا ادغام PR #771 و تفکیک پیاده‌سازی/CI از پذیرش مالک و شواهد Publish عملیاتی را منعکس کند.
+- **تصمیم محیط آزمایش:** طبق تأیید مالک، اجرای اولیه Staging روی یک Windows Server با دو پردازه/سرویس Vendor و Customer و دو دیتابیس مستقل خواهد بود. معماری محصول همچنان باید دو میزبان Windows Server مستقل را پشتیبانی کند؛ اجرای یک‌میزبانه استقلال سخت‌افزار/سیستم‌عامل را اثبات نمی‌کند.
+- **مستندات:** برگه `docs/runbooks/FIRST-STAGING-LICENSE-CYCLE-EVIDENCE.md` اضافه و در `docs/INDEX.md` ثبت شد؛ handoff در `docs/handoffs/ISSUE-UNNUMBERED-vendor-staging-readiness-evidence.md` ایجاد شد.
+- **ایمنی:** فقط مستندات تغییر کردند. هیچ Migration، DB، سرویس، تنظیمات، کلید یا Runtime Gate تغییر نکرد. Runtime Gate OFF و `DenyAllTradeModuleEntitlement` دست‌نخورده باقی ماند. اجرای واقعی Staging، Key Ceremony و آزمون دو میزبان انجام نشد.
+- **اعتبارسنجی:** diff فایل‌های PR از GitHub بازبینی شد؛ روی head دقیق `0e59ff08240d82f752cadcebe3b07b5054776c96`، هر ۱۵ check تکمیل شده‌اند: ۱۴ مورد با نتیجهٔ `success` و CodeRabbit با نتیجهٔ `neutral`. `git diff --check` در محیط Git محلی اجرا نشد. CI سبز صرفاً اعتبارسنجی CI است و اجرای عملیاتی Staging یا آزمون دو میزبان را اثبات نمی‌کند. PR #785 به‌علت تعارض با تغییرات جدید main کنار گذاشته شد و PR جایگزین #786 ساخته شد.
+- **Git:** شاخه `docs/vendor-staging-evidence-main-490224e-2026-11-23`؛ PR جایگزین #786 باز و Ready for review است؛ هنوز ادغام نشده است.
+
+- **بازاعمال امن مستندات Staging:** PR قبلی #785 با تغییرات هم‌زمان PR #780 در `docs/INDEX.md` و `docs/WORK_LOG.md` تعارض پیدا کرد؛ هیچ Force Push یا بازنویسی شاخه انجام نشد. تغییرات موردنظر روی شاخهٔ تازه از `main@490224e69542624b8e75a86fc83fc522157e1b29` بازاعمال شدند و رکوردهای PR #780 حفظ شدند. PR جایگزین #786 ساخته شده و PR #785 قدیمی بسته شده است؛ PR #785 نباید ادغام شود.
+
+
+## 2026-11-24 — PR #786: تثبیت پیش‌شرط خاموش‌بودن Runtime Gate در Staging
+- **بازبینی head قبلی:** روی `911bb1c81618e881639766a144ed1a9fd508b6a1` هر ۱۵ check تکمیل و موفق شدند (از جمله CodeRabbit، Build/Test، E2E، Windows publish و اسکن‌های امنیتی). این نتیجه فقط برای همان SHA معتبر است.
+- **یافتهٔ CodeRabbit:** اگر تنظیم قبلی سرویس Customer برابر `Licensing:RuntimeGate:Enabled=true` باشد، صرفاً رد کردن بخش فعال‌سازی Gate در چرخهٔ اول کافی نیست و Restart می‌تواند Gate را روشن نگه دارد. یافته معتبر تشخیص داده شد.
+- **اصلاح مستنداتی:** Runbook اکنون الزام می‌کند پیش از چرخه مقدار مؤثر تنظیم در پیکربندی واقعی سرویس Customer صریحاً `false` باشد؛ اگر مقدار `true` یا منبع آن نامشخص است، اجرا متوقف شود. Worksheet نیز شاهد مقدار مؤثر پس از Restart را ثبت می‌کند. فعال‌سازی Gate همچنان خارج از چرخه و نیازمند مجوز کتبی جداگانهٔ مالک و Recovery readiness است.
+- **دامنه/ایمنی:** فقط مستندات؛ بدون تغییر کد، Migration، Schema، DB، تنظیمات عملیاتی، کلید یا Runtime Gate. `DenyAllTradeModuleEntitlement` بدون تغییر باقی است.
+- **اعتبارسنجی:** تغییرات مستنداتی در GitHub ثبت شدند؛ CI روی head جدید باید تکمیل و بررسی شود. این اصلاح هیچ اجرای عملیاتی Staging را ادعا نمی‌کند.

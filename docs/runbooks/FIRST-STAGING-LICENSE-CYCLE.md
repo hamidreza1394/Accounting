@@ -2,7 +2,8 @@
 
 - **دامنه:** یک Customer آزمایشی، یک Installation، یک Company، یک License با یک entitlement شرکت‌محور `TRADE_IMPORT`، دو دیتابیس مستقل Vendor/Customer. فقط Staging؛ **هیچ ادعای Production readiness ندارد**.
 - **وضعیت:** تا اجرای واقعی روی میزبان Windows هدف، همهٔ گام‌ها `Not Run` است. هیچ گیت امنیتی در این Runbook باز نمی‌شود؛ گیت‌هایی که بازکردنشان تصمیم مالک است صریحاً علامت خورده‌اند.
-- **وابستگی PR:** گام 5 (صادرات پاکت) نیازمند PR **#781** (`agent/license-envelope-export`) است؛ تا Merge آن، این گام فقط پس از تأیید و ادغام اجرا می‌شود.
+- **پیش‌شرط قطعی Runtime Gate:** پیش از هر اجرای Customer و شروع چرخه، مقدار مؤثر `Licensing:RuntimeGate:Enabled` در پیکربندی همان سرویس Customer باید صریحاً `false` باشد؛ به default یا نبودن متغیر اتکا نکنید. اگر مقدار فعلی `true` است یا منبع مؤثر آن مشخص نیست، چرخه را شروع نکنید. مقدار را در منبع پیکربندی واقعی سرویس (Service/Service Wrapper یا Secret Store) به `false` تغییر دهید و پس از Restart، مقدار مؤثر را از همان منبع پیکربندی/تنظیمات استقرار تأیید و شاهد آن را ثبت کنید. برای اجرای تعاملی، پیش از شروع پردازه در همان PowerShell session مقدار `$env:Licensing__RuntimeGate__Enabled = "false"` را تنظیم کنید. این کار فقط Gate را خاموش نگه می‌دارد و مجوز فعال‌سازی یا اجرای بخش 7 نیست.
+- **وضعیت وابستگی:** گام 5 (صادرات پاکت) با PR **#781** (`agent/license-envelope-export`) و commit `b458a09ad918c1d3fa5c38bb909e25a9d6974978` در `main` ادغام شده است؛ endpoint در کد موجود است، اما اجرای واقعی export در Staging هنوز `Not Run` است.
 - **مراجع اجباری:** [Runbook Key Ceremony CNG (#236/D-107)](ISSUE-236-CNG-KEY-CEREMONY-ROTATION.md) و [LOCALHOST_WINDOWS_TEST_GUIDE.md](../LOCALHOST_WINDOWS_TEST_GUIDE.md)؛ این سند جایگزین آن‌ها نیست.
 
 ## 0) محیط هدف و قواعد ثابت
@@ -11,10 +12,12 @@
 |---|---|---|
 | Vendor Host (API + UI) | Windows Server یا ویندوز توسعه (دسترسی Administrator برای CNG MachineKey) | اتصال به Customer DB؛ کلید خصوصی در Git/Log/بستهٔ مشتری |
 | Vendor SQL Server DB | نمونهٔ مستقل | اشتراک فایل/نمونه با Customer DB |
-| Customer Host (Server.dll) | میزبان دوم یا پردازهٔ دوم | اتصال به Vendor DB؛ دریافت هر مادهٔ خصوصی |
+| Customer Host (Server.dll) | **آزمایش اول:** پردازه/سرویس دوم روی همان Windows Server؛ **مرحلهٔ بعد:** Windows Server مستقل مشتری | اتصال به Vendor DB؛ دریافت هر مادهٔ خصوصی |
 | Customer SQL Server DB | نمونهٔ مستقل | — |
 
 - کل فرآیند بین دو مرز مستقل با **فایل پاکت** انجام می‌شود؛ Vendor هرگز مستقیم به Customer نمی‌نویسد.
+- **توپولوژی اجرای اولیه طبق تصمیم مالک:** یک Windows Server با دو پردازه/سرویس Vendor و Customer، هویت سرویس و تنظیمات مستقل و دو دیتابیس جدا. این آزمایش استقلال سخت‌افزار/سیستم‌عامل یا دو میزبان را اثبات نمی‌کند؛ پشتیبانی و آزمون روی دو Windows Server مستقل در مرحلهٔ بعد الزامی است.
+- برگهٔ ثبت شواهد و نتایج هر اجرا: [`FIRST-STAGING-LICENSE-CYCLE-EVIDENCE.md`](FIRST-STAGING-LICENSE-CYCLE-EVIDENCE.md).
 - پیکربندی Vendor فقط با متغیرهای محیطی `FARANO_VENDOR_*` (User Secrets/Secret Store)؛ هیچ secret در فایل مخزن.
 
 ## 1) آماده‌سازی Vendor DB و اجرا
@@ -130,7 +133,9 @@ POST /api/v1/licensing/import   # body: envelope JSON + localInstallationId
 - import فقط پس از پذیرش اعتبارسنج revocation-aware و عبور از وضعیت‌های مجاز (`Valid/ExpiringSoon/Restricted`) ثبت پایدار می‌کند؛ replay و envelope دستکاری‌شده رد می‌شود.
 4. **نگاشت CompanyReference** به Company محلی مسیر #392 است؛ import مادهٔ mapping نمی‌سازد و نباید از آن حدس زده شود.
 
-## 7) فعال‌سازی Runtime Gate (فقط Staging، فقط با تأیید مالک)
+## 7) فعال‌سازی Runtime Gate (خارج از چرخهٔ اول؛ فقط با مجوز جداگانهٔ مالک)
+
+**این بخش را در چرخهٔ اول Staging اجرا نکنید و از آن عبور کنید.** Runtime Gate در تمام چرخهٔ اول خاموش می‌ماند. فعال‌سازی Gate یک رویهٔ مستقل و خارج از دامنهٔ این Runbook است و فقط پس از تصمیم و مجوز کتبی جداگانهٔ مالک، همراه با تأیید آمادگی Recovery، قابل انجام است. وجود دستورات زیر به‌معنی مجوز اجرای آن‌ها نیست.
 
 ```powershell
 $env:Licensing__RuntimeGate__Enabled = "true"
@@ -138,6 +143,7 @@ $env:Licensing__DeploymentMode = "Dedicated"
 ```
 
 - این دو مقدار باید در **محیط اجرایی خود سرویس Customer** (Service/Service Wrapper یا Secret Store مورد استفادهٔ همان سرویس) ثبت شوند؛ `$env:` در PowerShell فقط session جاری را تغییر می‌دهد و سرویسِ از قبل اجراشده آن را دریافت نمی‌کند. پس از ثبت تنظیمات، سرویس Customer را Restart کنید و سپس وضعیت را بررسی کنید. در اجرای تعاملی، هر دو مقدار را در همان session و پیش از شروع پردازهٔ Customer تنظیم کنید.
+- **وضعیت چرخهٔ اول:** مقدار مؤثر `Licensing:RuntimeGate:Enabled` باید پیش از چرخه `false` باشد؛ اگر تنظیم قبلی `true` است، آن را در پیکربندی واقعی سرویس Customer خاموش و پس از Restart تأیید کنید.
 - **پیش‌نیاز بازکردن Gate:** آماده‌بودن مسیر recovery و تأیید صریح مالک. `Licensing:RuntimeGate:Enabled` پیش‌فرض OFF باقی می‌ماند؛ تا پیش از تأیید مالک، مقدار را فعال نکنید. بدون لایسنس معتبر، فقط مسیرهای فعال‌سازی/بازیابی باز می‌مانند (503 `license_required` روی بقیهٔ API و صفحهٔ ورود).
 - پس از Restart و فقط با مجوز مالک، کنترل وضعیت: `GET /api/v1/licensing/status` — فقط از payload امضاشده.
 
