@@ -72,13 +72,24 @@ $env:FARANO_VENDOR_ProvisioningSigningTrust__Keys__0__PublicKeySubjectPublicKeyI
 ```
 
 5. آزمون‌های پذیرش گام کلید (همه باید ثبت شوند): امضای موفق با هویت سرویس، Verify با SPKI، Restart سرویس و امضای مجدد، رد امضا با حساب غیرمجاز، رد امضا با کلید حذف‌شده (fail-closed 503).
-6. **پیش از شروع Vendor:** برای اجرای تعاملی، متغیرهای بالا را در همان PowerShell session تنظیم کنید و سپس در همان session اجرا کنید؛ پردازه فقط محیط زمان شروع را به ارث می‌برد. برای Windows Service یا service wrapper، همین مقادیر را در محیط/Secret Store همان سرویس ثبت کنید و سرویس را پس از تغییر تنظیمات Restart کنید؛ تنظیمات session کاربر به سرویس در حال اجرا منتقل نمی‌شود.
+6. **هویت و نصب سرویس Vendor:** یک حساب محلی اختصاصی برای Vendor (مثلاً `FARANO-VENDOR-SVC`) بسازید؛ آن را با حساب Customer یا حساب شخصی اپراتور مشترک نکنید. فقط به پوشهٔ برنامه، پوشهٔ Data Protection و دیتابیس Vendor دسترسی لازم بدهید. ACL کلیدهای امضای Vendor طبق Runbook #236 فقط به همین هویت سرویس محدود شود.
+
+7. **ثبت تنظیمات سرویس:** مقادیر غیرمحرمانه و Secretها را در منبع پیکربندی قابل‌دسترسی برای همان سرویس ثبت کنید. از متغیرهای session جاری PowerShell به‌عنوان تنظیمات سرویس استفاده نکنید؛ سرویس محیط کاربر را به ارث نمی‌برد. Connection String و کلید خصوصی نباید در command line یا فایل tracked قرار گیرند.
+
+8. **ثبت و اجرای Windows Service:** پس از Publish خروجی مستقل Vendor و قرار دادن آن در مسیر ثابت، PowerShell را با Administrator باز کنید. Credential فقط در prompt دریافت می‌شود و در command history قرار نمی‌گیرد:
 
 ```powershell
-dotnet run --project Vendor/Vendor.Host
+$vendorCredential = Get-Credential -UserName ".\\FARANO-VENDOR-SVC"
+New-Service -Name "FaranouVendor" -DisplayName "Farano Vendor" `
+  -BinaryPathName '"C:\\Faranou\\Vendor\\Faranou.Vendor.Host.exe"' `
+  -Credential $vendorCredential -StartupType Automatic
+Start-Service -Name "FaranouVendor"
+Get-Service -Name "FaranouVendor"
 ```
 
-7. **کلید Staging از کلید Production مجزا است** (KeyId/Thumbprint/گواهی جدا).
+مسیر executable را با مسیر واقعی Publish جایگزین کنید. پس از Restart میزبان، اجرای خودکار و دسترسی سرویس به DB، Data Protection و کلید امضا باید جداگانه تأیید شود. برای Development تعاملی، `dotnet run --project Vendor/Vendor.Host` همچنان قابل استفاده است.
+
+9. **کلید Staging از کلید Production مجزا است** (KeyId/Thumbprint/گواهی جدا).
 
 ## 4) تعریف Customer آزمایشی، Installation و لایسنس شرکت‌محور
 
@@ -118,7 +129,8 @@ ${env:Licensing__TrustedLicenseKeys__vendor-license-v1__PublicKeySubjectPublicKe
 dotnet Server.dll --migrate   # یا --migrate --include-trade برای Trade؛ Core اول، شکست Core مانع Trade
 ```
 
-3. **ثبت هویت نصب** و **import پاکت** (فقط با حساب Infrastructure؛ نه از React):
+3. **هویت سرویس Customer:** حساب اختصاصی Customer (مثلاً `FARANO-CUSTOMER-SVC`) باید از حساب Vendor و اپراتور مستقل باشد. دسترسی آن فقط به پوشه‌های Customer، دیتابیس Customer و منابع کلید نصب خودش محدود شود. هویت نصب و کلید TPM باید برای همین هویت سرویس قابل استفاده باشد؛ کد فعلی کلید را با ACL مخصوص حساب سرویس provision نمی‌کند. تا زمانی که دسترسی کلید با هویت واقعی سرویس به‌صورت عملی اثبات نشده، ساخت کلید/Enrollment را انجام ندهید و ACL را به‌صورت گسترده باز نکنید.
+4. **ثبت هویت نصب** و **import پاکت** (فقط با حساب Infrastructure؛ نه از React):
 
 ```powershell
 # enrollment یک‌بارمصرف هویت نصب (نقطهٔ پایهٔ TPM/هویت ویندوز):
@@ -128,7 +140,7 @@ POST /api/v1/licensing/import   # body: envelope JSON + localInstallationId
 ```
 
 - import فقط پس از پذیرش اعتبارسنج revocation-aware و عبور از وضعیت‌های مجاز (`Valid/ExpiringSoon/Restricted`) ثبت پایدار می‌کند؛ replay و envelope دستکاری‌شده رد می‌شود.
-4. **نگاشت CompanyReference** به Company محلی مسیر #392 است؛ import مادهٔ mapping نمی‌سازد و نباید از آن حدس زده شود.
+5. **نگاشت CompanyReference** به Company محلی مسیر #392 است؛ import مادهٔ mapping نمی‌سازد و نباید از آن حدس زده شود.
 
 ## 7) فعال‌سازی Runtime Gate (فقط Staging، فقط با تأیید مالک)
 
