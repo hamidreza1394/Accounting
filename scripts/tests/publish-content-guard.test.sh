@@ -91,7 +91,7 @@ fi
 
 # --- positive: tree matching the real publish output (allow-list subset) ----------------
 allow_ok="$sandbox/allow-ok"
-mkdir -p "$allow_ok/wwwroot/app/assets" "$allow_ok/fa-IR" "$allow_ok/de" "$allow_ok/runtimes/linux-x64/native" "$allow_ok/runtimes/win-x64/native"
+mkdir -p "$allow_ok/wwwroot/app/assets" "$allow_ok/fa-IR" "$allow_ok/de" "$allow_ok/runtimes/linux-x64/native" "$allow_ok/runtimes/win-x64/native" "$allow_ok/runtimes/win/lib/net10.0"
 printf 'marker\n' > "$allow_ok/.faranou-publish-output"
 printf 'x' > "$allow_ok/Server.dll"
 printf 'x' > "$allow_ok/Server.pdb"
@@ -99,6 +99,9 @@ printf 'x' > "$allow_ok/Server"
 printf 'x' > "$allow_ok/Application.dll"
 printf 'x' > "$allow_ok/Faranou.Licensing.Contracts.dll"
 printf 'x' > "$allow_ok/Microsoft.Data.SqlClient.dll"
+printf 'x' > "$allow_ok/Microsoft.Extensions.Hosting.WindowsServices.dll"
+printf 'x' > "$allow_ok/System.ServiceProcess.ServiceController.dll"
+printf 'x' > "$allow_ok/runtimes/win/lib/net10.0/System.ServiceProcess.ServiceController.dll"
 printf 'x' > "$allow_ok/fa-IR/Resources.resources.dll"
 printf 'x' > "$allow_ok/de/Microsoft.Data.SqlClient.resources.dll"
 printf 'x' > "$allow_ok/runtimes/linux-x64/native/libmsalruntime.so"

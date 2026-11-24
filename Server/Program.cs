@@ -327,6 +327,20 @@ Infrastructure.DatabaseTopology.DatabaseTopologyServiceCollectionExtensions.AddD
     builder.Services,
     builder.Configuration);
 
+// A database availability probe must not hold up Windows Service startup/SCM registration.
+// Keep the existing environment and first-run conditions, but run the read-only check after
+// ApplicationStarted through a hosted service.
+var applyMigrationsOnStartup = !connectionLoadedFromLocalSettings
+    && builder.Environment.IsDevelopment()
+    && string.Equals(builder.Configuration["Database:ApplyMigrations"], "true", StringComparison.OrdinalIgnoreCase);
+var checkPendingMigrationsAfterStart = !setupRequired
+    && !applyMigrationsOnStartup
+    && (!builder.Environment.IsDevelopment() || connectionLoadedFromLocalSettings);
+if (checkPendingMigrationsAfterStart)
+{
+    builder.Services.AddHostedService<PendingDatabaseMigrationCheckService>();
+}
+
 var app = builder.Build();
 
 if (settingsLoad is not null)
@@ -368,9 +382,6 @@ var migrateOnly = args.Any(arg => string.Equals(arg, "--migrate", StringComparis
 // Connections configured by the operator through the setup form are migrated during first-run
 // initialization only for a new/empty database. Existing databases require an explicit migration
 // step so a legacy EnsureCreated schema is never upgraded blindly on application startup.
-var applyMigrationsOnStartup = !connectionLoadedFromLocalSettings
-    && app.Environment.IsDevelopment()
-    && string.Equals(builder.Configuration["Database:ApplyMigrations"], "true", StringComparison.OrdinalIgnoreCase);
 
 if (!setupRequired && migrateOnly)
 {
@@ -394,27 +405,6 @@ if (!setupRequired && applyMigrationsOnStartup)
     using var scope = app.Services.CreateScope();
     var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
     await migrator.MigrateAsync();
-}
-else if (!setupRequired && (!app.Environment.IsDevelopment() || connectionLoadedFromLocalSettings))
-{
-    try
-    {
-        using var scope = app.Services.CreateScope();
-        var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
-        var pendingMigrations = await migrator.GetPendingMigrationsAsync();
-
-        if (pendingMigrations.Count > 0)
-        {
-            app.Logger.LogWarning(
-                "The database schema is out of date. {PendingMigrationCount} migration(s) are pending: {PendingMigrations}. Apply them with 'dotnet run --project Server -- --migrate'.",
-                pendingMigrations.Count,
-                string.Join(", ", pendingMigrations));
-        }
-    }
-    catch (Exception exception)
-    {
-        app.Logger.LogWarning(exception, "The pending database migrations could not be checked at start-up.");
-    }
 }
 
 foreach (var warning in Infrastructure.Hosting.DeploymentConfigurationChecks.GetWarnings(app.Configuration, app.Environment))
