@@ -19,6 +19,7 @@
 | [ACCESS_CONTROL_ARCHITECTURE.md](ACCESS_CONTROL_ARCHITECTURE.md) و [SECURITY.md](SECURITY.md) | قرارداد هویت، عضویت، authorization و جداسازی Tenant/Company؛ D-087 بر فرض تاریخی Company=Tenant مقدم است |
 | [handoffs/ISSUE-397-s3-0-tenant-company-audit.md](handoffs/ISSUE-397-s3-0-tenant-company-audit.md) | ممیزی ایستای مدل Core/Trade، FK/unique index، WorkContext، Migration pipeline و بازبینی مالکیت V3.2 پس از D-087؛ اجرای زنده SQL Server هنوز لازم است |
 | [handoffs/ISSUE-397-s3-0i-tenant-company-user-identity-matrix.md](handoffs/ISSUE-397-s3-0i-tenant-company-user-identity-matrix.md) | تکمیل ماتریس Tenant/Company/User پس از D-118؛ تفکیک هویت Tenant-scoped، عضویت Company-scoped، کلیدهای مرکب و وضعیت legacy؛ فقط طراحی و ممیزی Read-only |
+| [handoffs/ISSUE-397-s3-0-gap-closure-g3-g6-owner-package-2026-11-24.md](handoffs/ISSUE-397-s3-0-gap-closure-g3-g6-owner-package-2026-11-24.md) | بستن شکاف‌های S3-0 (2026-11-24): G3 Verified، طبقه‌بندی G6/SP، بسته تصمیم مالک و گروه‌بندی کارهای بدون Schema |
 | [USER_ACCESS_MANAGEMENT.md](USER_ACCESS_MANAGEMENT.md) | طراحی و نقشه اجرایی مدیریت کاربران، سمت‌ها، گروه‌های دسترسی، مجوزهای جزئی، عضویت داخلی/بین‌شرکتی (D-078) و سوابق امنیتی (Issue #444) |
 | [SUBSYSTEM_CATALOG.md](SUBSYSTEM_CATALOG.md) | کاتالوگ رسمی زیرسیستم‌های واقعی مخزن با شواهد کد، وضعیت، منو، کدهای مجوز و پیوند entitlement؛ مدل زیرسیستم/منو/فرم/عملیات در D-075 (Stage 2-A، Issue #444) |
 | [MENU_FORM_CATALOG.md](MENU_FORM_CATALOG.md) | کاتالوگ درخت منو و همهٔ Routeهای واقعی با Parent/گیت/ترتیب؛ گارد ماشینی سازگاری منو↔روتر (Stage 2-B، Issue #444) |

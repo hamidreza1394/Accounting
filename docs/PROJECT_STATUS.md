@@ -916,3 +916,10 @@
 - **D-090** (OD-11) از `Proposed` به **`Accepted`** رفت؛ **D-119** (Party و Product Company-owned؛ بدون اشتراک خودکار در Tenant)، **D-120** (Rename فیزیکی `TenantId→CompanyId` + ستون واقعی `TenantId`؛ `HasColumnName` ممنوع) و **D-121** (ابتدا زیرساخت Tenant در Core، سپس Migration اصلاحی Trade) `Accepted` هستند. پیاده‌سازی هر چهار `NotImplemented` است؛ هیچ کد، Schema، Migration یا Backfill تغییر نکرد.
 - وضعیت واقعی Core از سورس: Entity/جدول `Tenant` وجود ندارد و `Company` ستون Tenant ندارد؛ بنابراین گام ۱ D-121 آغاز نشده است. Trade هنوز فقط `TenantId` دارد که `Company.Id` است (پنج Entity، سه جدول فیزیکی) و `DenyAllTradeModuleEntitlement` متصل است.
 - باز می‌مانند: D-091 (ترتیب عملیاتی؛ فقط گام `HasColumnName` آن توسط D-120 جایگزین شد)، D-092..D-096، گیت‌های G0، G5، G6، N-5/N-5b (`TradeAccessContext`/`TradePeriodScope`)، سازوکار انتقال نگاشت Company→Tenant به Trade بدون وابستگی به Core، و جزئیات Backfill/Unique Index. جزئیات و نقشهٔ PRها: `handoffs/ISSUE-UNNUMBERED-trade-tenant-company-owner-decisions-2026-11-23.md`.
+
+## Trade — بستن شکاف‌های S3-0 (2026-11-24، `main@35bd390`)
+
+- **G3 = Verified** روی SQL Server واقعی (شش کلاس PR-D/Rename/Migration Host/مدل؛ کل مجموعه ۱۶۲۳ تست، ۰ ناموفق، ۱۰ Skip نامرتبط). مجوز اجرای Migration نیست.
+- **S3-0d-b:** ماتریس HR/Admin/Export/File/Job در PR #788 (مستندات). موارد وابسته به Tenant واقعی `NotVerified`/`Blocked` ماندند؛ اثبات Tenant یا Shared Database ادعا نمی‌شود.
+- **G6/SP-1..SP-9:** طبقه‌بندی شد؛ همه به Core Tenant و/یا تصمیم مالک (OD-1، OD-5، OD-7، O-3) وابسته‌اند.
+- **S3-0 هنوز بسته نیست.** باز: D-091..D-096، D-083، G0، G4 (باقی‌مانده)، G5، G6، N-5a/N-5b. بسته تصمیم مالک در `handoffs/ISSUE-397-s3-0-gap-closure-g3-g6-owner-package-2026-11-24.md`.
