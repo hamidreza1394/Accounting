@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 
 var bootstrapCommandRequested = VendorBootstrapCommand.IsRequested(args);
 if (bootstrapCommandRequested && args.Length != 1)
@@ -87,6 +88,9 @@ if (bootstrapCommandRequested)
     Environment.ExitCode = exitCode;
     return;
 }
+
+// Run as a native Windows Service when launched by SCM; operator CLI commands remain console-only.
+builder.Host.UseWindowsService(options => options.ServiceName = "Farano Vendor");
 
 builder.Services.AddHealthChecks();
 builder.Services.AddSingleton<VendorAuditCheckpointHealthState>();
