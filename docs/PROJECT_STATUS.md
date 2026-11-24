@@ -916,3 +916,8 @@
 - **D-090** (OD-11) از `Proposed` به **`Accepted`** رفت؛ **D-119** (Party و Product Company-owned؛ بدون اشتراک خودکار در Tenant)، **D-120** (Rename فیزیکی `TenantId→CompanyId` + ستون واقعی `TenantId`؛ `HasColumnName` ممنوع) و **D-121** (ابتدا زیرساخت Tenant در Core، سپس Migration اصلاحی Trade) `Accepted` هستند. پیاده‌سازی هر چهار `NotImplemented` است؛ هیچ کد، Schema، Migration یا Backfill تغییر نکرد.
 - وضعیت واقعی Core از سورس: Entity/جدول `Tenant` وجود ندارد و `Company` ستون Tenant ندارد؛ بنابراین گام ۱ D-121 آغاز نشده است. Trade هنوز فقط `TenantId` دارد که `Company.Id` است (پنج Entity، سه جدول فیزیکی) و `DenyAllTradeModuleEntitlement` متصل است.
 - باز می‌مانند: D-091 (ترتیب عملیاتی؛ فقط گام `HasColumnName` آن توسط D-120 جایگزین شد)، D-092..D-096، گیت‌های G0، G5، G6، N-5/N-5b (`TradeAccessContext`/`TradePeriodScope`)، سازوکار انتقال نگاشت Company→Tenant به Trade بدون وابستگی به Core، و جزئیات Backfill/Unique Index. جزئیات و نقشهٔ PRها: `handoffs/ISSUE-UNNUMBERED-trade-tenant-company-owner-decisions-2026-11-23.md`.
+
+## وضعیت رویداد تمدید اعتبار Proforma — 2026-11-24
+- **Implemented (کد و تست، در انتظار CI/تأیید مالک):** `ProformaValidityExtendedEvent` در `Trade.Application/Proformas` — فقط نوع Domain خالص با `TenantId` و `CompanyId` مستقل؛ به هیچ مسیر زمان اجرا متصل نیست.
+- **Blocked/NotImplemented:** Aggregate کامل Proforma/Revision، Persistence، API/UI؛ وابسته به A-1، A-3، N-9، P-4، P-5 و گیت‌های S3-0. تصمیم A-2 (کاهش تاریخ) گرفته نشده است.
+- جزئیات: `handoffs/ISSUE-UNNUMBERED-trade-proforma-validity-extension-event.md`.
