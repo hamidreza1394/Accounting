@@ -2,6 +2,7 @@
 
 - **دامنه:** یک Customer آزمایشی، یک Installation، یک Company، یک License با یک entitlement شرکت‌محور `TRADE_IMPORT`، دو دیتابیس مستقل Vendor/Customer. فقط Staging؛ **هیچ ادعای Production readiness ندارد**.
 - **وضعیت:** تا اجرای واقعی روی میزبان Windows هدف، همهٔ گام‌ها `Not Run` است. هیچ گیت امنیتی در این Runbook باز نمی‌شود؛ گیت‌هایی که بازکردنشان تصمیم مالک است صریحاً علامت خورده‌اند.
+- **پیش‌شرط قطعی Runtime Gate:** پیش از هر اجرای Customer و شروع چرخه، مقدار مؤثر `Licensing:RuntimeGate:Enabled` در پیکربندی همان سرویس Customer باید صریحاً `false` باشد؛ به default یا نبودن متغیر اتکا نکنید. اگر مقدار فعلی `true` است یا منبع مؤثر آن مشخص نیست، چرخه را شروع نکنید. مقدار را در منبع پیکربندی واقعی سرویس (Service/Service Wrapper یا Secret Store) به `false` تغییر دهید و پس از Restart، مقدار مؤثر را از همان منبع پیکربندی/تنظیمات استقرار تأیید و شاهد آن را ثبت کنید. برای اجرای تعاملی، پیش از شروع پردازه در همان PowerShell session مقدار `$env:Licensing__RuntimeGate__Enabled = "false"` را تنظیم کنید. این کار فقط Gate را خاموش نگه می‌دارد و مجوز فعال‌سازی یا اجرای بخش 7 نیست.
 - **وضعیت وابستگی:** گام 5 (صادرات پاکت) با PR **#781** (`agent/license-envelope-export`) و commit `b458a09ad918c1d3fa5c38bb909e25a9d6974978` در `main` ادغام شده است؛ endpoint در کد موجود است، اما اجرای واقعی export در Staging هنوز `Not Run` است.
 - **مراجع اجباری:** [Runbook Key Ceremony CNG (#236/D-107)](ISSUE-236-CNG-KEY-CEREMONY-ROTATION.md) و [LOCALHOST_WINDOWS_TEST_GUIDE.md](../LOCALHOST_WINDOWS_TEST_GUIDE.md)؛ این سند جایگزین آن‌ها نیست.
 
@@ -142,6 +143,7 @@ $env:Licensing__DeploymentMode = "Dedicated"
 ```
 
 - این دو مقدار باید در **محیط اجرایی خود سرویس Customer** (Service/Service Wrapper یا Secret Store مورد استفادهٔ همان سرویس) ثبت شوند؛ `$env:` در PowerShell فقط session جاری را تغییر می‌دهد و سرویسِ از قبل اجراشده آن را دریافت نمی‌کند. پس از ثبت تنظیمات، سرویس Customer را Restart کنید و سپس وضعیت را بررسی کنید. در اجرای تعاملی، هر دو مقدار را در همان session و پیش از شروع پردازهٔ Customer تنظیم کنید.
+- **وضعیت چرخهٔ اول:** مقدار مؤثر `Licensing:RuntimeGate:Enabled` باید پیش از چرخه `false` باشد؛ اگر تنظیم قبلی `true` است، آن را در پیکربندی واقعی سرویس Customer خاموش و پس از Restart تأیید کنید.
 - **پیش‌نیاز بازکردن Gate:** آماده‌بودن مسیر recovery و تأیید صریح مالک. `Licensing:RuntimeGate:Enabled` پیش‌فرض OFF باقی می‌ماند؛ تا پیش از تأیید مالک، مقدار را فعال نکنید. بدون لایسنس معتبر، فقط مسیرهای فعال‌سازی/بازیابی باز می‌مانند (503 `license_required` روی بقیهٔ API و صفحهٔ ورود).
 - پس از Restart و فقط با مجوز مالک، کنترل وضعیت: `GET /api/v1/licensing/status` — فقط از payload امضاشده.
 
