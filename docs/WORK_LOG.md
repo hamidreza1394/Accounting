@@ -3677,6 +3677,16 @@
 - **دامنه/ایمنی:** فقط مستندات؛ بدون تغییر کد، Migration، Schema، DB، تنظیمات عملیاتی، کلید یا Runtime Gate. `DenyAllTradeModuleEntitlement` بدون تغییر باقی است.
 - **اعتبارسنجی:** تغییرات مستنداتی در GitHub ثبت شدند؛ CI روی head جدید باید تکمیل و بررسی شود. این اصلاح هیچ اجرای عملیاتی Staging را ادعا نمی‌کند.
 
+## 2026-11-24 — بستن شکاف‌های S3-0: S3-0d-b، G3، G6 و بسته تصمیم مالک (UNNUMBERED، #397)
+- **مبنا:** `main@35bd390`؛ PR باز: صفر. P0-0 دوباره اجرا نشد (۵۴ تست Trade روی SQL Server واقعی، همگی موفق؛ فقط اثبات جداسازی Company).
+- **S3-0d-b:** بخش ۱۵ به handoff موجود افزوده شد (PR #788): HR، Admin، Export، Raw/Set-based، File، Job با وضعیت `Verified`/`Verified with limitation`/`NotVerified`/`Blocked`/`NotApplicable`. یافته: Server اکنون دو `IHostedService` دارد که داده Company را لمس نمی‌کنند.
+- **G3:** `Verified` با اجرای واقعی SQL Server؛ کل مجموعه ۱۶۲۳ تست، ۱۶۱۳ موفق، ۰ ناموفق، ۱۰ Skip نامرتبط (Windows CNG ×8، مجوز سیستم‌فایل ×2)؛ مجوز Migration نیست. Guardهای Python بدون `tree-sitter` به‌دلیل محیط شکست می‌خورند و با نصب آن `OK` شدند.
+- **G6:** SP-1..SP-9 با کد و تست طبقه‌بندی شدند؛ شکاف مستقل بدون Tenant/تصمیم یافت نشد.
+- **مستندات:** `TRADE_S3_READINESS.md` با توضیح supersede هم‌راستا شد (D-090/D-119/D-120/D-121 `Accepted`؛ D-118 در ماتریس هویت؛ متن تاریخی حذف نشد). بسته تصمیم مالک (G0، D-092، D-094، G5، G4/N-5) در handoff جدید.
+- **ایمنی:** هیچ کد، تست، Schema، Migration، Backfill یا تصمیم `Accepted` جدید؛ Excel Import `Deferred`؛ دیتابیس آزمایشی حذف شد.
+- **اجرانشده:** Vitest، E2E، Build شاخهٔ مستنداتی، هر Migration روی دیتابیس مشتری.
+- handoff: `docs/handoffs/ISSUE-397-s3-0-gap-closure-g3-g6-owner-package-2026-11-24.md`.
+
 ## 2026-11-24 — S0: ثبت تصمیم‌های مالک (O-3، N-4، N-5a-type/N-5b) و یادداشت D-116
 - **handoff:** `docs/handoffs/ISSUE-UNNUMBERED-trade-s0-owner-decisions-2026-11-24.md`؛ شاخه `docs/trade-s0-owner-decisions-2026-11-24`.
 - **ثبت:** O-3 = گزینهٔ A (فقط داخل T1 اتمیک؛ مجوز شروع T1 نیست)؛ N-4 = گزینهٔ ۱ (Domain خالص، بدون Persistence)؛ N-5a-type فاز اول `Accepted`؛ N-5b همچنان `NeedsApproval`. یادداشت تکمیلی تاریخ‌دار D-116 دربارهٔ Accepted شدن D-090؛ ارجاع «ارتباط با Entity مالی: D-090» عدم‌تطابق موضوعی دارد ولی مقصد درست قابل اثبات نبود و تغییر نکرد.

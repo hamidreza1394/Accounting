@@ -246,3 +246,72 @@
 - **Verified (static/InMemory):** همهٔ بندهای ۱ تا ۱۴ در حد خواندن Source؛ چرخهٔ کامل «ایجاد دیتابیس → Provisioning → کاربر/عضویت → انتخاب context → اعتبارسنجی هر درخواست» با مسیرهای دقیق و کنترل‌های هر نقطه مستند شد.
 - **NotVerified/NotRun (بدون تغییر):** دو Tenant واقعی (Entity وجود ندارد)، اجرای تست‌ها روی SQL Server واقعی، مقادیر `TenantId` در دیتابیس واقعی، اجرای Vitest.
 - **هیچ تصمیم جدیدی گرفته نشد**؛ شکاف‌های FK (بند ۱۴.۵) فقط ثبت شدند. ورودی‌های طراحی S3-0e/f/g: بند ۱۴ نشان می‌دهد تنها نقطهٔ ایجاد Company مسیر Provisioning است و الگوی FK مرکب `(…, TenantId)` از قبل برقرار است — این دو، ریسک طرح گذار را کاهش می‌دهند.
+
+---
+
+## ۱۵. تکمیل مأموریت 2026-11-24 — ماتریس وضعیت مسیرهای HR، Admin، Export، File و Job
+
+- **مبنا:** `origin/main@35bd390` (پس از #780، #784، #787). بخش‌های ۱ تا ۱۴ بازنویسی نشدند؛ این بخش آن‌ها را با Source فعلی تطبیق می‌دهد و برای هر مورد دقیقاً یک وضعیت می‌گذارد.
+- **ماهیت:** مستندات؛ هیچ کد، تست، Schema، Migration یا Backfill تغییر نکرد.
+- **اجرای واقعی امروز:** کل مجموعهٔ `Template.Tests` با SQL Server 2022 آزمایشی (`scripts/dev/test-sqlserver.sh up`، حذف‌شده پس از پایان) و `FARANOU_REQUIRE_SQLSERVER=1`: **۱۶۲۳ تست، ۱۶۲۳ اجرا‌شده، ۰ ناموفق، ۰ خطا، ۱۰ Skip، ۰ NotRun**. ۱۰ Skip همگی وابسته به Windows CNG (۸ مورد) یا مجوز سیستم‌فایل (۲ مورد `DatabaseSettingsStoreTests`) و بی‌ارتباط با Tenant/Trade/HR‌اند. این نتیجه فقط جداسازی **Company در مدل فعلی** را اثبات می‌کند؛ **اثبات Tenant واقعی یا Shared Database نیست** (Entity Tenant در Core وجود ندارد).
+- **تعریف وضعیت‌ها:** `Verified` (کد + تست خودکار + اجرای واقعی)؛ `Verified with limitation` (همان، ولی فقط در معنای Company-legacy یا با محدودیت نام‌برده‌شده)؛ `NotVerified`؛ `NotRun`؛ `Blocked`؛ `NotApplicable`.
+
+### ۱۵.۱ HR
+
+مسیرها (۲۹ Route در دو فایل، شمارش از `Map*`): `HrOrganizationalStructureEndpoints.cs` (Employees ۱۰، Units ۷، Positions ۶، Assignments ۳)، `HrEmployeePhotoEndpoints.cs` (Photo ۳). Directory: `CompanyUserDirectoryEndpoints.cs` (`GET /companies/{companyId}/users`).
+
+| مسیر | Authorization | Predicate Company | تست | وضعیت |
+|---|---|---|---|---|
+| Employees / Units / Positions / Assignments (همهٔ Handlerها) | `AuthorizeHrScopeAsync` در همان فایل: کاربر ← **مدیر نصب مستقیم عبور می‌کند** (`HrScope(userId, true)`) ← وگرنه `FindAccessibleCompanyAsync` (غیرعضو ⇒ 404) ← `HasPermissionAsync` (⇒ 403)؛ Rate limit حساس | ۵۳ مورد `TenantId == companyId` در همان فایل (Query و بررسی والد) | `HrOrganizationalStructureEndpointTests` (از جمله `ForeignCompanyIdentifiers_AreRefusedByEveryHrHandler_AndTheForeignRowsStayUntouched`، ۱۳ Handler)، `HrWorkflowsEndpointTests`، `HrOrganizationalStructureSqlServerTests` | **Verified with limitation** — Company-legacy؛ روی SQL Server واقعی اجرا شد |
+| Photo (GET/PUT/DELETE) | همان `AuthorizeHrScopeAsync` | ۴ مورد در `HrEmployeePhotoEndpoints.cs`؛ BLOB در `CompanyEmployeePhotos` با FK مرکب | `HrEmployeePhotoEndpointTests.Photo_OfACompanyIsInvisibleAndImmutableFromAnotherCompany`، `UserEmailAndEmployeePhotoSqlServerTests` | **Verified with limitation** |
+| Manager و روابط بین شرکت‌ها | Body ارجاع Unit/Position بیرونی ⇒ ۴۰۴/۴۰۹/۴۰۰ | بررسی والد در Handler | `Assignment_SelfManagementAndCrossCompanyManager_AreRefused` | **Verified with limitation** |
+| Directory کاربران Company | `FindAccessibleCompanyAsync` + `HasPermissionAsync` | ۱ مورد | `CompanyUserDirectoryEndpointTests`، `CompanyUserDirectorySqlServerTests` | **Verified with limitation** |
+| عبور **مدیر نصب** از مرز Company/Tenant در HR | Bypass صریح و ممیزی‌شده (D-071/D-088) | — | تست رفتار فعلی هست؛ تست «مدیر نصب نباید از Tenant عبور کند» **ممکن نیست** | **NotVerified** (OD-1؛ نیازمند Tenant و تعریف Platform Admin) |
+| جداسازی Tenant (نه Company) در HR | — | — | — | **NotVerified / Blocked** (بدون Entity Tenant) |
+
+### ۱۵.۲ Admin
+
+چهار طبقه تفکیک می‌شود؛ `Role.Admin` به‌تنهایی در کد فعلی «مدیر نصب» است و مرز Tenant ندارد (طبق D-088 مجاز، تا تعریف OD-1).
+
+| طبقه | مسیرها (فایل) | کنترل واقعی در Source | تست | وضعیت |
+|---|---|---|---|---|
+| ۱. مدیر نصب / Platform Admin | ۳۱ صفحهٔ `Server/Pages/Admin/**` (`[Authorize(Roles = Admin)]` + بازبینی نقش از DB)؛ `UserAdministrationEndpoints` (`/admin/users*`)، `AdminUserSessionEndpoints`، `AccessCatalogEndpoints`، `SecurityAuditAdministrationEndpoints` | Claim نقش در هر درخواست با نقش فعلی DB جایگزین می‌شود؛ ممیزی دسترسی | `AdminRoleRevalidationHttpTests`، `InstallationAdminAudit*Tests`، `AdminUserSessionSqlServerTests`، `SecurityAuditAdministrationSqlServerTests` | **Verified with limitation** (سراسری نصب؛ بدون Tenant) |
+| ۲. مدیر Tenant | — | **وجود ندارد** (نه Entity، نه نقش) | — | **Blocked** (D-118/D-121؛ نیازمند Core Tenant) |
+| ۳. مدیر Company | `CompanyRoleAdministrationEndpoints` (۱۴ predicate، `AuthorizeCompanyScopeAsync`)، `CompanyMembershipRequestEndpoints` (`AuthorizeDestinationApproverAsync`) ، `CompanyUserProvisioningEndpoints` | عضویت فعال + مجوز در همان شرکت؛ سقف واگذاری D-071؛ FK مرکب DB برای نقش | `CompanyRoleAdministrationEndpointTests`، `CompanyRoleDelegationCeilingEndpointTests`، `CompanyMembershipRequestEndpointTests`، `*SqlServerTests` مربوط | **Verified with limitation** (Company-legacy) |
+| ۴. کاربر عملیاتی Company | `/companies/{id}/…`، `/context*`، `/me/*`، `/trade/*` | عضویت فعال هر درخواست؛ `/me/*` محدود به خود کاربر | `WorkContextTests`، `WorkContextHttpTests`، `CompanyAccessTests`، `MePermissionsSqlServerTests` | **Verified with limitation** |
+| Role سراسری Admin برای مشتری | ساخت کاربر با `RoleId` در `Pages/Admin/Users/Create.cshtml.cs:206` | مدیر نصب می‌تواند نقش انتخاب کند؛ انحصار «نقش سراسری فقط برای اپراتور» اعمال‌شده در کد **نیست** | — | **NotVerified** (SP-1/SP-2؛ OD-1 باز) |
+| Razor `Roles/MenuItems/Page*/ApplicationHandlers` | فراداده سراسری | `[Authorize(Roles=Admin)]` | تست مستقل مسیر‌به‌مسیر برای این صفحات بازبینی نشد | **NotVerified** (ممیزی تغییر Roles در Backlog؛ سراسری نصب است نه Tenant) |
+
+### ۱۵.۳ Export، Report و Raw/Set-based (جست‌وجوی دوباره روی `35bd390`)
+
+| مورد | Tenant | Company | Installation | فقط Platform Admin | تست منفی | وضعیت |
+|---|---|---|---|---|---|---|
+| `POST /admin/security/audit-events/export` (CSV، `SecurityAuditAdministrationEndpoints.cs`) | ندارد | فیلتر اختیاری `TenantId == companyId` (خط ۴۲۰) | بله (سراسری) | **بله** (Claim مدیر + Anti-forgery + بازهٔ زمانی الزامی/سقف + ممیزی `SecurityAuditExported`) | `SecurityAuditAdministrationEndpointTests` (رد غیرمدیر، Anti-forgery، بازهٔ نامعتبر/وسیع)، `SecurityAuditAdministrationSqlServerTests` | **Verified with limitation**؛ Tenant: **NotVerified** |
+| `GET /admin/security/audit-events`، `/admin/companies`، `installation-admin-activity` | ندارد | فیلتر اختیاری | بله | بله | همان تست‌ها | **Verified with limitation** |
+| `HrEmployeePhotoEndpoints` (`TypedResults.File`) | ندارد | بله | — | خیر (مجوز HR) | تست Cross-Company بالا | **Verified with limitation** |
+| گزارش مالی/تجاری، PDF، Excel Export، Report API، Bulk، Stored Procedure، View | — | — | — | — | — | **NotApplicable** (جست‌وجوی `text/csv\|FileContentResult\|Results.File\|TypedResults.File` فقط دو مورد بالا؛ هیچ بستهٔ Excel در `Directory.Packages.props`/`.csproj`؛ `ClosedXML\|EPPlus\|NPOI\|OpenXml\|ExcelDataReader` یافت نشد) |
+| `ExecuteUpdateAsync` روی `UserSessions` (`SessionValidator`، `UserSessionService`، `UserPasswordService`) | — | — | هویت/نصب | — | `AdminUserSessionSqlServerTests` | **Verified** (روی SQL Server واقعی؛ بدون داده Company) |
+| `ExecuteSqlRawAsync` برای `sp_getapplock` (۳ سرویس Licensing/Provisioning) | — | — | بله | — | تست‌های Provisioning/Licensing SqlServer | **Verified** (قفل پارامتری؛ بدون خواندن داده Company) |
+| `FromSqlRaw` در `TpmAnchoredOfflineRevocationStateStore` | — | — | بله | — | `CustomerOfflineRevocationSqlServerTests` | **Verified** |
+| `ExecuteDelete`، `ExecuteSqlInterpolated`، `SqlQuery` در کد تولیدی | — | — | — | — | — | **NotApplicable** (یافت نشد؛ فقط در تست‌ها) |
+| Global Query Filter | — | — | — | — | — | **NotApplicable** (`HasQueryFilter` یافت نشد؛ D-013) |
+
+### ۱۵.۴ File و Job
+
+| مورد | یافته با شواهد | وضعیت |
+|---|---|---|
+| فایل‌های HR | BLOB در `CompanyEmployeePhotos`؛ مسیر دانلود با `companyId + employeeId` از Route و Authorization بالا؛ هیچ مسیر فایل ارسالی کاربر | **Verified with limitation** |
+| فایل اسناد Trade / ذخیره‌سازی سند | پیاده‌نشده (`NotImplemented`)؛ زیرساخت فرضی ساخته نشد | **NotApplicable** |
+| `Admin/FileManager` | `FileManagerPathBoundaryTests` — مسیرها به `wwwroot` محدودند؛ داده Tenant نیست | **Verified** |
+| دانلود/دریافت با شناسه یا مسیر کاربر | فقط Photo (بالا) و FileManager (بالا) | **Verified with limitation** |
+| BackgroundService/IHostedService در **Server** | **دو مورد، نه صفر** (بروزرسانی نسبت به بند ۷): `PendingDatabaseMigrationCheckService` (فقط خواندن تاریخچهٔ Migration و Log هشدار؛ بدون داده Company) و `DatabaseTopologyStartupSnapshot` (فقط Snapshot پیکربندی D-115؛ بدون I/O داده) | **Verified** (هیچ‌کدام داده Tenant/Company را نمی‌خوانند یا نمی‌نویسند) |
+| Job/Worker/Scheduled تجاری یا Tenant-level | یافت نشد | **NotApplicable** |
+| `Vendor.Host` (`VendorAuditCheckpointBackgroundService`، دو Startup Service امضا) | Host مستقل Vendor؛ خارج از داده مشتری Server | **NotApplicable** برای S3-0d-b |
+
+### ۱۵.۵ نتیجهٔ S3-0d-b
+
+- **هیچ `Unknown` بدون توضیح باقی نمانده است.** مسیرهای قابل اثبات در مدل Company-legacy: **Verified / Verified with limitation** با اجرای واقعی SQL Server امروز.
+- **NotVerified (به‌دلیل نبود Tenant واقعی):** Tenant-level HR/Admin/Export، عبور مدیر نصب از مرز Tenant، انحصار نقش سراسری Admin، دو Tenant مستقل.
+- **Blocked:** طبقهٔ «مدیر Tenant».
+- **NotRun:** Vitest (`node_modules` نیست)؛ مقادیر `TenantId` روی دیتابیس واقعی مشتری (و طبق دستور هرگز اجرا نمی‌شود).
+- **ایزولاسیون Shared Database و Tenant دوم با این نتایج اثبات یا ادعا نشد.** S3-0d-b همچنان منتظر تأیید مالک است؛ این بخش آن را «بسته» اعلام نمی‌کند.
