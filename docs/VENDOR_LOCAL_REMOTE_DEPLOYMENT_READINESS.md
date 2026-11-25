@@ -1,7 +1,7 @@
 # آمادگی استقرار محلی و راه دور Vendor فرانو
 
 - **Issue:** [#768](https://github.com/hamidreza1394/Accounting/issues/768)
-- **مبنای بررسی:** main@560ff2890be8bbf87795f30dd85f4eaf3cd1f131
+- **مبنای بررسی:** main@50a15eae81d4b88657a3a981f59e0ae89f271a91؛ بازبینی 2026-11-25 پس از Merge PR #787
 - **وضعیت این سند:** نقشه اجرای مرحله‌ای؛ نه Runbook اجراشده و نه گواه Production readiness.
 - **هدف:** اجرای مستقل Vendor در Visual Studio روی سیستم توسعه و استقرار آن روی Windows Server، با امکان تغییر endpoint بدون تغییر کد Customer.
 
@@ -21,9 +21,10 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 |---|---|---|
 | Solution مستقل | Vendor.sln در ریشه مخزن؛ Host در Vendor/Vendor.Host/Vendor.Host.csproj | پایه اجرای مستقل وجود دارد؛ اجرای واقعی در Visual Studio هنوز باید روی دستگاه توسعه اثبات شود |
 | جداسازی Vendor/Customer | مرز پروژه و دیتابیس مستقل در معماری وجود دارد | در Staging باید دو دیتابیس مستقل با دو Connection String مجزا ساخته شوند |
+| Native Windows Service hosting (#768/#787) | PR #787 برای دو Host نام‌های مستقل `Farano Vendor` و `Farano Customer` را اضافه کرد؛ CLI/Key Ceremony console-only است؛ CI پس از Merge ۲۰/۲۰ و main فعلی ۱۲/۱۲ موفق | **Not Verified عملیاتی** — نصب واقعی سرویس، هویت سرویس، ACL و اتصال SQL روی میزبان هدف اجرا نشده است |
 | CNG مرکزی | Provider ویندوزی CNG/Certificate Store برای License و Provisioning پیاده شده و با Signing:CertificateStore:Enabled opt-in می‌شود | کلید واقعی، ACL هویت سرویس و Key Ceremony روی میزبان هدف هنوز عملیاتی تأیید نشده‌اند |
 | PKCS#11 | مسیر مجزای D-055/D-056 برای دامنه‌هایی که D-107 supersede نکرده باقی است | PKCS#11/HSM پیش‌نیاز signer مرکزی License/Provisioning در Vendor V1 نیست |
-| Publish guard (D-041/G2) | گارد رد Vendor DLL و الگوهای کلید وجود دارد؛ Allow-list کامل خروجی هنوز اثبات نشده | بسته انتشار مستقل Vendor هنوز معیار پذیرش کامل را ندارد |
+| Publish guard (D-041/G2) | PR #771 گارد و نرمال‌سازی مسیر Windows را وارد main کرد؛ PR #787 سه dependency دقیق Windows Service را به allow-list افزود | پذیرش مالک و ممیزی دستی artifact هدف هنوز انجام نشده است |
 | Deployment workflow (D-041/G5) | workflow مسیرمحدود Vendor CI وجود دارد؛ استقرار مقصد واقعی انتخاب/پیکربندی نشده | Staging deploy باید مستقل از CI و بدون signing key در CI طراحی شود |
 | Provisioning v5 | Customer verifier، CompanyReference mapping و Apply اتمیک در کد موجود است؛ Gate Vendor همچنان fail-closed و بسته است | وجود Consumer به معنی مجازبودن صدور v5 یا بازکردن Gate نیست |
 | Bootstrap | Enrollment موجود است؛ Bootstrap مستقل TenantOwner/Dedicated/Offline طبق D-110 هنوز NotImplemented است | این دو را یکی نگیریم؛ پیش از استفاده از این مسیر باید D-110 تکمیل شود |
@@ -40,6 +41,7 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 
 - اجرای Vendor.sln در Visual Studio 2026 نسخه 18.0 یا بالاتر و .NET 10 SDK؛ مسیر Host اجرایی Vendor/Vendor.Host/Vendor.Host.csproj است.
 - اجرای مستقیم Host از ریشه مخزن پس از تنظیمات: dotnet run --project Vendor/Vendor.Host/Vendor.Host.csproj.
+- PR #787 پشتیبانی Native Windows Service را با `UseWindowsService` و ServiceName برابر `Farano Vendor` اضافه کرده است؛ هنگام اجرای تعاملی در Visual Studio/Console رفتار توسعه حفظ می‌شود و فرمان‌های CLI/Key Ceremony پیش از فعال‌سازی Service lifetime خاتمه می‌یابند. این تغییر سرویس را نصب نمی‌کند و حساب سرویس/ACL نمی‌سازد.
 - برای آماده‌سازی UI مستقل Vendor، دستورات تأییدشده CI عبارت‌اند از: در Vendor/Vendor.Web اجرای npm ci، npm run typecheck، npm test و npm run build؛ سپس از ریشه مخزن اجرای dotnet publish Vendor/Vendor.Host/Vendor.Host.csproj --configuration Release --output <absolute-output-path>. مسیر خروجی باید خارج از سورس و مجزا از Customer publish باشد.
 - خروجی Vendor باید حداقل Faranou.Vendor.Host.dll، wwwroot/index.html و bundleهای JS/CSS در wwwroot/assets داشته باشد. CI این موارد را بررسی می‌کند و فایل‌های private-key با پسوندهای حساس یا PEM private-key marker را رد می‌کند؛ این بررسی جایگزین ممیزی کامل artifact و allow-list مستقل نیست.
 - اجرای Host منتشرشده از پوشه خروجی: dotnet Faranou.Vendor.Host.dll. فرمان bootstrap-admin برای ساخت اولین اپراتور Vendor یک فرمان تعاملی و یک‌بارمصرف است؛ FARANO_VENDOR_Bootstrap__Secret باید از Secret Store/Environment و حداقل ۳۲ بایت باشد. این فرمان فقط مدیر Vendor را می‌سازد و به Bootstrap مدیر Customer طبق D-110 ارتباطی ندارد.
@@ -55,6 +57,8 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 ### B. Staging روی Windows Server
 
 - Host مستقل Vendor روی Windows Server یا Windows VM اختصاصی اجرا شود.
+- در صورت انتخاب Windows Service، نصب/ثبت سرویس و هویت آن باید توسط اپراتور روی میزبان هدف انجام شود؛ PR #787 فقط Host lifetime و نام سرویس را فراهم می‌کند. نام سرویس Vendor برابر `Farano Vendor` است؛ نام Customer برابر `Farano Customer`. هیچ حساب مشترک یا دسترسی پیش‌فرض اضافه نشده است.
+- بررسی read-only Migrationهای Customer در `PendingDatabaseMigrationCheckService` پس از `ApplicationStarted` اجرا می‌شود تا ثبت در SCM را معطل نکند؛ این سرویس Migration را اعمال نمی‌کند.
 - Vendor DB و Customer DB از نظر نام، دسترسی، credential و backup جدا باشند.
 - Endpoint عمومی فقط با HTTPS و گواهی معتبر استفاده شود؛ IP عمومی به گواهی دارای IP SAN نیاز دارد. Endpoint خصوصی فقط روی LAN/VPN مورد اعتماد با CA معتبر داخلی.
 - SQL Server به اینترنت عمومی باز نشود؛ فقط Hostهای مجاز به آن دسترسی داشته باشند.
