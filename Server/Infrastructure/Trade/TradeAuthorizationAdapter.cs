@@ -17,6 +17,8 @@ public sealed class TradeAuthorizationAdapter(
     private const string TradePermissionPrefix = "trade.";
     // A private object key (not a string) so no other code can read or overwrite the resolved context.
     private static readonly object ResolvedContextItemKey = new();
+    // A separate private key for the company-scoped context, so one kind of context never authorizes the other.
+    private static readonly object ResolvedCompanyContextItemKey = new();
 
     public async Task<TradeAccessContext?> ResolveCurrentContextAsync(
         Guid userId,
@@ -45,6 +47,53 @@ public sealed class TradeAuthorizationAdapter(
             userId, current.Company.CompanyId, current.FiscalPeriod.Id, current.AllowsWrites);
         httpContext.Items[ResolvedContextItemKey] = resolved;
         return resolved;
+    }
+
+    public async Task<TradeCompanyAccessContext?> ResolveCurrentCompanyContextAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var httpContext = GetAuthenticatedContext(userId);
+        var sessionId = WorkContextCookie.GetSessionId(httpContext?.User);
+        if (httpContext is null || sessionId is null)
+        {
+            return null;
+        }
+
+        var current = await workContextService.GetCurrentAsync(
+            httpContext, userId, sessionId.Value, cancellationToken);
+        if (current is null)
+        {
+            return null;
+        }
+
+        // Both identifiers come from the server-side ownership of the verified work context, each from its own
+        // property. This path states no equation of its own; the transition (C4) replaces the ownership source.
+        var ownership = current.Ownership;
+        var resolved = new TradeCompanyAccessContext(userId, ownership.Tenant.Value, ownership.Company.Value);
+        httpContext.Items[ResolvedCompanyContextItemKey] = resolved;
+        return resolved;
+    }
+
+    public async Task<bool> HasCompanyPermissionAsync(
+        TradeCompanyAccessContext context,
+        string permissionCode,
+        TradeAccessIntent accessIntent,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsResolvedCompanyContextInThisRequest(context) ||
+            !IsValidRequest(context.UserId, permissionCode, accessIntent))
+        {
+            return false;
+        }
+
+        return await companyAccessService.HasPermissionAsync(
+            context.UserId, context.CompanyId, permissionCode, cancellationToken);
     }
 
     public async Task<bool> HasPermissionAsync(
@@ -82,6 +131,13 @@ public sealed class TradeAuthorizationAdapter(
     {
         return context is not null &&
             httpContextAccessor.HttpContext?.Items.TryGetValue(ResolvedContextItemKey, out var stored) == true &&
+            ReferenceEquals(stored, context);
+    }
+
+    private bool IsResolvedCompanyContextInThisRequest(TradeCompanyAccessContext? context)
+    {
+        return context is not null &&
+            httpContextAccessor.HttpContext?.Items.TryGetValue(ResolvedCompanyContextItemKey, out var stored) == true &&
             ReferenceEquals(stored, context);
     }
 

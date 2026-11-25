@@ -68,6 +68,48 @@ public sealed class TradeAccessGate(
         return new TradeAccessDecision(TradeAccessOutcome.Allowed, current);
     }
 
+    /// <summary>
+    /// Company-scoped path for operations that belong to no fiscal period (N-5a-type). Same order and fail-closed
+    /// behavior as <see cref="AuthorizeAsync(Guid, string, TradeAccessIntent, TradeAccessOptions, CancellationToken)" />
+    /// — identity, context, commercial entitlement, user permission — with only the period step removed. The
+    /// entitlement is checked for the company; a failing or throwing entitlement never falls back to user permission.
+    /// Period-bound operations must keep using the period-scoped path.
+    /// </summary>
+    public async Task<TradeCompanyAccessDecision> AuthorizeCompanyScopedAsync(
+        Guid userId,
+        string permissionCode,
+        TradeAccessIntent intent,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+        {
+            return new TradeCompanyAccessDecision(TradeAccessOutcome.Unauthenticated, null);
+        }
+
+        var context = await authorization.ResolveCurrentCompanyContextAsync(userId, cancellationToken);
+        if (context is null)
+        {
+            return new TradeCompanyAccessDecision(TradeAccessOutcome.ContextRequired, null);
+        }
+
+        // Entitlement contract (D-059 and D-060, both Accepted): module entitlements are scoped to the Company, so
+        // the entitlement is checked with context.CompanyId. The port parameter is still named 'tenantId' only for
+        // historical reasons (naming limitation, not a different key); the method itself is IsEnabledForCompanyAsync.
+        // Limitation kept: context.TenantId is not yet verified against a real Core Tenant entity (D-121, C4).
+        var (enabled, fault) = await IsEntitledAsync(context.CompanyId, cancellationToken);
+        if (!enabled)
+        {
+            return new TradeCompanyAccessDecision(TradeAccessOutcome.ModuleUnavailable, null, fault);
+        }
+
+        if (!await authorization.HasCompanyPermissionAsync(context, permissionCode, intent, cancellationToken))
+        {
+            return new TradeCompanyAccessDecision(TradeAccessOutcome.Forbidden, null);
+        }
+
+        return new TradeCompanyAccessDecision(TradeAccessOutcome.Allowed, context);
+    }
+
     /// <summary>Stages 1 and 3 only (no permission check); permissions are read only when entitled.</summary>
     public async Task<TradeCapabilities> GetCapabilitiesAsync(
         Guid userId,

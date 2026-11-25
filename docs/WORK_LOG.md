@@ -3700,3 +3700,14 @@
 - **ثبت:** O-3 = گزینهٔ A (فقط داخل T1 اتمیک؛ مجوز شروع T1 نیست)؛ N-4 = گزینهٔ ۱ (Domain خالص، بدون Persistence)؛ N-5a-type فاز اول `Accepted`؛ N-5b همچنان `NeedsApproval`. یادداشت تکمیلی تاریخ‌دار D-116 دربارهٔ Accepted شدن D-090؛ ارجاع «ارتباط با Entity مالی: D-090» عدم‌تطابق موضوعی دارد ولی مقصد درست قابل اثبات نبود و تغییر نکرد.
 - **دامنه/ایمنی:** فقط مستندات؛ بدون کد، Schema، Migration، Backfill یا تغییر Authorization. تست .NET اجرا نشد (لزومی نداشت).
 - **توجه:** افزودن در انتهای این فایل با #789 و #790 ممکن است تعارض متنی ساده ایجاد کند؛ حل با نگه‌داشتن هر دو بخش.
+
+## 2026-11-24 — Trade: N-5a-type فاز ۱ (`TradeCompanyAccessContext`)
+- **اجرا:** نوع Context جدا (`UserId, TenantId, CompanyId`)، Overload جدا در Gate (`AuthorizeCompanyScopedAsync`)، و دو عضو جدید `ITradeAuthorization`؛ Context فقط از `WorkContext.Ownership` ساخته می‌شود. `TradeAccessContext`/`TradePeriodScope`، Entitlement، Schema، Migration و Backfill دست‌نخورده‌اند؛ مصرف‌کننده‌ای وجود ندارد.
+- **بازبینی:** امنیتی (بدون Critical/High/Medium، ۴ Low ثبت‌شده در handoff) و کیفیت مستقل؛ یک تست اسکن IL برای `ResolveCurrentCompanyContextAsync` افزوده شد.
+- **تست:** ۵۵۶ اجرا/۰ ناموفق/۲۷ Skip (SQL Server، NotRun)؛ اجرای مجدد پس از اصلاح: ۸۳ اجرا/۰ ناموفق. CI کامل و SQL Server: NotRun.
+- **محدودیت:** Tenant تا C4 با DB سنجیده نمی‌شود؛ Resolve هنوز به دوره وابسته است (N-5b). جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-trade-n5a-type-company-access-context-2026-11-24.md`.
+- **ادغام:** ردیف‌های WORK_LOG در #789/#790/#791 و این PR همه به انتهای فایل افزوده می‌شوند؛ هنگام ادغام ممکن است تعارض متنی ساده رخ دهد و باید هر دو ردیف نگه داشته شوند.
+
+## 2026-11-24 — Trade: تثبیت PR #792 پس از بازبینی (N-5a-type)
+- **اجرا:** تست دیده‌بان فراخواننده‌های Gate شرکت‌محور و Resolve (شامل نوع Concrete Adapter)، حذف دو تست کم‌ارزش، یادداشت نام `tenantId` پورت Entitlement؛ بدون تغییر رفتار. L-1 و L-2 Deferred با دلیل در handoff.
+- **محدودیت:** Tenant تا C4 اعتبار مستقل ندارد و `WorkContext.Ownership` غیرمستقیم از معادلهٔ Legacy می‌آید؛ این در handoff صریح ثبت شد.
