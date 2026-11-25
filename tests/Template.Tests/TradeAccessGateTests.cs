@@ -290,6 +290,15 @@ public sealed class TradeAccessGateTests
             Guid userId, IReadOnlyCollection<TradePeriodScope> scopes, string permissionCode,
             TradeAccessIntent accessIntent, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+
+        public Task<TradeCompanyAccessContext?> ResolveCurrentCompanyContextAsync(
+            Guid userId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<bool> HasCompanyPermissionAsync(
+            TradeCompanyAccessContext context, string permissionCode, TradeAccessIntent accessIntent,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class RecordingEntitlement(List<string> calls, bool enabled, Exception? error) : ITradeModuleEntitlement

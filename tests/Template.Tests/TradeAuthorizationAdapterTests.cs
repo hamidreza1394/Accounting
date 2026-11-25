@@ -315,6 +315,123 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
         Assert.NotEqual(other.CompanyId, context!.TenantId);
     }
 
+    [Fact]
+    public async Task CompanyContextIsResolvedFromTheVerifiedWorkContext()
+    {
+        var permission = TradePermissionCodes.FormView("import-order");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Open, [permission]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+
+        var context = await adapter.ResolveCurrentCompanyContextAsync(userId, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(context);
+        Assert.Equal(userId, context.UserId);
+        Assert.Equal(company.CompanyId, context.CompanyId);
+        Assert.NotEqual(Guid.Empty, context.TenantId);
+    }
+
+    [Fact]
+    public async Task CompanyContextNeedsASessionAndTheAuthenticatedUser()
+    {
+        var company = AddCompany(Domain.FiscalPeriodStatus.Open, [TradePermissionCodes.FormView("import-order")]);
+
+        var withoutSession = CreateAdapter(company.CompanyId, company.PeriodId, includeSessionId: false);
+        Assert.Null(await withoutSession.ResolveCurrentCompanyContextAsync(userId, TestContext.Current.CancellationToken));
+
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+        Assert.Null(await adapter.ResolveCurrentCompanyContextAsync(Guid.NewGuid(), TestContext.Current.CancellationToken));
+        Assert.Null(await adapter.ResolveCurrentCompanyContextAsync(Guid.Empty, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task CompanyContextOfACompanyWithoutActiveMembershipIsNull()
+    {
+        var foreign = AddForeignCompany();
+        var adapter = CreateAdapter(foreign.CompanyId, foreign.PeriodId);
+
+        Assert.Null(await adapter.ResolveCurrentCompanyContextAsync(userId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task CompanyPermissionFollowsTheCompanyRoleAndTheIntent()
+    {
+        var view = TradePermissionCodes.FormView("import-order");
+        var update = TradePermissionCodes.FormUpdate("import-order");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Open, [view]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+        var context = (await adapter.ResolveCurrentCompanyContextAsync(userId, TestContext.Current.CancellationToken))!;
+
+        Assert.True(await adapter.HasCompanyPermissionAsync(context, view, TradeAccessIntent.Read, TestContext.Current.CancellationToken));
+        Assert.False(await adapter.HasCompanyPermissionAsync(context, view, TradeAccessIntent.Write, TestContext.Current.CancellationToken));
+        Assert.False(await adapter.HasCompanyPermissionAsync(context, update, TradeAccessIntent.Write, TestContext.Current.CancellationToken));
+        Assert.False(await adapter.HasCompanyPermissionAsync(context, "accounting.vouchers.view", TradeAccessIntent.Read, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ACompanyScopedWriteDoesNotDependOnThePeriodState()
+    {
+        // The company path has no fiscal period; period-bound operations keep using the period-scoped path.
+        var update = TradePermissionCodes.FormUpdate("import-order");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Closed, [update]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+        var context = (await adapter.ResolveCurrentCompanyContextAsync(userId, TestContext.Current.CancellationToken))!;
+
+        Assert.True(await adapter.HasCompanyPermissionAsync(context, update, TradeAccessIntent.Write, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task AForgedCompanyContextIsDeniedEvenWithEqualValues()
+    {
+        var view = TradePermissionCodes.FormView("import-order");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Open, [view]);
+        var other = AddCompany(Domain.FiscalPeriodStatus.Open, [view]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+        var real = (await adapter.ResolveCurrentCompanyContextAsync(userId, TestContext.Current.CancellationToken))!;
+        var ct = TestContext.Current.CancellationToken;
+
+        // same values, other instance
+        Assert.False(await adapter.HasCompanyPermissionAsync(
+            new TradeCompanyAccessContext(real.UserId, real.TenantId, real.CompanyId), view, TradeAccessIntent.Read, ct));
+        // forged instance carrying another tenant value (rejected as a forgery; no DB tenant relation exists until C4)
+        Assert.False(await adapter.HasCompanyPermissionAsync(
+            new TradeCompanyAccessContext(real.UserId, Guid.NewGuid(), real.CompanyId), view, TradeAccessIntent.Read, ct));
+        // another company the user is a member of
+        Assert.False(await adapter.HasCompanyPermissionAsync(
+            new TradeCompanyAccessContext(real.UserId, real.TenantId, other.CompanyId), view, TradeAccessIntent.Read, ct));
+        // another user
+        Assert.False(await adapter.HasCompanyPermissionAsync(
+            new TradeCompanyAccessContext(Guid.NewGuid(), real.TenantId, real.CompanyId), view, TradeAccessIntent.Read, ct));
+        // the real instance still works
+        Assert.True(await adapter.HasCompanyPermissionAsync(real, view, TradeAccessIntent.Read, ct));
+    }
+
+    [Fact]
+    public async Task ACompanyContextOfAnotherRequestIsDenied()
+    {
+        var view = TradePermissionCodes.FormView("import-order");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Open, [view]);
+        var first = CreateAdapter(company.CompanyId, company.PeriodId);
+        var context = (await first.ResolveCurrentCompanyContextAsync(userId, TestContext.Current.CancellationToken))!;
+
+        var second = CreateAdapter(company.CompanyId, company.PeriodId);
+
+        Assert.False(await second.HasCompanyPermissionAsync(context, view, TradeAccessIntent.Read, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ResolvingAPeriodContextDoesNotAuthorizeACompanyContext()
+    {
+        var view = TradePermissionCodes.FormView("import-order");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Open, [view]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+        var periodContext = (await adapter.ResolveCurrentContextAsync(userId, TestContext.Current.CancellationToken))!;
+
+        var forged = new TradeCompanyAccessContext(periodContext.UserId, periodContext.TenantId, periodContext.TenantId);
+
+        Assert.False(await adapter.HasCompanyPermissionAsync(forged, view, TradeAccessIntent.Read, TestContext.Current.CancellationToken));
+        Assert.True(await adapter.HasPermissionAsync(periodContext, view, TradeAccessIntent.Read, TestContext.Current.CancellationToken));
+    }
+
     private (Guid CompanyId, Guid PeriodId) AddForeignCompany()
     {
         var company = new Domain.Company { Name = "Foreign " + Guid.NewGuid().ToString("N")[..8], IsActive = true };
