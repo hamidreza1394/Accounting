@@ -76,6 +76,8 @@ G6 فقط **فعال‌سازی Tenant دوم در Shared Database** را متو
 | Domain خالص Proforma/Revision با `CompanyId` صریح و بدون EF/Store | `docs/handoffs/ISSUE-UNNUMBERED-trade-proforma-domain-design.md` گزینهٔ ۱؛ D-116 و D-119/D-120 Accepted؛ همانند #772/#705 | **فقط** قواعد Accepted: Revision بدون mutator، قفل کالا، تمدید با Revision. **خارج از این PR:** P-4 (انقضا) و P-5 (Replace) تا تصمیم مالک؛ فرمول مالی تصمیم‌نشده. پیشنهاد: PR مستقل، با تأیید اینکه N-4 توسط D-120 بسته شده است |
 | تست‌های غیرمخرب | — | هیچ شکاف جدیدی در Party/Product یا G3 نیست |
 
+> **اصلاح تاریخ‌دار (2026-11-25؛ ردیف بالا بدون تغییر حفظ شده):** عبارت «تمدید با Revision» در ردیف Domain خالص Proforma با D-116 بند ۲ (`Accepted`) ناسازگار است: تمدید صرف تاریخ اعتبار یک رویداد تاریخچه‌ای مستقل است و Revision جدید **نمی‌سازد**؛ فقط تغییر شرایط تجاری Revision می‌سازد (D-116 بند ۳). کار جدید (پس از پذیرش N-4 گزینهٔ ۱) از D-116 پیروی کند.
+
 ### گروه ۲ — قابل طراحی، غیرقابل پیاده‌سازی (طراحی Accepted ولی جدول/Migration می‌خواهد)
 Party BankAccount/ProductIdentifier (فعال‌سازی Migration)، ImportCase، ActivityProfile، Proforma/OrderRegistration (D-104 یک‌به‌یک)، Vessel/Voyage/Allocation، BoL، Customs، Permit، Forex، Facility/Guarantee/Cheque، Documents/Insurance، Cost allocation، Reports/Dashboard. وابستگی مشترک: Core Tenant (D-121) + Schema مصوب (D-120). قرارداد API و معیار پذیرش هر یک در اسناد `TRADE_S3_ARCHITECTURE.md` و طراحی Proforma هست؛ در این PR چیزی دوباره‌نویسی یا Entity نمایشی ساخته نشد.
 
@@ -142,6 +144,8 @@ D-089، D-090، D-118، D-119، D-120 و D-121 دوباره مطرح نشدند.
 | O-3 (N-5a) | تصمیم | باز | داخل T1، یا PR جدا (حالت میانی نامعتبر)؟ |
 | O-4 (رکورد بدون نگاشت) | تصمیم | پیشنهاد: توقف کامل + Manifest دستی | تأیید؟ |
 | N-5b | تصمیم (`NeedsApproval`) | باز | انتخاب «فقط شرکت» در WorkContext یا Route؟ |
+
+> **یادداشت تکمیلی (2026-11-25، هم‌راستاسازی پس از همگام‌سازی شاخهٔ S0؛ جدول بالا بدون تغییر حفظ شده):** تصمیم‌های صریح مالک در یادداشت وضعیت D-090 (`docs/DECISIONS.md`) و `ISSUE-UNNUMBERED-trade-s0-owner-decisions-2026-11-24.md` ثبت شده‌اند: **O-3 = گزینهٔ A `Accepted`** (فقط داخل PR اتمیک T1؛ مجوز شروع T1 نیست)؛ **N-5a-type فاز اول `Accepted`** (نوع مستقل از دوره؛ بدون تغییر Contextهای موجود)؛ **N-5b همچنان `NeedsApproval`**. سایر ردیف‌ها تغییری نکرده‌اند.
 
 ## ۶. دستورات و نتایج (خلاصه)
 - SQL Server آزمایشی: `scripts/dev/test-sqlserver.sh up` / `down` (حذف شد؛ رمز چاپ نشد).
