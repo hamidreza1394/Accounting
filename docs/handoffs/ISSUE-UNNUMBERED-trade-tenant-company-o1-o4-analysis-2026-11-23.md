@@ -289,6 +289,8 @@
 
 **N-5b و T1:** مانع T1 نیست و از وابستگی‌های اجباری T1 خارج می‌شود. دلیل از سورس: `TradePeriodScope` فقط در `ITradeAuthorization.HasPermissionForAllCompanyPeriodsAsync` و Adapter استفاده می‌شود که طبق کامنت «تا مسیر چندشرکتیِ آگاه از entitlement وجود ندارد نباید از هیچ Endpoint بیرون برود»؛ Endpointهای فعلی فقط `TradeAccessContext` می‌گیرند. پس T1 فقط `TradePeriodScope.TenantId` را به `CompanyId` تغییر نام می‌دهد (مقدار آن امروز Company است؛ Tenant سمت سرور از رابطه می‌آید، نه از درخواست) بدون هیچ تغییر رفتار. **سیاست** دورهٔ مالی (`PeriodIndependent` و نوشتن در دورهٔ بسته) جدا و باز می‌ماند و فقط برای PR ای که مسیر گزارش گروهی را Expose کند یا سیاست دوره را عوض کند وابستگی است. (اگر مالک بخواهد T1 رفتار دوره را هم تغییر دهد، N-5b مانع می‌شود؛ این در پیشنهاد نیست.)
 
+> **اصلاح تاریخ‌دار (2026-11-24، تصمیم مالک؛ بند بالا بدون تغییر حفظ شده):** طبق O-3 (`Accepted`، یادداشت وضعیت D-090)، `TradePeriodScope` داخل T1 به زوج `(TenantId, CompanyId)` تغییر می‌کند؛ عبارت «فقط تغییر نام `TradePeriodScope.TenantId` به `CompanyId`» در این بند منسوخ است. `N-5b` فقط منبع resolve شرکت (WorkContext یا Route) است و `NeedsApproval` می‌ماند؛ سیاست دورهٔ مالی همچنان باز است.
+
 ### ۱۰.۷ O-2 — دامنهٔ یکتایی هر مورد (Company-scoped حفظ شد؛ شاهد تجاری خلاف آن نیست)
 
 | مورد | دامنه | یادداشت |
