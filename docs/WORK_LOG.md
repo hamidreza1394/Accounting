@@ -3686,3 +3686,16 @@
 - **ایمنی:** هیچ کد، تست، Schema، Migration، Backfill یا تصمیم `Accepted` جدید؛ Excel Import `Deferred`؛ دیتابیس آزمایشی حذف شد.
 - **اجرانشده:** Vitest، E2E، Build شاخهٔ مستنداتی، هر Migration روی دیتابیس مشتری.
 - handoff: `docs/handoffs/ISSUE-397-s3-0-gap-closure-g3-g6-owner-package-2026-11-24.md`.
+
+
+## 2026-11-25 — Vendor: هم‌ترازی وضعیت Windows Service Hosting پس از PR #787
+
+- **مبنای بازبینی:** `main@50a15eae81d4b88657a3a981f59e0ae89f271a91`؛ Issue #768؛ PR #787 با merge commit `35bd3905537023051b9372f01234cc4027590ab7` در 2026-11-24T07:44:48Z ادغام شده است.
+- **تغییر ادغام‌شده در #787:** Native Windows Service lifetime برای Vendor با نام `Farano Vendor` و Customer با نام `Farano Customer`؛ فرمان‌های CLI/Key Ceremony پیش از فعال‌سازی lifetime مسیر console-only دارند. Migration probe سمت Customer به `PendingDatabaseMigrationCheckService` منتقل شده و فقط پس از `ApplicationStarted` اجرا می‌شود؛ Migration خودکار نیست.
+- **علت ریشه‌ای شکست CI قبلی:** run #45338174154 در E2E، Linux Publish و Windows Publish به‌علت رد سه dependency جدید Windows Service توسط G2 allow-list شکست خورد؛ هر سه شکست از یک guard واحد بودند، نه سه اشکال مستقل. #787 سه فایل دقیق را به allow-list و fixtureهای مثبت Bash/PowerShell افزود و پوشش منفی assembly ناشناخته را حفظ کرد.
+- **شواهد پس از Merge:** روی `35bd3905537023051b9372f01234cc4027590ab7` تعداد ۲۰/۲۰ Check Run موفق؛ .NET CI #45350378180، Vendor CI #45350378170، Semgrep #45350378311 و CodeQL موفق. روی main فعلی `50a15eae81d4b88657a3a981f59e0ae89f271a91` نیز ۱۲/۱۲ Check Run موفق است: .NET CI #45567365188، Push on main #45567365166 و Semgrep #45567365152.
+- **PRهای تاریخی:** #281 برابر ۱۲/۱۲، #282 برابر ۱۳/۱۳ و #284 برابر ۱۳/۱۳ Check Run روی merge SHAهای واقعی. PRهای باز فعلی #790/#791/#792 مربوط به Trade هستند؛ .NET CI آن‌ها هنوز در حال اجرا بود و در این مأموریت دست‌نخورده ماندند.
+- **محدودیت عملیاتی:** #787 سرویس‌ها را نصب یا هویت سرویس، ACL، Secret Store، DataProtection، مجوز SQL، Trust Store یا endpoint را provision نمی‌کند. اجرای واقعی روی Windows Server، Key Ceremony، چرخهٔ Staging و آزمون دو میزبان انجام نشده است؛ #768 باز می‌ماند.
+- **دامنهٔ این رکورد:** فقط هم‌ترازی مستندات Vendor/Deployment؛ هیچ Customer consumer، Customer migration/schema، secret یا کلید خصوصی تغییر نکرد. Build/Test و `git diff --check` محلی برای این بازبینی اجرا نشدند؛ نتایج CI فوق از GitHub خوانده شده‌اند.
+- handoff: `docs/handoffs/ISSUE-768-vendor-windows-service-hosting-2026-11-25.md`.
+
