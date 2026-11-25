@@ -6,12 +6,14 @@
 **مراجع:** `ROADMAP.md` بخش S3، `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md` (طرح مرجع، `Proposed`)، `TRADE_S3_ARCHITECTURE.md`، `TRADE_TENANT_COMPANY_AUDIT.md`، `TRADE_DECISION_RECONCILIATION.md`، D-087..D-104.
 **برچسب‌ها:** **[V]** در این گذر با مخزن بررسی شد؛ **[S]** از ROADMAP/handoffهای قبلی نقل شد و دوباره راستی‌آزمایی نشد.
 
+> **به‌روزرسانی 2026-11-24 (مبنا `main@35bd390`):** G3 با اجرای واقعی روی SQL Server **Verified** شد (کل مجموعه ۱۶۲۳ تست، ۱۶۱۳ موفق، ۰ ناموفق، ۱۰ Skip نامرتبط؛ شش کلاس G3 جدا اجرا شد؛ جزئیات و نگاشت پوشش در `handoffs/ISSUE-397-s3-0-gap-closure-g3-g6-owner-package-2026-11-24.md`). این Verified فقط درستی رفتار SQL Server را نشان می‌دهد و **مجوز اجرای Migration نیست**. G6 (SP-1..SP-9) با کد و تست طبقه‌بندی شد؛ هیچ SP بدون Tenant یا تصمیم مالک بسته‌شدنی نیست. D-118 (هویت Tenant-scoped کاربران مشتری؛ `Accepted`، `NotImplemented`) در ماتریس هویت (`ISSUE-397-s3-0i-…`) لحاظ است. **S3-0 هنوز بسته نیست.** باز می‌مانند (`Proposed`/`Open`): D-091 (ترتیب اجرایی)، D-092..D-096، D-083، G0، G4 (باقی‌مانده)، G5، G6، OD-13، OD-17 و N-5a/N-5b (O-3). بندهای قدیمی زیر «ماتریس تاریخی» هستند و فقط با این به‌روزرسانی supersede شده‌اند؛ حذف نشدند.
+
 > **به‌روزرسانی 2026-11-23:** D-090 `Accepted` شد؛ D-119 (Party/Product Company-owned)، D-120 (Rename فیزیکی + `TenantId` واقعی) و D-121 (ترتیب Core سپس Trade) `Accepted` و `NotImplemented` هستند. بنابراین عبارت «D-090..D-096 همچنان Proposed» و بسته‌نبودن گام ۱ جدول بخش ۴ دیگر معتبر نیست؛ D-090 و مالکیت Party/Product تصمیم‌گیری شده‌اند؛ D-091..D-096 و گیت‌های G0، G4 (باقی‌مانده)، G5، G6 باز می‌مانند. شکاف G4/OD-11 اکنون تصمیم نیست؛ پیاده‌سازی است و مسدود به زیرساخت Tenant در Core (که در سورس وجود ندارد). ترتیب PRها: `handoffs/ISSUE-UNNUMBERED-trade-tenant-company-owner-decisions-2026-11-23.md` بخش ۵.
 
 ## ۱. خلاصه
 
 1. **پیش‌نیازهای کدمحور S3-0 تقریباً کامل‌اند [S]:** Guard Migration (PR-2a #656، PR-2b #660)، تست SQL Server ایزوله برای Rename و Migration Tenant (PR-SS-1، PR-D)، قراردادهای مالکیت (PR-3)، دروازهٔ Migration Host (#665) ادغام شده‌اند.
-2. **مانع اصلی تصمیم است، نه کد:** D-090..D-096 همچنان `Proposed` هستند؛ تا تأیید صریح مالک، هیچ جدول Trade با `CompanyId`، ستون Tenant یا Backfill ساخته نمی‌شود.
+2. **مانع اصلی تصمیم است، نه کد:** *(تاریخی؛ از 2026-11-23 D-090 `Accepted` است و فقط D-091..D-096 `Proposed`ند)* D-090..D-096 همچنان `Proposed` هستند؛ تا تأیید صریح مالک، هیچ جدول Trade با `CompanyId`، ستون Tenant یا Backfill ساخته نمی‌شود.
 3. **S3-1 (پروفایل فعالیت) هم جدول ماندگار می‌خواهد.** پس بدون بسته‌شدن گیت‌های زیر، مجاز نیست (بخش ۵).
 4. **آنچه امروز بدون گیت ممکن است:** منطق دامنهٔ خالص و بدون Schema (مانند PR #704 و #705 و `TradeDocumentNumber`) و تست‌های غیرمخرب. این‌ها قابلیت تکمیل‌شدهٔ Proforma نیستند.
 5. **D-104 (یک‌به‌یک Proforma/OrderRegistration)** سر راه S3-3 تغییر ایجاد می‌کند ولی مانع S3-0 تا S3-2 نیست.
@@ -40,16 +42,16 @@
 | G0 | تأیید طرح S3-0h؛ OD-6/6a (D-089 Accepted)، OD-13 (D-092)، OD-17 (D-094) | **باز**: OD-6/6a بسته؛ OD-13/OD-17 `Proposed` |
 | G1 | PR-2a ادغام و تست‌های Mutation سبز | ظاهراً بسته [S: #656] |
 | G2 | PR-2b ادغام و تست‌های Rename سبز | ظاهراً بسته [S: #660] |
-| G3 | اجرای واقعی روی SQL Server (`sp_rename` با Pin، رفت‌وبرگشت، FK مرکب با NULL، NOT NULL با Guid، شکست، اجرای تکراری، همزمانی) | ظاهراً بسته [S: PR-D، 20 تست]؛ اجرای کامل مجموعه در این گذر روی SQL Server آزمایشی انجام شد (نتیجه در handoff) |
+| G3 | اجرای واقعی روی SQL Server (`sp_rename` با Pin، رفت‌وبرگشت، FK مرکب با NULL، NOT NULL با Guid، شکست، اجرای تکراری، همزمانی) | **Verified (2026-11-24)** [V]: ۲۰ تست PR-D + ۵ + ۸ + ۳ + ۱۸ + ۱ روی SQL Server واقعی، همگی موفق؛ مجوز Migration نیست |
 | G4 | OD-4، OD-5، OD-10، OD-11 (D-090)، OD-12 (D-091)، OD-18 | **باز** |
 | G5 | Backup، رویهٔ بازیابی، Manifest بایگانی‌شده برای هر نصب هدف؛ مجوز جدا برای اجرا روی دیتابیس مشتری | **باز** |
-| G6 | پیش‌نیازهای امنیتی SP-1..SP-9 پیش از Tenant دوم | **باز** (فقط فعال‌سازی Shared را می‌بندد) |
+| G6 | پیش‌نیازهای امنیتی SP-1..SP-9 پیش از Tenant دوم | **باز** (فقط فعال‌سازی Tenant دوم در Shared را متوقف می‌کند)؛ طبقه‌بندی SP با کد و تست در handoff 2026-11-24 [V] |
 
 ## ۴. موارد Blocked
 
 | مورد | علت | چه چیزی بازش می‌کند |
 |---|---|---|
-| هر جدول Trade جدید با `CompanyId` (ImportCase، Proforma، OrderRegistration…) | D-090 `Proposed`؛ منبع Company→Tenant پیاده‌نشده | تأیید D-090 + PR-4 (A1) |
+| هر جدول Trade جدید با `CompanyId` (ImportCase، Proforma، OrderRegistration…) | *(به‌روز 2026-11-24: D-090 `Accepted` است)* منبع Company→Tenant و Core Tenant پیاده‌نشده (D-121) | Core Tenant + PR-4 (A1) + Schema مصوب |
 | ستون `TenantId` واقعی روی `Companies` و جدول `Tenants` | G0، G4 | تأیید D-092/D-094 و طرح S3-0h |
 | Backfill | نبود Manifest معتبر (D-092) و G5 | تأیید D-092، Backup |
 | Rename فیزیکی ستون legacy | OD-12 و OD-18 | تأیید D-091 |
