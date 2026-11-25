@@ -80,4 +80,4 @@
 - **Base:** `50a15eae81d4b88657a3a981f59e0ae89f271a91`
 - **Branch:** `docs/vendor-service-hosting-status-2026-11-25`
 - **Commit:** در تاریخچهٔ شاخه و PR ثبت می‌شود.
-- **Pull Request:** پس از ایجاد ثبت می‌شود.
+- **Pull Request:** [#793](https://github.com/hamidreza1394/Accounting/pull/793) — docs-only؛ در انتظار تکمیل بررسی‌های CI.
