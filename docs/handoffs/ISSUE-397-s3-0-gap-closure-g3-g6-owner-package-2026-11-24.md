@@ -76,6 +76,8 @@ G6 فقط **فعال‌سازی Tenant دوم در Shared Database** را متو
 | Domain خالص Proforma/Revision با `CompanyId` صریح و بدون EF/Store | `docs/handoffs/ISSUE-UNNUMBERED-trade-proforma-domain-design.md` گزینهٔ ۱؛ D-116 و D-119/D-120 Accepted؛ همانند #772/#705 | **فقط** قواعد Accepted: Revision بدون mutator، قفل کالا، تمدید با Revision. **خارج از این PR:** P-4 (انقضا) و P-5 (Replace) تا تصمیم مالک؛ فرمول مالی تصمیم‌نشده. پیشنهاد: PR مستقل، با تأیید اینکه N-4 توسط D-120 بسته شده است |
 | تست‌های غیرمخرب | — | هیچ شکاف جدیدی در Party/Product یا G3 نیست |
 
+> **اصلاح تاریخ‌دار (2026-11-25؛ ردیف بالا بدون تغییر حفظ شده):** عبارت «تمدید با Revision» در ردیف Domain خالص Proforma با D-116 بند ۲ (`Accepted`) ناسازگار است: تمدید صرف تاریخ اعتبار یک رویداد تاریخچه‌ای مستقل است و Revision جدید **نمی‌سازد**؛ فقط تغییر شرایط تجاری Revision می‌سازد (D-116 بند ۳). کار جدید (پس از پذیرش N-4 گزینهٔ ۱) از D-116 پیروی کند.
+
 ### گروه ۲ — قابل طراحی، غیرقابل پیاده‌سازی (طراحی Accepted ولی جدول/Migration می‌خواهد)
 Party BankAccount/ProductIdentifier (فعال‌سازی Migration)، ImportCase، ActivityProfile، Proforma/OrderRegistration (D-104 یک‌به‌یک)، Vessel/Voyage/Allocation، BoL، Customs، Permit، Forex، Facility/Guarantee/Cheque، Documents/Insurance، Cost allocation، Reports/Dashboard. وابستگی مشترک: Core Tenant (D-121) + Schema مصوب (D-120). قرارداد API و معیار پذیرش هر یک در اسناد `TRADE_S3_ARCHITECTURE.md` و طراحی Proforma هست؛ در این PR چیزی دوباره‌نویسی یا Entity نمایشی ساخته نشد.
 
