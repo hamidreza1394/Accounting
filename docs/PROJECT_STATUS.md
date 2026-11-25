@@ -923,3 +923,8 @@
 - **S3-0d-b:** ماتریس HR/Admin/Export/File/Job در PR #788 (مستندات). موارد وابسته به Tenant واقعی `NotVerified`/`Blocked` ماندند؛ اثبات Tenant یا Shared Database ادعا نمی‌شود.
 - **G6/SP-1..SP-9:** طبقه‌بندی شد؛ همه به Core Tenant و/یا تصمیم مالک (OD-1، OD-5، OD-7، O-3) وابسته‌اند.
 - **S3-0 هنوز بسته نیست.** باز: D-091..D-096، D-083، G0، G4 (باقی‌مانده)، G5، G6، N-5a/N-5b. بسته تصمیم مالک در `handoffs/ISSUE-397-s3-0-gap-closure-g3-g6-owner-package-2026-11-24.md`.
+
+## وضعیت رویداد تمدید اعتبار Proforma — 2026-11-24
+- **Implemented (کد و تست، در انتظار CI/تأیید مالک):** `ProformaValidityExtendedEvent` در `Trade.Application/Proformas` — فقط نوع Domain خالص با `TenantId` و `CompanyId` مستقل؛ به هیچ مسیر زمان اجرا متصل نیست.
+- **Blocked/NotImplemented:** Aggregate کامل Proforma/Revision، Persistence، API/UI؛ وابسته به A-1، A-3، N-9، P-4، P-5 و گیت‌های S3-0. تصمیم A-2 (کاهش تاریخ) گرفته نشده است.
+- جزئیات: `handoffs/ISSUE-UNNUMBERED-trade-proforma-validity-extension-event.md`.
