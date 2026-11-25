@@ -92,9 +92,10 @@ public sealed class TradeAccessGate(
             return new TradeCompanyAccessDecision(TradeAccessOutcome.ContextRequired, null);
         }
 
-        // NOTE: the entitlement port names its parameter 'tenantId' although the method is per company and the
-        // legacy path passes a company id there. This path passes the CompanyId explicitly; which identifier the
-        // entitlement is keyed by is an open decision (D-059/D-060) and is not decided here.
+        // Entitlement contract (D-059 and D-060, both Accepted): module entitlements are scoped to the Company, so
+        // the entitlement is checked with context.CompanyId. The port parameter is still named 'tenantId' only for
+        // historical reasons (naming limitation, not a different key); the method itself is IsEnabledForCompanyAsync.
+        // Limitation kept: context.TenantId is not yet verified against a real Core Tenant entity (D-121, C4).
         var (enabled, fault) = await IsEntitledAsync(context.CompanyId, cancellationToken);
         if (!enabled)
         {
