@@ -3688,6 +3688,14 @@
 - handoff: `docs/handoffs/ISSUE-397-s3-0-gap-closure-g3-g6-owner-package-2026-11-24.md`.
 
 
+## 2026-11-24 — رویداد تمدید تاریخ اعتبار Proforma (Domain خالص، Trade)
+- **Issue/شاخه:** UNNUMBERED؛ `feat/trade-proforma-validity-extension-event`. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-trade-proforma-validity-extension-event.md`.
+- **شکاف:** برای «تمدید صرف تاریخ اعتبار = رویداد مستقل، نه Revision» (D-116 بند ۲) نوعی با Scope صریح Tenant/Company وجود نداشت؛ `ProformaChangeClassifier` (#772) تغییر نکرد.
+- **تغییر:** `ProformaValidityExtendedEvent.TryCreate` (غیرقابل‌تغییر، شناسه‌های خالی رد، UTC الزامی، «تاریخ جدید ≤ قبلی» فقط به‌عنوان «تمدید نیست» رد) و ۱۶ تست.
+- **اعتبارسنجی واقعی:** ۱۶ از ۱۶ تست جدید موفق؛ Trade+Architecture: ۴۸۳ تست، ۰ ناموفق، ۲۶ Skip (SQL Server، **اجرا نشد**). بازبین مستقل: بدون Critical/High؛ دو مورد Medium اصلاح شد.
+- **دامنه/ایمنی:** بدون EF، Schema، Migration، Backfill، API، UI، Authorization، `TradeAccessContext` یا Entitlement. A-1، A-2، A-3، P-4، P-5 و فرمول‌های مالی تصمیم‌نشده ماندند.
+- **توجه:** افزودن این ردیف و ردیف‌های وضعیت/فهرست با PR #789 در نقطهٔ انتهای فایل ممکن است تعارض متنی ساده ایجاد کند؛ حل با نگه‌داشتن هر دو بخش.
+
 ## 2026-11-25 — Vendor: هم‌ترازی وضعیت Windows Service Hosting پس از PR #787
 
 - **مبنای بازبینی:** `main@50a15eae81d4b88657a3a981f59e0ae89f271a91`؛ Issue #768؛ PR #787 با merge commit `35bd3905537023051b9372f01234cc4027590ab7` در 2026-11-24T07:44:48Z ادغام شده است.
