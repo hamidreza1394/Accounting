@@ -80,4 +80,4 @@
 - **Base:** `50a15eae81d4b88657a3a981f59e0ae89f271a91`
 - **Branch:** `docs/vendor-service-hosting-status-2026-11-25`
 - **Commit:** در تاریخچهٔ شاخه و PR ثبت می‌شود.
-- **Pull Request:** [#793](https://github.com/hamidreza1394/Accounting/pull/793) — docs-only؛ در انتظار تکمیل بررسی‌های CI.
+- **Pull Request:** [#793](https://github.com/hamidreza1394/Accounting/pull/793) — docs-only؛ HEAD `0a35ece049038d179677e472a63703898d49eb4d`، ۱۵/۱۵ Check Run تکمیل‌شده (۱۴ `success`، یک `neutral` CodeRabbit، صفر pending/failure)، `mergeable=true` و بدون review thread؛ در زمان ثبت هنوز ادغام نشده بود.
