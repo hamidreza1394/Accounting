@@ -3697,6 +3697,6 @@
 - **PRهای تاریخی:** #281 برابر ۱۲/۱۲، #282 برابر ۱۳/۱۳ و #284 برابر ۱۳/۱۳ Check Run روی merge SHAهای واقعی. PRهای باز فعلی #790/#791/#792 مربوط به Trade هستند؛ .NET CI آن‌ها هنوز در حال اجرا بود و در این مأموریت دست‌نخورده ماندند.
 - **محدودیت عملیاتی:** #787 سرویس‌ها را نصب یا هویت سرویس، ACL، Secret Store، DataProtection، مجوز SQL، Trust Store یا endpoint را provision نمی‌کند. اجرای واقعی روی Windows Server، Key Ceremony، چرخهٔ Staging و آزمون دو میزبان انجام نشده است؛ #768 باز می‌ماند.
 - **دامنهٔ این رکورد:** فقط هم‌ترازی مستندات Vendor/Deployment؛ هیچ Customer consumer، Customer migration/schema، secret یا کلید خصوصی تغییر نکرد. Build/Test و `git diff --check` محلی برای این بازبینی اجرا نشدند؛ نتایج CI فوق از GitHub خوانده شده‌اند.
-- PR مستنداتی #793 از همین مبنا باز شد؛ HEAD اولیه `35d32a321299a6ae386b59ea4df4dc763d29606f`، mergeable=true؛ در زمان ثبت این رکورد `build-and-test`، `client` و تحلیل C# در حال اجرا بودند و PR ادغام نشده است.
+- PR مستنداتی #793 از همین مبنا باز شد؛ HEAD نهایی بازبینی‌شده `0a35ece049038d179677e472a63703898d49eb4d` است. روی همین SHA، .NET CI run #45572011308 هر ۷ Job را موفق گذراند؛ Semgrep #45572011493 و PR-specific workflow #45572008047 (چهار تحلیل CodeQL) نیز موفق شدند. از ۱۵ Check Run، ۱۴ `success` و یک `neutral` مربوط به CodeRabbit ثبت شد؛ هیچ Check معلق یا ناموفق نماند. PR `mergeable=true` و بدون review thread بود؛ در زمان این ثبت هنوز open و ادغام‌نشده بود. `dotnet build`، `dotnet test` و `git diff --check` محلی اجرا نشدند.
 - handoff: `docs/handoffs/ISSUE-768-vendor-windows-service-hosting-2026-11-25.md`.
 
