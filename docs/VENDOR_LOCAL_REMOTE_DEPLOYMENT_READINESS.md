@@ -21,7 +21,7 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 |---|---|---|
 | Solution مستقل | Vendor.sln در ریشه مخزن؛ Host در Vendor/Vendor.Host/Vendor.Host.csproj | پایه اجرای مستقل وجود دارد؛ اجرای واقعی در Visual Studio هنوز باید روی دستگاه توسعه اثبات شود |
 | جداسازی Vendor/Customer | مرز پروژه و دیتابیس مستقل در معماری وجود دارد | در Staging باید دو دیتابیس مستقل با دو Connection String مجزا ساخته شوند |
-| Native Windows Service hosting (#768/#787) | در PR #787، هر دو Host از `UseWindowsService` با نام‌های مستقل `Farano Vendor` و `Farano Customer` پشتیبانی می‌کنند؛ CLI/Key Ceremony همچنان console-only است | روی merge commit `35bd3905537023051b9372f01234cc4027590ab7`، ۲۰/۲۰ Check Run موفق؛ روی main فعلی ۱۲/۱۲ موفق | **خیر** — نصب واقعی سرویس، هویت سرویس، ACL و اتصال SQL روی میزبان هدف اجرا نشده است |
+| Native Windows Service hosting (#768/#787) | PR #787 برای دو Host نام‌های مستقل `Farano Vendor` و `Farano Customer` را اضافه کرد؛ CLI/Key Ceremony console-only است؛ CI پس از Merge ۲۰/۲۰ و main فعلی ۱۲/۱۲ موفق | **Not Verified عملیاتی** — نصب واقعی سرویس، هویت سرویس، ACL و اتصال SQL روی میزبان هدف اجرا نشده است |
 | CNG مرکزی | Provider ویندوزی CNG/Certificate Store برای License و Provisioning پیاده شده و با Signing:CertificateStore:Enabled opt-in می‌شود | کلید واقعی، ACL هویت سرویس و Key Ceremony روی میزبان هدف هنوز عملیاتی تأیید نشده‌اند |
 | PKCS#11 | مسیر مجزای D-055/D-056 برای دامنه‌هایی که D-107 supersede نکرده باقی است | PKCS#11/HSM پیش‌نیاز signer مرکزی License/Provisioning در Vendor V1 نیست |
 | Publish guard (D-041/G2) | PR #771 گارد و نرمال‌سازی مسیر Windows را وارد main کرد؛ PR #787 سه dependency دقیق Windows Service را به allow-list افزود | پذیرش مالک و ممیزی دستی artifact هدف هنوز انجام نشده است |
