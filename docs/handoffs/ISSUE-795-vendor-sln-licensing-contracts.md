@@ -42,5 +42,5 @@
 
 ## شناسه‌های Git
 - Branch: `fix/vendor-sln-licensing-contracts`
-- Commit: پس از ثبت تغییر در GitHub درج می‌شود.
-- Pull Request: پس از ایجاد در GitHub درج می‌شود.
+- Commit اولیه: `cce785137c152d287262276bb923f9daab583541`
+- Pull Request: [#796](https://github.com/hamidreza1394/Accounting/pull/796)
