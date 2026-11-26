@@ -37,7 +37,7 @@ internal static class VendorDevelopmentDatabaseSetup
         app.Use(async (context, next) =>
         {
             context.Response.Headers.CacheControl = "no-store";
-            context.Response.Headers.Pragma = "no-cache";
+            context.Response.Headers["Pragma"] = "no-cache";
             context.Response.Headers["X-Content-Type-Options"] = "nosniff";
 
             if ((setupOnly || IsSetupRequest(context.Request.Path)) && !IsLoopback(context))
@@ -199,7 +199,7 @@ internal static class VendorDevelopmentDatabaseSetup
     }
 
     private static bool IsSetupRequest(PathString path) =>
-        path.StartsWithSegments("/development/database-setup") ||
+        path.Value?.StartsWith("/development/database-setup", StringComparison.OrdinalIgnoreCase) == true ||
         path.StartsWithSegments("/api/development/database-setup");
 
     private static bool IsLoopback(HttpContext context) =>
@@ -233,7 +233,8 @@ internal static class VendorDevelopmentDatabaseSetup
         SetupRequest request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Server) ||
+        if (request.Authentication is not ("windows" or "sql") ||
+            string.IsNullOrWhiteSpace(request.Server) ||
             string.IsNullOrWhiteSpace(request.Database) ||
             request.Server.Length > 256 ||
             request.Database.Length > 128 ||
