@@ -399,9 +399,14 @@ internal static class VendorDevelopmentDatabaseSetup
             finally
             {
                 CryptographicOperations.ZeroMemory(blob);
-                Marshal.ZeroFreeGlobalAllocUnicode(targetPointer);
-                Marshal.ZeroFreeGlobalAllocUnicode(userPointer);
-                Marshal.ZeroFreeHGlobal(blobPointer);
+                Marshal.FreeHGlobal(targetPointer);
+                Marshal.FreeHGlobal(userPointer);
+                for (var index = 0; index < blob.Length; index++)
+                {
+                    Marshal.WriteByte(blobPointer, index, 0);
+                }
+
+                Marshal.FreeHGlobal(blobPointer);
             }
         }
 
