@@ -186,11 +186,94 @@ internal static class VendorDevelopmentDatabaseSetup
             return Results.Json(new { success = true, message = "تنظیم ذخیره‌شده حذف شد. برای اعمال، Vendor را دوباره اجرا کنید." });
         }).RequireRateLimiting("vendor-development-setup"));
 
+        // Development-only provisioning stages (create the dedicated Vendor database, apply the
+        // existing Vendor migrations, prepare the restricted runtime identity). They inherit the
+        // loopback guard, the security headers and the mutation authorization above, and are
+        // never mapped or enabled outside the explicit development setup surface.
+        Access(app.MapPost("/api/development/database-setup/provision/check", async (
+            HttpContext context,
+            IAntiforgery antiforgery,
+            ProvisioningRequest request) =>
+        {
+            if (!await IsAuthorizedMutationAsync(context, antiforgery))
+            {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            var result = await VendorDevelopmentDatabaseProvisioning.CheckAsync(request, context.RequestAborted);
+            return result.Success
+                ? Results.Json(result)
+                : Results.BadRequest(new { success = false, message = result.Message });
+        }).RequireRateLimiting("vendor-development-setup"));
+
+        Access(app.MapPost("/api/development/database-setup/provision/create", async (
+            HttpContext context,
+            IAntiforgery antiforgery,
+            ILoggerFactory loggerFactory,
+            ProvisioningRequest request) =>
+        {
+            if (!await IsAuthorizedMutationAsync(context, antiforgery))
+            {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            var result = await VendorDevelopmentDatabaseProvisioning.CreateAsync(
+                request,
+                context.RequestAborted,
+                CreateProvisioningLogger(loggerFactory));
+            return result.Success
+                ? Results.Json(result)
+                : Results.BadRequest(new { success = false, message = result.Message });
+        }).RequireRateLimiting("vendor-development-setup"));
+
+        Access(app.MapPost("/api/development/database-setup/provision/migrate", async (
+            HttpContext context,
+            IAntiforgery antiforgery,
+            ILoggerFactory loggerFactory,
+            ProvisioningRequest request) =>
+        {
+            if (!await IsAuthorizedMutationAsync(context, antiforgery))
+            {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            var result = await VendorDevelopmentDatabaseProvisioning.MigrateAsync(
+                request,
+                context.RequestAborted,
+                CreateProvisioningLogger(loggerFactory));
+            return result.Success
+                ? Results.Json(result)
+                : Results.BadRequest(new { success = false, message = result.Message });
+        }).RequireRateLimiting("vendor-development-setup"));
+
+        Access(app.MapPost("/api/development/database-setup/provision/runtime", async (
+            HttpContext context,
+            IAntiforgery antiforgery,
+            ILoggerFactory loggerFactory,
+            ProvisioningRequest request) =>
+        {
+            if (!await IsAuthorizedMutationAsync(context, antiforgery))
+            {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            var result = await VendorDevelopmentDatabaseProvisioning.GrantRuntimeAccessAsync(
+                request,
+                context.RequestAborted,
+                CreateProvisioningLogger(loggerFactory));
+            return result.Success
+                ? Results.Json(result)
+                : Results.BadRequest(new { success = false, message = result.Message });
+        }).RequireRateLimiting("vendor-development-setup"));
+
         if (setupOnly)
         {
             app.MapFallback(() => Results.Redirect("/development/database-setup"));
         }
     }
+
+    private static ILogger CreateProvisioningLogger(ILoggerFactory loggerFactory) =>
+        loggerFactory.CreateLogger("Faranou.Vendor.Host.DevelopmentDatabaseProvisioning");
 
     private static ILogger CreateLogger(ILoggerFactory loggerFactory) =>
         loggerFactory.CreateLogger("Faranou.Vendor.Host.DevelopmentDatabaseSetup");
@@ -472,11 +555,9 @@ internal static class VendorDevelopmentDatabaseSetup
         private static extern bool CredRead(string target, uint type, uint flags, out IntPtr credential);
 
         [DllImport("Advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool CredWrite(ref NativeCredential credential, uint flags);
 
         [DllImport("Advapi32.dll", EntryPoint = "CredDeleteW", CharSet = CharSet.Unicode, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool CredDelete(string target, uint type, uint flags);
 
         [DllImport("Advapi32.dll", SetLastError = false)]
