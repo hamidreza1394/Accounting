@@ -14,7 +14,11 @@ public sealed class VendorDevelopmentDatabaseSetupExposureTests
     private static readonly string[] SetupApiPaths =
     [
         "/api/development/database-setup/status",
-        "/api/development/database-setup/antiforgery"
+        "/api/development/database-setup/antiforgery",
+        "/api/development/database-setup/provision/check",
+        "/api/development/database-setup/provision/create",
+        "/api/development/database-setup/provision/migrate",
+        "/api/development/database-setup/provision/runtime"
     ];
 
     [Fact]
