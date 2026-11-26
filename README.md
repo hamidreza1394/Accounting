@@ -1,6 +1,6 @@
 # فرانو — نرم‌افزار حسابداری (ASP.NET Core Razor Pages + React)
 
-مخزن نرم‌افزار حسابداری «فرانو»: پایه چندشرکتی (Multi-Tenant) روی ASP.NET Core و SQL Server با کلاینت React. **هنوز ماژول حسابداری (سند، سرفصل، گزارش) و سیستم لایسنس تجاری پیاده‌سازی نشده‌اند**؛ وضعیت واقعی در [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) و نقطه شروع مستندات در [docs/INDEX.md](docs/INDEX.md) است. مجوز استفاده (LICENSE) هنوز در مخزن تعیین نشده است (تصمیم مالک مخزن).
+مخزن نرم‌افزار حسابداری «فرانو»: پایه چندشرکتی (Multi-Tenant) روی ASP.NET Core و SQL Server با کلاینت React. **ماژول حسابداری (سند، سرفصل، گزارش) هنوز پیاده‌سازی نشده است؛ زیرساخت Vendor/Licensing به‌صورت مرحله‌ای پیاده‌سازی شده، اما چرخهٔ onboarding/entitlement و آمادگی Production کامل نیست**؛ وضعیت واقعی در [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) و نقطه شروع مستندات در [docs/INDEX.md](docs/INDEX.md) است. مجوز استفاده (LICENSE) هنوز در مخزن تعیین نشده است (تصمیم مالک مخزن).
 
 ## فناوری‌ها
 - ASP.NET Core Razor Pages + Minimal API (`/api/v1`) / .NET 10 LTS

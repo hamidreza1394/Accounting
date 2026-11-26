@@ -3726,3 +3726,15 @@
 - PR مستنداتی #793 از همین مبنا باز شد؛ HEAD نهایی بازبینی‌شده `0a35ece049038d179677e472a63703898d49eb4d` است. روی همین SHA، .NET CI run #45572011308 هر ۷ Job را موفق گذراند؛ Semgrep #45572011493 و PR-specific workflow #45572008047 (چهار تحلیل CodeQL) نیز موفق شدند. از ۱۵ Check Run، ۱۴ `success` و یک `neutral` مربوط به CodeRabbit ثبت شد؛ هیچ Check معلق یا ناموفق نماند. PR `mergeable=true` و بدون review thread بود؛ در زمان این ثبت هنوز open و ادغام‌نشده بود. `dotnet build`، `dotnet test` و `git diff --check` محلی اجرا نشدند.
 - handoff: `docs/handoffs/ISSUE-768-vendor-windows-service-hosting-2026-11-25.md`.
 
+
+
+## 2026-11-26 — Vendor: ثبت Merge #793 و هم‌ترازی وضعیت main
+
+- **مبنای ممیزی:** `main@bb8ac69440419e9d9c0a38e353e19796e5677d27`؛ پیش از ایجاد این PR مستنداتی، تعداد PRهای باز صفر بود. Issueهای مرتبط باز شامل #228، #235، #236، #214، #393، #394، #392، #107 و #768 هستند.
+- **Merge واقعی:** PR #793 با merge commit `bb8ac69440419e9d9c0a38e353e19796e5677d27` در main قرار دارد. روی همان SHA، ۱۶/۱۶ Check Run موفق است: .NET CI (۷ Job)، Vendor CI (۴ Job)، Semgrep (۱ Job) و CodeQL (۴ تحلیل). Runها: #45587525791، #45587525896، #45587525784 و #45587525265.
+- **PRهای تاریخی:** Check Runهای پس از Merge روی SHAهای واقعی #281، #282 و #284 به‌ترتیب ۱۲/۱۲، ۱۳/۱۳ و ۱۳/۱۳ موفق‌اند؛ برای #282 نتیجهٔ پس از Merge جداگانه روی merge SHA تأیید شد. اصلاح ترتیب Authorization در #284 حفظ شده است.
+- **مرور Actions:** از ۱۰۰ اجرای اخیر، ۹۲ موفق، ۸ لغوشده و صفر شکست؛ همهٔ ۱۰۰ اجرا تکمیل شده‌اند. این آمار تاریخیِ محدود به ۱۰۰ اجرای اخیر است، نه کل ۱۰٬۸۳۵ اجرا.
+- **تغییر مستنداتی این PR:** Snapshot بالای `docs/PROJECT_STATUS.md` با SHA و CI واقعی main جایگزین شد؛ وضعیت PR #793 در handoff #768 با الحاقیهٔ تاریخ‌دار ثبت شد؛ `Vendor/README.md` هم‌تراز شد؛ عبارت نادرست README دربارهٔ «پیاده‌سازی‌نشدن کامل سیستم لایسنس» به وضعیت مرحله‌ای واقعی اصلاح شد.
+- **دامنه/ایمنی:** فقط مستندات؛ بدون تغییر کد اجرایی، Schema، Migration، Customer consumer، `Server/**`، Runtime Gate، Provisioning v5 Gate، کلید یا Secret. هیچ نصب Windows Service، Key Ceremony، Staging یا آزمون دو میزبان ادعا نمی‌شود.
+- **اعتبارسنجی:** Check Runهای main و PRهای تاریخی از GitHub API خوانده شدند؛ Build/Test و `git diff --check` محلی در این اجرا اجرا نشده‌اند. CI مربوط به PR مستنداتی جاری هنوز باید روی HEAD نهایی تکمیل شود.
+- **گام بعدی:** پس از CI این PR، ادامهٔ کار قابل انجام Vendor-only روی #228/#393 با حفظ مرز #235/#392؛ قرارداد S-B، زیرساخت Production و آزمون‌های عملیاتی تا تصمیم/دسترسی انسانی مسدود می‌مانند.
