@@ -69,7 +69,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
     /// character that could break out of the brackets; this remains defense in depth.
     /// </summary>
     public static string QuoteIdentifier(string value) =>
-        "[" + value.Replace("]", "]]]", StringComparison.Ordinal) + "]";
+        "[" + value.Replace("]", "]]", StringComparison.Ordinal) + "]";
 
     public static string? Validate(ProvisioningRequest request)
     {
