@@ -3747,4 +3747,4 @@
 - **مستندات:** handoff در `docs/handoffs/ISSUE-795-vendor-sln-licensing-contracts.md` و فهرست آن در `docs/INDEX.md`.
 - **اعتبارسنجی:** Restore/Build/Test و `git diff --check` محلی اجرا نشدند؛ این محیط checkout مخزن ندارد. CI شاخه/PR باید بررسی شود.
 - **محدودهٔ ممنوع حفظ شد:** دیتابیس‌ها، Migrationها، اسرار، gateها و نصب سرویس دست‌نخورده‌اند.
-- **Git:** Branch `fix/vendor-sln-licensing-contracts`; Commit/PR پس از ایجاد ثبت می‌شوند.
+- **Git:** Branch `fix/vendor-sln-licensing-contracts`; Commit اولیه: `cce785137c152d287262276bb923f9daab583541`; PR: [#796](https://github.com/hamidreza1394/Accounting/pull/796).
