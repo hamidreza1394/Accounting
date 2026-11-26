@@ -54,6 +54,11 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 - برای EF Core نیز همان FARANO_VENDOR_ConnectionStrings__VendorDb باید فقط به Vendor DB اشاره کند. Migrationهای Vendor را با ابزار EF و پس از بازبینی فقط روی دیتابیس توسعه‌ای Vendor اجرا کنید؛ Migration مشتری Issue/مسیر مستقل خودش را دارد.
 - در این مرحله از کلید و داده Production استفاده نشود.
 
+- پروفایل Visual Studio `Vendor.Host` صفحهٔ setup محلی را در `https://localhost:5001/development/database-setup` باز می‌کند. این مسیر تنها با `Development` و پرچم صریح launch profile فعال است.
+- در نبود اتصال، Host سبکِ setup بدون Persistence/Identity بالا می‌آید؛ پس از آزمون موفق، اتصال در Windows Credential Manager همان کاربر ذخیره و در اجرای بعدی Development بارگذاری می‌شود. تنظیم صریح Environment/Configuration بر مقدار ذخیره‌شده اولویت دارد.
+- صفحه و APIهای آن loopback-only و HTTPS هستند؛ POST/DELETE با antiforgery و Origin check محافظت می‌شوند. صفحه رمز را بازنمایی یا ذخیره مرورگری نمی‌کند.
+- ابزار فقط به Vendor DB وصل می‌شود؛ دیتابیس را ایجاد یا Migration را اعمال نمی‌کند. برای SQL محلی با گواهی توسعه‌ای می‌توان گزینه TrustServerCertificate را آگاهانه انتخاب کرد.
+
 ### B. Staging روی Windows Server
 
 - Host مستقل Vendor روی Windows Server یا Windows VM اختصاصی اجرا شود.

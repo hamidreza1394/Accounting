@@ -3748,3 +3748,12 @@
 - **اعتبارسنجی:** Restore/Build/Test و `git diff --check` محلی اجرا نشدند؛ این محیط checkout مخزن ندارد. Vendor CI run [#45856392286](https://github.com/hamidreza1394/Accounting/actions/runs/45856392286) روی commit `955f2eda1eb15372265e8c33aedbf8fbb8e82e94` با هر ۴ Job موفق شد؛ .NET CI run #45856392373 در حال اجرا بود هنگام ثبت این یادداشت.
 - **محدودهٔ ممنوع حفظ شد:** دیتابیس‌ها، Migrationها، اسرار، gateها و نصب سرویس دست‌نخورده‌اند.
 - **Git:** Branch `fix/vendor-sln-licensing-contracts`; Commit اولیه: `cce785137c152d287262276bb923f9daab583541`; PR: [#796](https://github.com/hamidreza1394/Accounting/pull/796).
+
+## 2026-11-28 — فرم اتصال دیتابیس محلی Vendor در Development (Issue #797)
+- **هدف:** رفع شکست شروع Host در سیستم توسعه وقتی اتصال Vendor تنظیم نشده است و فراهم‌کردن صفحه‌ای برای کنترل/آزمون تنظیمات.
+- **طراحی:** پروفایل Visual Studio با پرچم صریح Development صفحه setup را فعال می‌کند؛ در نبود اتصال، Host محدود به loopback و بدون ثبت Persistence/Identity بالا می‌آید. رابط فارسی RTL اتصال Windows Integrated یا SQL Login را پیش از ذخیره آزمایش می‌کند. اتصال موفق در Windows Credential Manager کاربر جاری ذخیره می‌شود و در اجرای بعدی خوانده می‌شود.
+- **اولویت پیکربندی:** اگر Environment یا Configuration Provider اتصال صریح دارد، همان منبع مقدم است و صفحه ذخیره/حذف را غیرفعال می‌کند. Production و Customer DB در مسیر جدید نیستند.
+- **امنیت:** HTTPS محلی، Origin و antiforgery برای تغییرات، محدودیت نرخ و پاسخ خطای بدون جزئیات اتصال/رمز؛ صفحه connection string یا رمز را به مرورگر بازنمی‌گرداند. DB ایجاد و Migration اجرا نمی‌شود.
+- **اعتبارسنجی:** checkout محلی و اجرای dotnet restore/build/test در این محیط در دسترس نیست؛ نتیجه Vendor CI و .NET CI پس از بازشدن PR باید بررسی شود. وضعیت تا آن زمان **Implemented / Not yet Verified** است.
+- **مستندات:** مشخصات طراحی، راهنمای Vendor، readiness محلی/راه دور و handoff Issue #797 به‌روز شدند.
+- **Git:** Branch `agent/797-vendor-dev-db-setup` بر پایهٔ PR #796 باز است؛ این کار PR جداگانه خواهد داشت و ادغام نمی‌شود.

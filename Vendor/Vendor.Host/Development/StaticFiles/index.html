@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>تنظیم اتصال دیتابیس Vendor</title>
+  <link rel="stylesheet" href="/development/database-setup.css">
+  <script src="/development/database-setup.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="heading">
+      <div class="badge" aria-hidden="true">V</div>
+      <div>
+        <p class="eyebrow">FARANOU · VENDOR</p>
+        <h1>تنظیم اتصال دیتابیس</h1>
+        <p class="intro">این صفحه فقط برای اجرای Development روی همین رایانه در دسترس است.</p>
+      </div>
+    </header>
+    <section class="notice" id="source-notice" role="status" hidden></section>
+    <form id="connection-form" autocomplete="off">
+      <div class="grid">
+        <label>آدرس SQL Server
+          <input name="server" required maxlength="256" placeholder="localhost یا نام سرور" autocomplete="off">
+        </label>
+        <label>نام دیتابیس Vendor
+          <input name="database" required maxlength="128" placeholder="VendorDb" autocomplete="off">
+        </label>
+      </div>
+      <fieldset>
+        <legend>روش ورود</legend>
+        <label class="choice"><input type="radio" name="authentication" value="windows" checked> احراز هویت ویندوز</label>
+        <label class="choice"><input type="radio" name="authentication" value="sql"> نام کاربری و گذرواژه SQL</label>
+      </fieldset>
+      <div id="sql-credentials" class="grid" hidden>
+        <label>نام کاربری SQL
+          <input name="username" maxlength="256" autocomplete="off">
+        </label>
+        <label>گذرواژه SQL
+          <input name="password" type="password" maxlength="1024" autocomplete="new-password">
+        </label>
+      </div>
+      <label class="choice trust">
+        <input type="checkbox" name="trustServerCertificate">
+        اعتماد به گواهی سرور (فقط برای SQL محلی/توسعه)
+      </label>
+      <p class="hint">رمز فقط برای آزمون و ذخیره به سرور ارسال می‌شود؛ در مرورگر نگه‌داری نمی‌شود. اتصال رمزگذاری‌شده است.</p>
+      <div class="actions">
+        <button type="button" class="secondary" id="test-button">آزمون اتصال</button>
+        <button type="submit" id="save-button" disabled>ذخیره اتصال موفق</button>
+      </div>
+    </form>
+    <section class="result" id="result" role="status" aria-live="polite"></section>
+    <section class="saved" id="saved-section" hidden>
+      <div>
+        <strong>تنظیم ذخیره‌شده برای این کاربر ویندوز</strong>
+        <p>برای اعمال یا حذف تنظیم ذخیره‌شده، برنامه را دوباره اجرا کنید.</p>
+      </div>
+      <button type="button" class="danger" id="delete-button">حذف تنظیم ذخیره‌شده</button>
+    </section>
+    <footer>این فرم دیتابیس را ایجاد نمی‌کند و Migration اجرا نمی‌کند. دیتابیس مستقل Vendor باید از قبل آماده باشد.</footer>
+  </main>
+</body>
+</html>

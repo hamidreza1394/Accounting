@@ -7,6 +7,9 @@
     <AssemblyName>Faranou.Vendor.Host</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Development/StaticFiles/**/*">
+      <LogicalName>Faranou.Vendor.Host.Development.StaticFiles.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
     <ProjectReference Include="..\Vendor.Persistence\Vendor.Persistence.csproj" />
     <ProjectReference Include="..\..\Licensing.Contracts\Licensing.Contracts.csproj" />
     <PackageReference Include="Pkcs11Interop" />
