@@ -40,7 +40,7 @@ internal static class VendorDevelopmentDatabaseSetup
             context.Response.Headers.Pragma = "no-cache";
             context.Response.Headers["X-Content-Type-Options"] = "nosniff";
 
-            if (!IsLoopback(context))
+            if ((setupOnly || IsSetupRequest(context.Request.Path)) && !IsLoopback(context))
             {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return;
@@ -55,7 +55,11 @@ internal static class VendorDevelopmentDatabaseSetup
             app.UseRateLimiter();
         }
 
-        app.MapGet("/", () => Results.Redirect("/development/database-setup"));
+        if (setupOnly)
+        {
+            app.MapGet("/", () => Results.Redirect("/development/database-setup"));
+        }
+
         app.MapGet("/development/database-setup", () => EmbeddedFile(HtmlResource, "text/html; charset=utf-8"));
         app.MapGet("/development/database-setup.css", () => EmbeddedFile(CssResource, "text/css; charset=utf-8"));
         app.MapGet("/development/database-setup.js", () => EmbeddedFile(JsResource, "text/javascript; charset=utf-8"));
@@ -193,6 +197,10 @@ internal static class VendorDevelopmentDatabaseSetup
 
         return Results.Stream(stream, contentType, enableRangeProcessing: false);
     }
+
+    private static bool IsSetupRequest(PathString path) =>
+        path.StartsWithSegments("/development/database-setup") ||
+        path.StartsWithSegments("/api/development/database-setup");
 
     private static bool IsLoopback(HttpContext context) =>
         context.Connection.RemoteIpAddress is { } address && IPAddress.IsLoopback(address);
