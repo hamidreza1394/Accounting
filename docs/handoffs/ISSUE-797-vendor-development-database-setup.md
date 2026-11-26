@@ -1,9 +1,9 @@
 # تحویل Issue #797 — فرم تنظیم اتصال Vendor در Development
 
-- **تاریخ:** 2026-11-28
+- **تاریخ:** 2026-11-26
 - **شاخه:** `agent/797-vendor-dev-db-setup`
-- **مبنای شاخه:** سر commit `5cb7ec7be18e94dbaffb28e26f39c99326079c17` (PR #796)
-- **وضعیت:** پیاده‌سازی در شاخه؛ منتظر PR/CI. Merge نشده است.
+- **مبنای شاخه:** ابتدا `5cb7ec7` (شاخهٔ PR #796)؛ پس از Merge شدن #796، روی `main@4a8a028` rebase شد و base PR #800 به `main` تغییر کرد.
+- **وضعیت:** پیاده‌سازی و بازبینی شد؛ نتیجهٔ CI روی head نهایی در PR #800 ثبت می‌شود.
 
 ## تغییرها
 
@@ -24,3 +24,27 @@
 ## محدوده
 
 فقط Vendor.Host و اسناد آن. بدون تغییر Customer projects، دیتابیس‌ها، Migrationها، secrets، gateها، نصب سرویس یا عملیات Production.
+
+## بازبینی پیش از Merge (Claude، 2026-11-26)
+
+بازبینی مستقل: `security-reviewer` (opus، فقط‌خواندنی) روی head `f6c1d3e`. یافتهٔ blocking نداشت؛ مسیری برای فعال‌شدن در Production یا بدون flag پیدا نشد، نشت رمز/connection string پیدا نشد و P/Invoke درست ارزیابی شد. یافته‌های غیرمسدودکننده و اصلاح‌ها:
+
+| یافته | شدت | اصلاح |
+|---|---|---|
+| M1: در حالت برنامهٔ کامل، test/save/delete بدون احراز هویت Vendor بودند؛ هر پروسهٔ محلی غیرمرورگری می‌توانست مقصد DB را عوض کند یا NTLM را به سرور دلخواه بفرستد | Medium | `AllowAnonymous` فقط در حالت setup-only؛ در حالت کامل همهٔ endpointهای setup پشت FallbackPolicy (مدیر MFA) هستند |
+| M2: صفحه/دارایی‌ها در حالت کامل پشت FallbackPolicy و API ناشناس بود (ناهمسان) | Medium | با اصلاح M1 سیاست یکسان شد؛ README اصلاح شد |
+| L1: نام میزبان فیلتر نمی‌شد (tunnel/rebinding) | Low | peer و Host هر دو باید loopback باشند (`localhost`/`127.0.0.1`/`[::1]`) وگرنه 404 |
+| L2: هدرهای no-store روی همهٔ پاسخ‌های برنامهٔ کامل | Low | هدرها فقط روی درخواست‌های setup |
+| L3: نبود ضد framing/CSP | Low | `X-Frame-Options: DENY` و CSP `default-src 'self'; frame-ancestors 'none'` روی setup |
+| L4: `catch` خالی بدون log (خلاف AGENTS.md بخش ۲) | Low | `catch` محدود به `Win32Exception`/`InvalidOperationException` با `ILogger`، بدون مقدار credential |
+| L5: نبود تست | Low | `VendorDevelopmentDatabaseSetupExposureTests` (۲ تست) |
+
+## آزمون‌های اجراشده (Claude، Linux، SDK 10.0.404)
+
+| فرمان/آزمون | نتیجه واقعی | توضیح |
+|---|---|---|
+| `dotnet build Vendor.sln -c Release` | موفق | 0 خطا |
+| `dotnet test Vendor.sln --no-build -c Release` با connection string ساختگی و غیرقابل‌دسترس | موفق | total 469، succeeded 387، skipped 82، failed 0؛ تست‌های SQL Server واقعی skip شدند |
+| `VendorDevelopmentDatabaseSetupExposureTests` | موفق | روی Linux مسیر «غیر Windows» و «بدون flag» را می‌سنجد؛ روی Windows همان تست guard loopback را می‌سنجد |
+
+اجرانشده: اجرای واقعی Visual Studio روی Windows، Windows Credential Manager، گواهی HTTPS توسعه و اتصال SQL واقعی؛ این‌ها به سیستم مالک نیاز دارند.

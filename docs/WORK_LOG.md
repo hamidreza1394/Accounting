@@ -3758,11 +3758,12 @@
 - **اعتبارسنجی:** نتایج واقعی Build/Test و CI در handoff `docs/handoffs/ISSUE-798-vendor-sln-project-configurations.md` ثبت می‌شود.
 - **Git:** Branch `fix/vendor-sln-project-configurations`.
 
-## 2026-11-28 — فرم اتصال دیتابیس محلی Vendor در Development (Issue #797)
+## 2026-11-26 — فرم اتصال دیتابیس محلی Vendor در Development (Issue #797)
 - **هدف:** رفع شکست شروع Host در سیستم توسعه وقتی اتصال Vendor تنظیم نشده است و فراهم‌کردن صفحه‌ای برای کنترل/آزمون تنظیمات.
 - **طراحی:** پروفایل Visual Studio با پرچم صریح Development صفحه setup را فعال می‌کند؛ در نبود اتصال، Host محدود به loopback و بدون ثبت Persistence/Identity بالا می‌آید. رابط فارسی RTL اتصال Windows Integrated یا SQL Login را پیش از ذخیره آزمایش می‌کند. اتصال موفق در Windows Credential Manager کاربر جاری ذخیره می‌شود و در اجرای بعدی خوانده می‌شود.
 - **اولویت پیکربندی:** اگر Environment یا Configuration Provider اتصال صریح دارد، همان منبع مقدم است و صفحه ذخیره/حذف را غیرفعال می‌کند. Production و Customer DB در مسیر جدید نیستند.
 - **امنیت:** HTTPS محلی، Origin و antiforgery برای تغییرات، محدودیت نرخ و پاسخ خطای بدون جزئیات اتصال/رمز؛ صفحه connection string یا رمز را به مرورگر بازنمی‌گرداند. DB ایجاد و Migration اجرا نمی‌شود.
 - **اعتبارسنجی:** checkout محلی و اجرای dotnet restore/build/test در این محیط در دسترس نیست؛ نتیجه Vendor CI و .NET CI پس از بازشدن PR باید بررسی شود. وضعیت تا آن زمان **Implemented / Not yet Verified** است.
+- **بازبینی پیش از Merge (Claude):** `security-reviewer` بدون یافتهٔ blocking؛ یافته‌های M1/M2 (ناشناس‌بودن setup در حالت برنامهٔ کامل) و L1–L5 (فیلتر Host، هدرها، CSP، log خطا، تست) در همین PR اصلاح شدند. Build و Test محلی Vendor (469 تست، 0 ناموفق، 82 skip) موفق؛ جزئیات در handoff Issue #797.
 - **مستندات:** مشخصات طراحی، راهنمای Vendor، readiness محلی/راه دور و handoff Issue #797 به‌روز شدند.
-- **Git:** Branch `agent/797-vendor-dev-db-setup` بر پایهٔ PR #796 باز است؛ این کار PR جداگانه خواهد داشت و ادغام نمی‌شود.
+- **Git:** Branch `agent/797-vendor-dev-db-setup`؛ PR [#800](https://github.com/hamidreza1394/Accounting/pull/800). پس از Merge شدن #796، شاخه روی `main@4a8a028` rebase و base PR به `main` تغییر داده شد.
