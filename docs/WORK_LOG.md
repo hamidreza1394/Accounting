@@ -3738,3 +3738,13 @@
 - **دامنه/ایمنی:** فقط مستندات؛ بدون تغییر کد اجرایی، Schema، Migration، Customer consumer، `Server/**`، Runtime Gate، Provisioning v5 Gate، کلید یا Secret. هیچ نصب Windows Service، Key Ceremony، Staging یا آزمون دو میزبان ادعا نمی‌شود.
 - **اعتبارسنجی:** Check Runهای main و PRهای تاریخی از GitHub API خوانده شدند؛ Build/Test و `git diff --check` محلی در این اجرا اجرا نشده‌اند. CI مربوط به PR مستنداتی جاری هنوز باید روی HEAD نهایی تکمیل شود.
 - **گام بعدی:** پس از CI این PR، ادامهٔ کار قابل انجام Vendor-only روی #228/#393 با حفظ مرز #235/#392؛ قرارداد S-B، زیرساخت Production و آزمون‌های عملیاتی تا تصمیم/دسترسی انسانی مسدود می‌مانند.
+
+
+## 2026-11-28 — Issue #795: افزودن Licensing.Contracts به Vendor.sln
+- **دامنه:** رفع خطای اطلاعات پروژه هنگام بازکردن Vendor.sln از ZIP/Visual Studio.
+- **یافته:** در main@791b99b، `Vendor.Host.csproj` به `Licensing.Contracts.csproj` ارجاع داشت اما این پروژه در solution نبود.
+- **اصلاح:** افزودن `Licensing.Contracts` به `Vendor.sln` همراه تنظیمات Debug/Release Any CPU؛ بدون تغییر Host reference یا پروژه‌های Customer.
+- **مستندات:** handoff در `docs/handoffs/ISSUE-795-vendor-sln-licensing-contracts.md` و فهرست آن در `docs/INDEX.md`.
+- **اعتبارسنجی:** Restore/Build/Test و `git diff --check` محلی اجرا نشدند؛ این محیط checkout مخزن ندارد. CI شاخه/PR باید بررسی شود.
+- **محدودهٔ ممنوع حفظ شد:** دیتابیس‌ها، Migrationها، اسرار، gateها و نصب سرویس دست‌نخورده‌اند.
+- **Git:** Branch `fix/vendor-sln-licensing-contracts`; Commit/PR پس از ایجاد ثبت می‌شوند.
