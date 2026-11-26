@@ -3749,6 +3749,15 @@
 - **محدودهٔ ممنوع حفظ شد:** دیتابیس‌ها، Migrationها، اسرار، gateها و نصب سرویس دست‌نخورده‌اند.
 - **Git:** Branch `fix/vendor-sln-licensing-contracts`; Commit اولیه: `cce785137c152d287262276bb923f9daab583541`; PR: [#796](https://github.com/hamidreza1394/Accounting/pull/796).
 
+
+## 2026-11-26 — Issue #798: اصلاح تنظیمات پیکربندی Vendor.sln
+- **دامنه:** دو ایراد از قبل موجود در `Vendor.sln` که در بازبینی PR #796 دیده شد؛ فقط Solution و مستندات.
+- **یافته روی main@c71af27:** پروژهٔ `Vendor.Persistence` هیچ ردیف `ProjectConfigurationPlatforms` نداشت (در Configuration Manager ویژوال استودیو بدون Build)؛ ردیف `Release|Any CPU.Build.0` پروژهٔ `Vendor.Host.Tests` مقدار خراب `{GUID}.Release|Any CPU` داشت.
+- **اصلاح:** افزودن ردیف‌های Debug/Release Any CPU (ActiveCfg و Build.0) برای `Vendor.Persistence` و اصلاح مقدار ردیف خراب به `Release|Any CPU`. بدون تغییر csproj، Customer، دیتابیس، Migration، اسرار یا gate.
+- **اصلاح سابقه (append-only):** ردیف «2026-11-28 — Issue #795» در همین فایل و handoff `ISSUE-795-vendor-sln-licensing-contracts.md` تاریخ 2026-11-28 دارند؛ تاریخ واقعی کار و Merge آن 2026-11-26 است (Merge #796 در `c71af27`، 2026-11-26T16:45:19Z). همچنین .NET CI که در آن ردیف «در حال اجرا» ثبت شده، روی head نهایی `5cb7ec7` موفق تکمیل شد. ردیف قبلی بازنویسی نشد.
+- **اعتبارسنجی:** نتایج واقعی Build/Test و CI در handoff `docs/handoffs/ISSUE-798-vendor-sln-project-configurations.md` ثبت می‌شود.
+- **Git:** Branch `fix/vendor-sln-project-configurations`.
+
 ## 2026-11-28 — فرم اتصال دیتابیس محلی Vendor در Development (Issue #797)
 - **هدف:** رفع شکست شروع Host در سیستم توسعه وقتی اتصال Vendor تنظیم نشده است و فراهم‌کردن صفحه‌ای برای کنترل/آزمون تنظیمات.
 - **طراحی:** پروفایل Visual Studio با پرچم صریح Development صفحه setup را فعال می‌کند؛ در نبود اتصال، Host محدود به loopback و بدون ثبت Persistence/Identity بالا می‌آید. رابط فارسی RTL اتصال Windows Integrated یا SQL Login را پیش از ذخیره آزمایش می‌کند. اتصال موفق در Windows Credential Manager کاربر جاری ذخیره می‌شود و در اجرای بعدی خوانده می‌شود.
