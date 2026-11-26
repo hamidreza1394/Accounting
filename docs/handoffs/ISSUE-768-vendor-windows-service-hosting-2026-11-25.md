@@ -81,3 +81,14 @@
 - **Branch:** `docs/vendor-service-hosting-status-2026-11-25`
 - **Commit:** در تاریخچهٔ شاخه و PR ثبت می‌شود.
 - **Pull Request:** [#793](https://github.com/hamidreza1394/Accounting/pull/793) — docs-only؛ HEAD `0a35ece049038d179677e472a63703898d49eb4d`، ۱۵/۱۵ Check Run تکمیل‌شده (۱۴ `success`، یک `neutral` CodeRabbit، صفر pending/failure)، `mergeable=true` و بدون review thread؛ در زمان ثبت هنوز ادغام نشده بود.
+
+
+## الحاقیهٔ 2026-11-26 — تعیین تکلیف PR #793 و وضعیت فعلی main
+
+- PR #793 با موضوع هم‌ترازی مستندات Windows Service در main ادغام شده است؛ merge commit و SHA فعلی main برابر `bb8ac69440419e9d9c0a38e353e19796e5677d27` است. وضعیت قبلی «هنوز open» در بخش شناسه‌های Git، snapshot زمان ایجاد handoff را توصیف می‌کند و با این الحاقیه به‌روزرسانی زمانی می‌شود، نه اینکه تاریخچه حذف شود.
+- روی `bb8ac69440419e9d9c0a38e353e19796e5677d27` هر ۱۶ Check Run موفق‌اند: .NET CI هفت Job، Vendor CI چهار Job، Semgrep یک Job و CodeQL چهار تحلیل. اجراها: #45587525791، #45587525896، #45587525784 و #45587525265.
+- PRهای #281، #282 و #284 روی merge SHAهای واقعی خود به‌ترتیب ۱۲/۱۲، ۱۳/۱۳ و ۱۳/۱۳ Check Run موفق دارند؛ نتیجهٔ #282 پس از Merge مستقلاً تأیید شد.
+- در ممیزی پیش از ایجاد PR مستنداتی جدید، PR بازی وجود نداشت. Issue #768 همچنان باز است، زیرا نصب واقعی دو Windows Service، هویت‌های مستقل، ACL، Secret Store، مجوز SQL، HTTP smoke، چرخه Staging و آزمون دو میزبان اجرا نشده‌اند.
+- از ۱۰۰ اجرای اخیر GitHub Actions، ۹۲ موفق، ۸ لغوشده و صفر شکست؛ هر ۱۰۰ اجرا تکمیل شده‌اند. این شمارش فقط پنجرهٔ ۱۰۰ اجرای اخیر است.
+- Build/Test و `git diff --check` محلی در این بازبینی اجرا نشده‌اند. CI موفق، شواهد کد/انتشار است و جایگزین آزمون عملیاتی روی Windows Server نیست.
+- هیچ Customer consumer، Customer schema/Migration، `Server/**`، Runtime Gate، Provisioning v5 Gate، private key یا secret در این الحاقیه تغییر نکرده است.
