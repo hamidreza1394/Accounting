@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using System.Text.Json;
+using Faranou.Vendor.Host;
 using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Bootstrap;
@@ -86,6 +87,58 @@ if (bootstrapCommandRequested)
         new ConsoleVendorBootstrapPrompt());
     await commandApp.DisposeAsync();
     Environment.ExitCode = exitCode;
+    return;
+}
+
+// Local Development setup is opt-in through the Vendor.Host launch profile. A saved
+// per-user Windows Credential Manager value is loaded only when configuration did not provide one.
+var configuredVendorConnection = builder.Configuration["ConnectionStrings:VendorDb"];
+VendorDevelopmentDatabaseSetup.SetConfigurationSource(!string.IsNullOrWhiteSpace(configuredVendorConnection));
+var developmentSetupEnabled =
+    builder.Environment.IsDevelopment() &&
+    builder.Configuration.GetValue<bool>("DevelopmentSetup:Enabled") &&
+    OperatingSystem.IsWindows();
+
+if (developmentSetupEnabled && string.IsNullOrWhiteSpace(configuredVendorConnection))
+{
+    var savedConnection = VendorDevelopmentDatabaseSetup.ReadSavedConnection();
+    if (!string.IsNullOrWhiteSpace(savedConnection))
+    {
+        builder.Configuration["ConnectionStrings:VendorDb"] = savedConnection;
+    }
+}
+
+// With no configured or saved connection, start only the local setup surface.
+// No Vendor persistence, Identity, migrations, or audit startup services are registered.
+if (developmentSetupEnabled &&
+    string.IsNullOrWhiteSpace(builder.Configuration["ConnectionStrings:VendorDb"]))
+{
+    builder.Services.AddAntiforgery(options =>
+    {
+        options.HeaderName = "X-CSRF-TOKEN";
+        options.Cookie.Name = "Vendor.DevelopmentSetup.AntiForgery";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+    });
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.AddPolicy("vendor-development-setup", context =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 10,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1)
+                }));
+    });
+    builder.WebHost.UseUrls("https://localhost:5001");
+    var setupApp = builder.Build();
+    VendorDevelopmentDatabaseSetup.Map(setupApp, setupOnly: true);
+    await setupApp.RunAsync();
     return;
 }
 
@@ -292,6 +345,19 @@ builder.Services.AddHealthChecks();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    if (developmentSetupEnabled)
+    {
+        options.AddPolicy("vendor-development-setup", context =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 10,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1)
+                }));
+    }
     options.AddPolicy("vendor-auth", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -390,6 +456,11 @@ if (builder.Environment.IsProduction())
 builder.Services.AddHostedService<VendorAuditCheckpointStartupService>();
 
 var app = builder.Build();
+if (developmentSetupEnabled)
+{
+    VendorDevelopmentDatabaseSetup.Map(app, setupOnly: false);
+}
+
 
 if (app.Environment.IsProduction())
 {

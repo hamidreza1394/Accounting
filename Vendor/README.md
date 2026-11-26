@@ -81,7 +81,14 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 ## اتصال دیتابیس Vendor
 - متغیر محیطی: `FARANO_VENDOR_ConnectionStrings__VendorDb` (به یک دیتابیس مستقل Vendor). `AddVendorPersistence` در مرحلهٔ Issue #117، DbContext و storeهای Identity را از همین اتصال ثبت می‌کند؛ هیچ fallback به تنظیم اتصال برنامهٔ مشتری مجاز نیست.
 - هیچ connection string پیش‌فرض، seed مدیر، ثبت‌نام عمومی یا endpoint مدیریتی ناشناس وجود ندارد.
-- قبل از استفادهٔ واقعی، پیاده‌سازی login/MFA و bootstrap باید تکمیل و کنترل‌های امنیتی/عملیاتی جداگانه تأیید شوند؛ وجود Schema به معنی آماده‌بودن پنل نیست.
+
+### فرم محلی Development (Issue #797)
+- پروفایل Visual Studio پروژه `Vendor.Host` در Development، صفحهٔ `https://localhost:5001/development/database-setup` را باز می‌کند؛ اگر اتصال پیکربندی نشده باشد، Host فقط همین صفحه و endpointهای setup را بالا می‌آورد و سرویس‌های Persistence/Identity را نمی‌سازد.
+- فرم Windows Integrated یا SQL Login را می‌پذیرد، اتصال را قبل از ذخیره آزمایش می‌کند و مقدار موفق را در Windows Credential Manager کاربر جاری نگه می‌دارد. اجرای بعدی Development آن را می‌خواند.
+- اگر Environment یا Configuration Provider مقدار اتصال داشته باشد، همان مقدار اولویت دارد؛ صفحه منبع را اعلام می‌کند و ذخیره/حذف را غیرفعال می‌کند تا کاربر مقدار بلااثر ثبت نکند.
+- endpointهای setup فقط در Development با پروفایل صریح و روی Windows فعال می‌شوند، به peer و نام میزبان loopback (`localhost`/`127.0.0.1`/`[::1]`) محدودند و درخواست‌های تغییردهنده به Origin و antiforgery token معتبر نیاز دارند. از HTTPS محلی استفاده می‌شود.
+- در حالت setup-only (هنوز اتصالی نیست) صفحه بدون ورود باز می‌شود، چون هنوز هویتی برای Vendor وجود ندارد. وقتی اتصال تنظیم شده و برنامهٔ کامل بالا آمده، همهٔ endpointهای setup پشت سیاست پیش‌فرض Vendor (مدیر با MFA) هستند؛ برای تغییر یا حذف اتصال ذخیره‌شده باید وارد پنل شوید.
+- این ابزار DB نمی‌سازد و Migration اجرا نمی‌کند. Production و اتصال دیتابیس Customer از آن استفاده نمی‌کنند.
 
 ## احراز هویت Vendor — Issue #103 (شاخهٔ در حال بازبینی)
 - APIهای پایهٔ password→TOTP، passkey sign-in/enrollment، TOTP setup/confirmation، session/me و logout با ASP.NET Core Identity 10 در شاخه پیاده‌سازی شده‌اند؛ تا CI سبز و ادغام، Production-verified نیستند.

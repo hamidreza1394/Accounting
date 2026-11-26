@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Vendor.Host": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "development/database-setup",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "FARANO_VENDOR_DevelopmentSetup__Enabled": "true"
+      },
+      "applicationUrl": "https://localhost:5001"
+    }
+  }
+}
