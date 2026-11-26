@@ -555,9 +555,11 @@ internal static class VendorDevelopmentDatabaseSetup
         private static extern bool CredRead(string target, uint type, uint flags, out IntPtr credential);
 
         [DllImport("Advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool CredWrite(ref NativeCredential credential, uint flags);
 
         [DllImport("Advapi32.dll", EntryPoint = "CredDeleteW", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool CredDelete(string target, uint type, uint flags);
 
         [DllImport("Advapi32.dll", SetLastError = false)]
