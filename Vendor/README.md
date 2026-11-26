@@ -2,17 +2,17 @@
 
 # سامانهٔ مرکزی فروشندهٔ فرانو
 
-## وضعیت جاری Vendor — 2026-11-25
+## وضعیت جاری Vendor — 2026-11-26
 
-- **فروش/پرداخت و Amendment (#393):** چرخه Backend سفارش/پرداخت/مطالبات در PR #722، رابط فارسی RTL در PR #738 و درخواست صریح Amendment/Approval/Signing/sequence+1 نصب‌محور در PR #739 در main ادغام شده‌اند. پرداخت از صدور مستقل است (D-108). Company-scoped Module/Feature/UserSeat تا تکمیل #392 مسدود است؛ ACK/Applied tracking اختصاصی و Delivery tracking جداگانه Amendment باقی‌اند.
-- **Provisioning و CompanyReference (#228/#392):** مسیر پایه درخواست/Approval/Signing/Export/ACK و Customer Apply v5 در main وجود دارد؛ allow-list چهار کد رد شرکت‌محور با #699 تکمیل شده است. Gate صدور v5 همچنان default-off است و Migration مشتری روی DB واقعی اجرا نشده؛ Bootstrap Dedicated/Offline و Restore/Clone و آزمون عملیاتی دو میزبان باقی‌اند.
-- **Signer مرکزی (#236):** PR #720 Windows CNG/Certificate Store با MachineKey غیرقابل‌استخراج و AssuranceLevel=SoftwareProtected را برای License/Provisioning اضافه کرده و PR #736 Runbook Key Ceremony/Rotation را ثبت کرده است. D-107، HSM/KMS خارجی را برای این signer مرکزی اجباری نمی‌کند؛ اما Key Ceremony واقعی، ACL سرویس، Trust Store، rotation و recovery روی میزبان هدف هنوز Not Verified است. D-055/D-057 برای offline revocation و Customer anti-rollback جدا هستند.
-- **Approval (#214، D-109):** self-approval اپراتور مجاز در Vendor V1 پذیرفته شده؛ ادعای نیاز به دو کاربر متفاوت معتبر نیست. Permission، MFA، RowVersion و Audit همچنان الزامی‌اند.
+- **main و CI:** `main@bb8ac69440419e9d9c0a38e353e19796e5677d27`؛ هر ۱۶ Check Run موفق‌اند: .NET CI (۷ Job)، Vendor CI (۴ Job)، Semgrep (۱ Job) و CodeQL (۴ تحلیل). PR #793 که وضعیت Windows Service را مستند کرد، با همین SHA ادغام شده است.
+- **فروش/پرداخت و Amendment (#393):** چرخه سفارش/پرداخت/مطالبات در PR #722، UI فارسی RTL در #738 و درخواست Amendment/Approval/Signing/sequence+1 نصب‌محور در #739 در main هستند. Payment از Issuance مستقل است (D-108). Company-scoped Module/Feature/UserSeat تا binding معتبر #392 مسدود است؛ Delivery/ACK/Applied tracking اختصاصی Amendment تا تصویب قرارداد S-B شروع نمی‌شود.
+- **Provisioning و CompanyReference (#228/#392):** intent، signing/export، ACK intake سمت Vendor و mapping/Apply در کد وجود دارند؛ Gate صدور v5 همچنان fail-closed و default-off است. Bootstrap مستقل TenantOwner، اجرای Migration مشتری روی Staging و Restore/Clone عملیاتی انجام نشده‌اند.
+- **Signer مرکزی (#236):** Windows CNG/Certificate Store با MachineKey غیرقابل‌استخراج و AssuranceLevel=SoftwareProtected طبق D-107 و Runbook در main هستند. Key Ceremony واقعی، ACL سرویس، Trust Store، rotation/overlap و recovery روی میزبان هدف هنوز Not Verified است. D-055/D-057 برای offline revocation و Customer anti-rollback جدا هستند.
+- **Approval (#214، D-109):** self-approval اپراتور مجاز در Vendor V1 پذیرفته شده؛ الزام دو کاربر متفاوت وجود ندارد. Permission، MFA، RowVersion، Audit و fail-closed حفظ می‌شوند.
 - **Customer consumer (#235):** verifier/Apply/ACK پایه وجود دارد؛ trust distribution/rotation، readiness/audit پایدار، retry/error semantics و آزمون Staging دو میزبان/دو OS باقی‌اند و باید در PR مستقل Customer-side انجام شوند.
 - **Audit checkpoint (#107):** hash-chain، قرارداد sink، Development/Test file store و Production startup guard fail-closed موجودند؛ sink مستقل Production با failure domain/identity جدا، retention/immutability و recovery drill هنوز انتخاب و provision نشده است.
-- **Lifecycle Readiness / Final Audit:** PR #741 (Vendor lifecycle diagnostics) با merge commit `755aeba200326ba91559e9e0a9c524ede2a56ea4` و PR #742 (final audit) با merge commit `ac0ec74115ced3988bc609e1e50ba46866b0920f` در main ادغام شده‌اند؛ Check Runهای پس از Merge روی هر دو SHA به‌ترتیب ۱۶/۱۶ و ۱۶/۱۶ موفق‌اند. این diagnostics فقط وضعیت Vendor DB را گزارش می‌کنند و Production readiness را اثبات نمی‌کنند.
-- **Windows Service / Deployment (#768):** PR #787 با merge commit `35bd3905537023051b9372f01234cc4027590ab7` پشتیبانی Native Windows Service را برای `Farano Vendor` و `Farano Customer` اضافه کرد؛ CLI/Key Ceremony همچنان console-only است. CI پس از Merge #787 برابر ۲۰/۲۰ و CI main@`50a15eae81d4b88657a3a981f59e0ae89f271a91` برابر ۱۲/۱۲ موفق بود؛ نصب واقعی سرویس، هویت/ACL، SQL grants و آزمون Staging هنوز Not Verified هستند.
-- **Production readiness:** Not Ready تا تکمیل #392، آزمون عملیاتی CNG و trust/rotation، #235، sink مستقل #107 و sync/recovery #394. هیچ KMS/HSM، credential یا کلید واقعی فرض یا در repo/log ثبت نشده است.
+- **Windows Service / Deployment (#768):** PR #787 Native Windows Service lifetime را برای `Farano Vendor` و `Farano Customer` اضافه کرد؛ PR #793 مستندات را هم‌تراز کرد. CI پس از Merge هر دو موفق است؛ نصب واقعی سرویس، هویت/ACL، SQL grants، HTTP smoke و Staging هنوز Not Verified هستند.
+- **Production readiness:** Not Ready تا تکمیل #392، آزمون عملیاتی CNG، trust/rotation در #235، sink مستقل #107 و sync/recovery #394. هیچ KMS/HSM، credential یا کلید واقعی فرض یا در repo/log ثبت نشده است.
 
 ---
 
