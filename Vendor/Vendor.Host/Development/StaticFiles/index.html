@@ -29,7 +29,7 @@
         </label>
       </div>
       <fieldset>
-        <legend>روش ورود</legend>
+        <legend>روش ورود اجرای برنامه</legend>
         <label class="choice"><input type="radio" name="authentication" value="windows" checked> احراز هویت ویندوز</label>
         <label class="choice"><input type="radio" name="authentication" value="sql"> نام کاربری و گذرواژه SQL</label>
       </fieldset>
@@ -45,13 +45,60 @@
         <input type="checkbox" name="trustServerCertificate">
         اعتماد به گواهی سرور (فقط برای SQL محلی/توسعه)
       </label>
-      <p class="hint">رمز فقط برای آزمون و ذخیره به سرور ارسال می‌شود؛ در مرورگر نگه‌داری نمی‌شود. اتصال رمزگذاری‌شده است.</p>
+      <p class="hint">این اتصال، هویت اجرای برنامه است و پس از آزمون موفق در Windows Credential Manager کاربر جاری ذخیره می‌شود. از اطلاعات مدیریتی برای اجرای عادی استفاده نکنید.</p>
       <div class="actions">
         <button type="button" class="secondary" id="test-button">آزمون اتصال</button>
         <button type="submit" id="save-button" disabled>ذخیره اتصال موفق</button>
       </div>
     </form>
     <section class="result" id="result" role="status" aria-live="polite"></section>
+    <section class="provision" id="provision-section">
+      <h2>راه‌اندازی خودکار دیتابیس (اختیاری)</h2>
+      <p class="hint">اگر دیتابیس مستقل Vendor هنوز ساخته نشده است، با اطلاعات مدیریتی زیر می‌توانید آن را ایجاد کنید، مهاجرت‌های موجود را اجرا کنید و دسترسی اجرای محدود را آماده کنید. دیتابیس موجود هرگز حذف یا بازسازی نمی‌شود و این مراحل هرگز دیتابیس Customer یا محیط Production را تغییر نمی‌دهند.</p>
+      <fieldset>
+        <legend>احراز هویت مدیریتی برای ایجاد و مهاجرت</legend>
+        <label class="choice"><input type="radio" name="provision-auth" value="windows" checked> احراز هویت ویندوز</label>
+        <label class="choice"><input type="radio" name="provision-auth" value="sql"> نام کاربری و گذرواژه SQL</label>
+        <div id="provision-sql-credentials" class="grid" hidden>
+          <label>نام کاربری مدیریتی SQL
+            <input name="provision-username" maxlength="256" autocomplete="off">
+          </label>
+          <label>گذرواژه مدیریتی SQL
+            <input name="provision-password" type="password" maxlength="1024" autocomplete="new-password">
+          </label>
+        </div>
+        <label class="choice trust">
+          <input type="checkbox" name="provision-trust">
+          اعتماد به گواهی سرور برای اتصال مدیریتی
+        </label>
+        <p class="hint">اطلاعات مدیریتی فقط در حافظهٔ همین درخواست استفاده می‌شود؛ ذخیره، بازگردانی یا ثبت به‌عنوان اتصال اجرا نمی‌شود.</p>
+      </fieldset>
+      <label class="choice">
+        <input type="checkbox" id="create-runtime-login">
+        ساخت نام کاربری SQL محدود برای اجرا (برای جداسازی کامل مجوزها پیشنهاد می‌شود)
+      </label>
+      <div id="runtime-login-fields" class="grid" hidden>
+        <label>نام کاربری اجرای جدید
+          <input name="runtime-login-name" maxlength="128" value="FaranouVendorRuntime" autocomplete="off">
+        </label>
+        <label>گذرواژهٔ نام کاربری اجرا
+          <input name="runtime-login-password" type="password" maxlength="1024" autocomplete="new-password">
+        </label>
+      </div>
+      <ol class="stages" id="provision-stages">
+        <li class="pending" data-stage="1"><span class="state" aria-hidden="true"></span>اتصال مدیریتی به SQL Server<span class="note"></span></li>
+        <li class="pending" data-stage="2"><span class="state" aria-hidden="true"></span>بررسی وضعیت دیتابیس هدف<span class="note"></span></li>
+        <li class="pending" data-stage="3"><span class="state" aria-hidden="true"></span>ایجاد دیتابیس در صورت نیاز<span class="note"></span></li>
+        <li class="pending" data-stage="4"><span class="state" aria-hidden="true"></span>اجرای مهاجرت‌های موجود Vendor<span class="note"></span></li>
+        <li class="pending" data-stage="5"><span class="state" aria-hidden="true"></span>آماده‌سازی دسترسی اجرای محدود<span class="note"></span></li>
+        <li class="pending" data-stage="6"><span class="state" aria-hidden="true"></span>آزمون اتصال اجرا<span class="note"></span></li>
+        <li class="pending" data-stage="7"><span class="state" aria-hidden="true"></span>ذخیرهٔ اتصال اجرا<span class="note"></span></li>
+      </ol>
+      <div class="actions">
+        <button type="button" id="provision-button">اجرای راه‌اندازی خودکار</button>
+      </div>
+      <section class="result" id="provision-result" role="status" aria-live="polite"></section>
+    </section>
     <section class="saved" id="saved-section" hidden>
       <div>
         <strong>تنظیم ذخیره‌شده برای این کاربر ویندوز</strong>
@@ -59,7 +106,7 @@
       </div>
       <button type="button" class="danger" id="delete-button">حذف تنظیم ذخیره‌شده</button>
     </section>
-    <footer>این فرم دیتابیس را ایجاد نمی‌کند و Migration اجرا نمی‌کند. دیتابیس مستقل Vendor باید از قبل آماده باشد.</footer>
+    <footer>راه‌اندازی خودکار فقط روی همین سرور Development اجرا می‌شود؛ با اطلاعات مدیریتی موقت و بدون حذف یا بازسازی دیتابیس موجود. دیتابیس Customer و محیط Production از این صفحه بی‌اثرند و اتصال ذخیره‌شده تنها هویت اجرای برنامه است.</footer>
   </main>
 </body>
 </html>
