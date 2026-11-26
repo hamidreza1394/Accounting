@@ -86,7 +86,8 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - پروفایل Visual Studio پروژه `Vendor.Host` در Development، صفحهٔ `https://localhost:5001/development/database-setup` را باز می‌کند؛ اگر اتصال پیکربندی نشده باشد، Host فقط همین صفحه و endpointهای setup را بالا می‌آورد و سرویس‌های Persistence/Identity را نمی‌سازد.
 - فرم Windows Integrated یا SQL Login را می‌پذیرد، اتصال را قبل از ذخیره آزمایش می‌کند و مقدار موفق را در Windows Credential Manager کاربر جاری نگه می‌دارد. اجرای بعدی Development آن را می‌خواند.
 - اگر Environment یا Configuration Provider مقدار اتصال داشته باشد، همان مقدار اولویت دارد؛ صفحه منبع را اعلام می‌کند و ذخیره/حذف را غیرفعال می‌کند تا کاربر مقدار بلااثر ثبت نکند.
-- endpointهای setup فقط در Development با پروفایل صریح فعال می‌شوند، به loopback محدودند و درخواست‌های تغییردهنده به Origin و antiforgery token معتبر نیاز دارند. از HTTPS محلی استفاده می‌شود.
+- endpointهای setup فقط در Development با پروفایل صریح و روی Windows فعال می‌شوند، به peer و نام میزبان loopback (`localhost`/`127.0.0.1`/`[::1]`) محدودند و درخواست‌های تغییردهنده به Origin و antiforgery token معتبر نیاز دارند. از HTTPS محلی استفاده می‌شود.
+- در حالت setup-only (هنوز اتصالی نیست) صفحه بدون ورود باز می‌شود، چون هنوز هویتی برای Vendor وجود ندارد. وقتی اتصال تنظیم شده و برنامهٔ کامل بالا آمده، همهٔ endpointهای setup پشت سیاست پیش‌فرض Vendor (مدیر با MFA) هستند؛ برای تغییر یا حذف اتصال ذخیره‌شده باید وارد پنل شوید.
 - این ابزار DB نمی‌سازد و Migration اجرا نمی‌کند. Production و اتصال دیتابیس Customer از آن استفاده نمی‌کنند.
 
 ## احراز هویت Vendor — Issue #103 (شاخهٔ در حال بازبینی)

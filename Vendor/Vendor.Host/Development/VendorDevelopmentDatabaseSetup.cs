@@ -36,14 +36,22 @@ internal static class VendorDevelopmentDatabaseSetup
     {
         app.Use(async (context, next) =>
         {
-            context.Response.Headers.CacheControl = "no-store";
-            context.Response.Headers["Pragma"] = "no-cache";
-            context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-
-            if ((setupOnly || IsSetupRequest(context.Request.Path)) && !IsLoopback(context))
+            if (setupOnly || IsSetupRequest(context.Request.Path))
             {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                return;
+                // Loopback peer and a loopback Host name: a public tunnel or DNS-rebinding
+                // name reaching the local port is rejected before any setup endpoint runs.
+                if (!IsLoopback(context) || !IsLoopbackHostName(context.Request.Host.Host))
+                {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+
+                context.Response.Headers.CacheControl = "no-store";
+                context.Response.Headers["Pragma"] = "no-cache";
+                context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+                context.Response.Headers["X-Frame-Options"] = "DENY";
+                context.Response.Headers["Content-Security-Policy"] =
+                    "default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
             }
 
             await next();
@@ -60,18 +68,24 @@ internal static class VendorDevelopmentDatabaseSetup
             app.MapGet("/", () => Results.Redirect("/development/database-setup"));
         }
 
-        app.MapGet("/development/database-setup", () => EmbeddedFile(HtmlResource, "text/html; charset=utf-8"));
-        app.MapGet("/development/database-setup.css", () => EmbeddedFile(CssResource, "text/css; charset=utf-8"));
-        app.MapGet("/development/database-setup.js", () => EmbeddedFile(JsResource, "text/javascript; charset=utf-8"));
+        // In setup-only mode no Vendor identity exists yet, so the local surface is anonymous.
+        // Next to the full application every setup endpoint keeps the Vendor fallback policy
+        // (MFA administrator), so a local non-browser process cannot repoint the database.
+        TBuilder Access<TBuilder>(TBuilder endpoint) where TBuilder : IEndpointConventionBuilder =>
+            setupOnly ? endpoint.AllowAnonymous() : endpoint;
 
-        app.MapGet("/api/development/database-setup/antiforgery",
+        Access(app.MapGet("/development/database-setup", () => EmbeddedFile(HtmlResource, "text/html; charset=utf-8")));
+        Access(app.MapGet("/development/database-setup.css", () => EmbeddedFile(CssResource, "text/css; charset=utf-8")));
+        Access(app.MapGet("/development/database-setup.js", () => EmbeddedFile(JsResource, "text/javascript; charset=utf-8")));
+
+        Access(app.MapGet("/api/development/database-setup/antiforgery",
             (IAntiforgery antiforgery, HttpContext context) =>
             {
                 var tokens = antiforgery.GetAndStoreTokens(context);
                 return Results.Json(new { requestToken = tokens.RequestToken });
-            }).AllowAnonymous();
+            }));
 
-        app.MapGet("/api/development/database-setup/status", (IConfiguration configuration) =>
+        Access(app.MapGet("/api/development/database-setup/status", (IConfiguration configuration) =>
         {
             var source = GetSource(configuration);
             return Results.Json(new
@@ -80,9 +94,9 @@ internal static class VendorDevelopmentDatabaseSetup
                 canSave = source is "none" or "windowsCredentialManager",
                 savedInWindowsCredentialManager = WindowsCredential.Exists(CredentialTarget)
             });
-        }).AllowAnonymous();
+        }));
 
-        app.MapPost("/api/development/database-setup/test", async (
+        Access(app.MapPost("/api/development/database-setup/test", async (
             HttpContext context,
             IAntiforgery antiforgery,
             SetupRequest request) =>
@@ -96,12 +110,13 @@ internal static class VendorDevelopmentDatabaseSetup
             return result.Success
                 ? Results.Json(new { success = true, message = "اتصال با موفقیت برقرار شد." })
                 : Results.BadRequest(new { success = false, message = result.SafeMessage });
-        }).AllowAnonymous().RequireRateLimiting("vendor-development-setup");
+        }).RequireRateLimiting("vendor-development-setup"));
 
-        app.MapPost("/api/development/database-setup/save", async (
+        Access(app.MapPost("/api/development/database-setup/save", async (
             HttpContext context,
             IAntiforgery antiforgery,
             IConfiguration configuration,
+            ILoggerFactory loggerFactory,
             SetupRequest request) =>
         {
             if (!await IsAuthorizedMutationAsync(context, antiforgery))
@@ -124,8 +139,10 @@ internal static class VendorDevelopmentDatabaseSetup
             {
                 WindowsCredential.Write(CredentialTarget, result.ConnectionString!);
             }
-            catch
+            catch (Exception exception) when (exception is Win32Exception or InvalidOperationException)
             {
+                // The exception carries only the Win32 error; never log the connection string itself.
+                CreateLogger(loggerFactory).LogError(exception, "Saving the Vendor development connection to Windows Credential Manager failed.");
                 return Results.Problem(
                     statusCode: StatusCodes.Status500InternalServerError,
                     title: "ذخیره در Windows Credential Manager انجام نشد.");
@@ -136,12 +153,13 @@ internal static class VendorDevelopmentDatabaseSetup
                 success = true,
                 message = "اتصال تأیید و برای کاربر فعلی ذخیره شد. برای اعمال آن، Vendor را دوباره اجرا کنید."
             });
-        }).AllowAnonymous().RequireRateLimiting("vendor-development-setup");
+        }).RequireRateLimiting("vendor-development-setup"));
 
-        app.MapDelete("/api/development/database-setup/saved", async (
+        Access(app.MapDelete("/api/development/database-setup/saved", async (
             HttpContext context,
             IAntiforgery antiforgery,
-            IConfiguration configuration) =>
+            IConfiguration configuration,
+            ILoggerFactory loggerFactory) =>
         {
             if (!await IsAuthorizedMutationAsync(context, antiforgery))
             {
@@ -157,21 +175,25 @@ internal static class VendorDevelopmentDatabaseSetup
             {
                 WindowsCredential.Delete(CredentialTarget);
             }
-            catch
+            catch (Win32Exception exception)
             {
+                CreateLogger(loggerFactory).LogError(exception, "Deleting the saved Vendor development connection from Windows Credential Manager failed.");
                 return Results.Problem(
                     statusCode: StatusCodes.Status500InternalServerError,
                     title: "حذف تنظیم ذخیره‌شده انجام نشد.");
             }
 
             return Results.Json(new { success = true, message = "تنظیم ذخیره‌شده حذف شد. برای اعمال، Vendor را دوباره اجرا کنید." });
-        }).AllowAnonymous().RequireRateLimiting("vendor-development-setup");
+        }).RequireRateLimiting("vendor-development-setup"));
 
         if (setupOnly)
         {
             app.MapFallback(() => Results.Redirect("/development/database-setup"));
         }
     }
+
+    private static ILogger CreateLogger(ILoggerFactory loggerFactory) =>
+        loggerFactory.CreateLogger("Faranou.Vendor.Host.DevelopmentDatabaseSetup");
 
     private static string GetSource(IConfiguration configuration)
     {
@@ -201,6 +223,10 @@ internal static class VendorDevelopmentDatabaseSetup
     private static bool IsSetupRequest(PathString path) =>
         path.Value?.StartsWith("/development/database-setup", StringComparison.OrdinalIgnoreCase) == true ||
         path.StartsWithSegments("/api/development/database-setup");
+
+    private static bool IsLoopbackHostName(string host) =>
+        string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+        (IPAddress.TryParse(host.Trim('[', ']'), out var address) && IPAddress.IsLoopback(address));
 
     private static bool IsLoopback(HttpContext context) =>
         context.Connection.RemoteIpAddress is { } address && IPAddress.IsLoopback(address);
