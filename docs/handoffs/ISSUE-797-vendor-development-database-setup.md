@@ -48,3 +48,15 @@
 | `VendorDevelopmentDatabaseSetupExposureTests` | موفق | روی Linux مسیر «غیر Windows» و «بدون flag» را می‌سنجد؛ روی Windows همان تست guard loopback را می‌سنجد |
 
 اجرانشده: اجرای واقعی Visual Studio روی Windows، Windows Credential Manager، گواهی HTTPS توسعه و اتصال SQL واقعی؛ این‌ها به سیستم مالک نیاز دارند.
+
+
+## الحاقیهٔ 2026-11-27 — Merge PR #800 و CI پس از Merge
+
+- Issue #797 با PR [#800](https://github.com/hamidreza1394/Accounting/pull/800) در 2026-11-26T17:41:51Z تکمیل و بسته شد.
+- HEAD نهایی PR: `9586e27d92413c371c35ca48b57d2c42094a95f5`؛ merge commit و SHA فعلی main: `110d797fe7a3a40466c7ff3aa520cfa73ff22536`.
+- Checkهای نهایی روی HEAD PR موفق‌اند: .NET CI #45867980923، Vendor CI #45867980991، Semgrep #45867980980 و CodeQL #45867977087. اجراهای قبلی لغوشده مربوط به تلاش‌های جایگزین‌شده‌اند؛ روی HEAD نهایی شکست نهایی ثبت نشده است.
+- CI پس از Merge روی main برابر ۱۶/۱۶ Check Run موفق است: .NET CI #45869907350 (۷ Job)، Vendor CI #45869907458 (۴ Job)، Semgrep #45869907173 (۱ Job) و Push on main/CodeQL #45869907193 (۴ تحلیل). شامل Build/Test، E2E، Publish Linux/Windows، Secret Scan، Client، CNG signer و checkpoint file-lock regressions است.
+- فرم محلی DB setup فقط در Development ویندوز با flag صریح و loopback فعال است؛ setup-only فاقد Persistence/Identity است؛ اتصال پیش از ذخیره آزمایش و در Credential Manager همان کاربر نگهداری می‌شود. اولویت Environment/Configuration حفظ شده؛ ابزار DB نمی‌سازد و Migration اجرا نمی‌کند.
+- Issue #797 بسته است؛ Issue #768 برای اجرای واقعی Visual Studio، dev certificate، Windows Credential Manager، اتصال Vendor DB، نصب Windows Service، هویت/ACL و Staging همچنان باز است.
+- **محدودیت عملیاتی:** Build/Test محلی این ممیزی اجرا نشد. handoff قبلی نتایج محلی Linux/SDK 10.0.404 را ثبت کرده است (Build موفق؛ Vendor test 469 مورد، 387 موفق، 82 Skip، صفر شکست؛ تست SQL Server واقعی در آن اجرای محلی Skip بود). این شواهد جایگزین اجرای واقعی Windows/SQL روی دستگاه مالک نیست.
+- **مرز امنیتی:** هیچ Customer consumer، Customer schema/Migration، `Server/**`، connection string، رمز یا کلید خصوصی تغییر نکرد؛ Provisioning v5 و Runtime Gate باز نشده‌اند.
