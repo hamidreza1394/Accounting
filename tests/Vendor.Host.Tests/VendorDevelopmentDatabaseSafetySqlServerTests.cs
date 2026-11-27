@@ -18,6 +18,8 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
     {
         await using var fixture = await SafetyFixture.OpenAsync();
         if (fixture is null) return;
+        // The fixture owns only its own uniquely named database; create it before connecting.
+        await fixture.CreateEmptyDatabaseAsync();
 
         var builder = new SqlConnectionStringBuilder(fixture.ConnectionString) { InitialCatalog = fixture.DatabaseName };
         await using var connection = new SqlConnection(builder.ConnectionString);
