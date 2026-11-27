@@ -10,16 +10,16 @@
 - [x] Quote امن شناسهٔ SQL با escape سهوی کروشه
 - [x] Allow-list مقصد SQL: پیش‌فرض فقط محلی، Remote فقط با Allow-list دقیق، بدون wildcard، بدون Hardcode نام ماشین
 - [x] نشانهٔ مالکیت `FaranouVendorOwnership` با اعتبارسنجی مقدار (نشانهٔ جعلی ⇒ Fail Closed)
-- [x] تشخیص دیتابیس Foreign/Customer و دیتابیس خالی ناشناس به‌صورت Fail Closed (بدون هیچ DROP)
+- [x] تشخیص دیتابیس Foreign/Customer و دیتابیس خالی ناشناس به‌صورت Fail Closed؛ استثنای واحد، Recovery کنترل‌شده فقط با رکورد قصدِ تازهٔ هم‌نام + اتصال create_date، و بدون هیچ DROP
 - [x] پنجرهٔ شکست CREATE DATABASE ⇒ دیتابیس حذف نمی‌شود؛ گزارش «ناشناس» و Recovery کنترل‌شده با رکورد قصد
 - [x] تست واحد مربوط + تست SQL Integration گیت‌دار
 - [ ] اجرای واقعی روی SQL Server مالک (پس از تحویل، با مجوز عملیاتی جداگانه)
 
 ## خلاصه تغییرات
 - فایل جدید `VendorDevelopmentDatabaseSafety.cs` با پنج بلوک خالص: `VendorSqlIdentifier`، `VendorDatabaseName`، `VendorRuntimeLoginName`، `VendorSqlServerTarget`، `VendorOwnershipMarker` و `VendorProvisioningIntent`.
-- گارد مقصد IP غیر-loopback فقط از مسیر Allow-list دقیق عبور می‌کند و wildcard در خود Allow-list هم اثر ندارد (تقویت نسبت به پیش‌نویس شاخهٔ agent).
-- نشانهٔ مالکیت سه‌حالته شد (`Absent/Valid/InvalidValue`) تا «Marker جعلی یا ناسازگار ⇒ Fail Closed» تضمین شود.
-- رکورد قصد راه‌اندازی (Extended Property روی `master`) برای Recovery کنترل‌شدهٔ پنجرهٔ شکست بین CREATE و ثبت نشانه اضافه شد؛ دیتابیس در هیچ حالتی Drop نمی‌شود.
+- گارد مقصد IP غیر-loopback فقط از مسیر Allow-list دقیق عبور می‌کند و wildcard در خود Allow-list هم اثر ندارد (تقویت نسبت به پیش‌نویس شاخهٔ agent)؛ جفت‌بودن کروشه‌ها و نام‌ساز بودن نمونه نیز پیش از تطبیق میزبان اعتبارسنجی می‌شود.
+- نشانهٔ مالکیت سه‌حالته شد (`Absent/Valid/InvalidValue`) تا «Marker جعلی یا ناسازگار، شامل مقدار SQL NULL، ⇒ Fail Closed» تضمین شود.
+- رکورد قصد راه‌اندازی (Extended Property روی `master`) برای Recovery کنترل‌شدهٔ پنجرهٔ شکست بین CREATE و ثبت نشانه اضافه شد؛ دیتابیس در هیچ حالتی Drop نمی‌شود. Recovery فقط با سه شرط هم‌زمان مجاز است: رکورد تازهٔ هم‌نام (مقایسهٔ حساس به حروف)، دیتابیس خالی، و اتصال زمانی — `create_date` ثبت‌شدهٔ سرور نباید قدیمی‌تر از زمان ثبت رکورد باشد. رکورد آینده‌نگر، رکورد خراب یا دیتابیس قدیمی‌تر از رکورد، Fail Closed می‌شود؛ رکورد به‌تنهایی اثبات مالکیت نیست.
 - `InternalsVisibleTo "Vendor.Host.Tests"` برای تست‌پذیری این primitives اضافه شد.
 - تصمیم معماری با شناسهٔ D-122 در `docs/DECISIONS.md` به‌صورت `Proposed` ثبت شد (تأیید مالک لازم است؛ Accepted جعل نشده است).
 

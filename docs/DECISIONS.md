@@ -3513,7 +3513,7 @@ Entity یا جدول `Tenant` در Core وجود ندارد؛ `Domain/Company.cs
 ### تصمیم
 1. مالکیت دیتابیس Vendor فقط با Extended Property `FaranouVendorOwnership` با مقدار ثابت Vendor اثبات می‌شود؛ صرف وجود Extended Property هم‌نام با مقدار دیگر، نشانهٔ جعلی است و Fail Closed می‌شود.
 2. دیتابیس‌های قدیمی فارنو با تاریخچهٔ Migration اعمال‌شدهٔ فارنو پذیرفته می‌شوند و نشانه پس از Migration موفق Backfill می‌شود؛ دیتابیس خالی/بی‌نشان هرگز خودکار تصاحب نمی‌شود و هیچ مسیری DROP انجام نمی‌دهد.
-3. برای پنجرهٔ شکست بین `CREATE DATABASE` و ثبت نشانه، پیش از ساخت یک «رکورد قصد» به‌صورت Extended Property `FaranouVendorProvisioningIntent` روی `master` ثبت و پس از ثبت نشانه حذف می‌شود؛ Recovery کنترل‌شده فقط با رکورد قصدِ تازه (≤۲۴ ساعت) هم‌نام و دیتابیس خالی مجاز است و دیتابیس هیچ‌وقت حذف نمی‌شود.
+3. برای پنجرهٔ شکست بین `CREATE DATABASE` و ثبت نشانه، پیش از ساخت یک «رکورد قصد» به‌صورت Extended Property `FaranouVendorProvisioningIntent` روی `master` ثبت و پس از ثبت نشانه حذف می‌شود؛ Recovery کنترل‌شده فقط با رکورد قصدِ تازه (≤۲۴ ساعت) هم‌نام (حساس به حروف)، دیتابیس خالی و اتصال `create_date` سرور به زمان ثبت رکورد مجاز است؛ رکورد به‌تنهایی اثبات مالکیت نیست و دیتابیس هیچ‌وقت حذف نمی‌شود. ثبت/حذف رکورد فقط درون قفل یک‌زمان pipeline انجام می‌شود تا بازنویسی هم‌زمان ممکن نباشد.
 4. مقصد SQL به مقصدهای محلی و Allow-list دقیق (`FARANO_VENDOR_Development__Provisioning__AllowedSqlHosts` / کلید پیکربندی `Faranou:Development:Provisioning:AllowedSqlHosts`) محدود است؛ wildcard در هیچ لایه‌ای اثر ندارد و نام ماشین خاصی در کد Hardcode نمی‌شود.
 5. اعتبارسنجی نام دیتابیس و شناسهٔ SQL با قواعد مسیر مشتری و Bracket-quote با escape سهوی انجام می‌شود.
 

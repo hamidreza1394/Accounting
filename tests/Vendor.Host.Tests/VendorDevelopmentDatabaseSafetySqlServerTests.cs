@@ -80,7 +80,7 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
     }
 
     [Fact]
-    public async Task EmptyUnmarkedDatabaseIsRefusedUnlessAFreshIntentMatches()
+    public async Task EmptyUnmarkedDatabaseIsRefusedUnlessAFreshIntentWithCreateDateBindingMatches()
     {
         await using var fixture = await SafetyFixture.OpenAsync();
         if (fixture is null) return;
@@ -92,17 +92,38 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
             markerState, historyTableExists: false, appliedCount: 0, unknownCount: 0, userTableCount: 0);
         Assert.False(owned);
 
+        var masterBuilder = new SqlConnectionStringBuilder(fixture.ConnectionString) { InitialCatalog = "master" };
+        await using var masterConnection = new SqlConnection(masterBuilder.ConnectionString);
+        await masterConnection.OpenAsync(TestContext.Current.CancellationToken);
+        var createdUtc = await VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.ReadDatabaseCreatedUtcAsync(
+            masterConnection, fixture.DatabaseName, TestContext.Current.CancellationToken);
+        Assert.NotNull(createdUtc);
+
         // Without a matching intent the database stays anonymous and fail-closed.
         var noIntent = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.EvaluateRecovery(
             VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.Absent,
-            historyTableExists: false, userTableCount: 0);
+            createdUtc, createdUtc.Value.AddMinutes(-1), historyTableExists: false, userTableCount: 0);
         Assert.False(noIntent.Allowed);
 
-        // With a fresh matching intent (the crash-window ledger) controlled recovery is allowed.
+        // A fresh intent recorded BEFORE the create (the real crash-window order) with the
+        // create-date binding satisfied authorizes the controlled recovery.
+        var intentIssuedUtc = createdUtc.Value.AddMinutes(-2);
+        await VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.WriteAsync(
+            masterConnection, fixture.DatabaseName, intentIssuedUtc, TestContext.Current.CancellationToken);
+        var stored = await VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.ReadAsync(masterConnection, TestContext.Current.CancellationToken);
+        var state = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.Classify(stored, fixture.DatabaseName, DateTimeOffset.UtcNow);
+        Assert.Equal(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.Matching, state);
+
         var (recoverable, refusal) = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.EvaluateRecovery(
-            VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.Matching,
-            historyTableExists: false, userTableCount: 0);
+            state, createdUtc, intentIssuedUtc, historyTableExists: false, userTableCount: 0);
         Assert.True(recoverable, refusal);
+
+        // A pre-existing database (created before the intent) is never adopted.
+        var (preExistingRefused, _) = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.EvaluateRecovery(
+            state, createdUtc.Value.AddHours(-1), intentIssuedUtc.AddHours(2), historyTableExists: false, userTableCount: 0);
+        Assert.False(preExistingRefused);
+
+        await VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.ClearAsync(masterConnection, TestContext.Current.CancellationToken);
     }
 
     private sealed class SafetyFixture : IAsyncDisposable
@@ -206,6 +227,12 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
             catch (SqlException)
             {
                 // Ignore: the CI server is ephemeral and discarded wholesale after the run.
+            }
+            finally
+            {
+                // Idle pooled connections to the dropped database keep it alive; clearing the
+                // pools releases them so the next fixture run can recreate the name cleanly.
+                SqlConnection.ClearAllPools();
             }
         }
     }

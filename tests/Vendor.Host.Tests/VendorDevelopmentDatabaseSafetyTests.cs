@@ -193,6 +193,28 @@ public sealed class VendorDevelopmentDatabaseSafetyTests
             "anything.remote", allowList, out _, machineName: "OWNER-MACHINE"));
     }
 
+    [Theory]
+    [InlineData("[:1")]
+    [InlineData("]host")]
+    [InlineData("[host]")]
+    [InlineData("localhost \\")]
+    [InlineData("localhost\\ ")]
+    public void TargetRejectsUnbalancedBracketsAndBlankInstances(string server)
+    {
+        var allowed = VendorDevelopmentDatabaseSafety.VendorSqlServerTarget.IsAllowed(
+            server, [], out _, machineName: "OWNER-MACHINE");
+        Assert.False(allowed);
+    }
+
+    [Fact]
+    public void TargetStillAcceptsBracketedLoopback()
+    {
+        Assert.True(VendorDevelopmentDatabaseSafety.VendorSqlServerTarget.IsAllowed(
+            "[::1]", [], out var error, machineName: "OWNER-MACHINE"));
+        Assert.True(VendorDevelopmentDatabaseSafety.VendorSqlServerTarget.IsAllowed(
+            "[::1],1433", [], out error, machineName: "OWNER-MACHINE"), error);
+    }
+
     // ── Ownership decision matrix ───────────────────────────────────────────────────────
 
     [Fact]
@@ -314,8 +336,12 @@ public sealed class VendorDevelopmentDatabaseSafetyTests
         Assert.Equal(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.Matching, state);
 
         var (allowed, refusal) = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.EvaluateRecovery(
-            state, historyTableExists: false, userTableCount: 0);
-        Assert.True(allowed);
+            state,
+            databaseCreatedUtc: Now.AddSeconds(-90),
+            intentIssuedUtc: Now.AddMinutes(-2),
+            historyTableExists: false,
+            userTableCount: 0);
+        Assert.True(allowed, refusal);
         Assert.Null(refusal);
     }
 
@@ -326,9 +352,40 @@ public sealed class VendorDevelopmentDatabaseSafetyTests
         var state = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.Classify(value, "VendorDb", Now);
 
         var (allowed, refusal) = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.EvaluateRecovery(
-            state, historyTableExists: false, userTableCount: 3);
+            state, Now.AddSeconds(-90), Now.AddMinutes(-2), historyTableExists: false, userTableCount: 3);
         Assert.False(allowed);
         Assert.False(string.IsNullOrWhiteSpace(refusal));
+    }
+
+    [Fact]
+    public void RecoveryIsRefusedWhenTheDatabaseExistedBeforeTheIntentWasRecorded()
+    {
+        // A pre-existing empty database (someone else's) must not be adopted just because
+        // the name matches: the create-date binding ties the database to this flow's own
+        // create attempt, and a database older than the intent has no such binding.
+        var value = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.FormatValue("VendorDb", Now.AddMinutes(-2));
+        var state = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.Classify(value, "VendorDb", Now);
+
+        var (allowed, refusal) = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.EvaluateRecovery(
+            state,
+            databaseCreatedUtc: Now.AddHours(-3),
+            intentIssuedUtc: Now.AddMinutes(-2),
+            historyTableExists: false,
+            userTableCount: 0);
+        Assert.False(allowed);
+        Assert.False(string.IsNullOrWhiteSpace(refusal));
+    }
+
+    [Fact]
+    public void RecoveryIsRefusedForAFutureDatedIntent()
+    {
+        var value = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.FormatValue("VendorDb", Now.AddMinutes(5));
+        Assert.Equal(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.Expired,
+            VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.Classify(value, "VendorDb", Now));
+        var (allowed, _) = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.EvaluateRecovery(
+            VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.Expired,
+            Now, Now.AddMinutes(5), historyTableExists: false, userTableCount: 0);
+        Assert.False(allowed);
     }
 
     [Fact]
@@ -337,19 +394,38 @@ public sealed class VendorDevelopmentDatabaseSafetyTests
         var evaluate = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.EvaluateRecovery;
 
         Assert.False(evaluate(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.Absent,
-            false, 0).Allowed);
+            Now, Now.AddMinutes(-1), false, 0).Allowed);
 
         var stale = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.FormatValue("VendorDb", Now.AddHours(-25));
         Assert.Equal(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.Expired,
             VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.Classify(stale, "VendorDb", Now));
         Assert.False(evaluate(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.Expired,
-            false, 0).Allowed);
+            Now.AddHours(-25), Now.AddHours(-25), false, 0).Allowed);
 
         var foreign = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.FormatValue("OtherDb", Now.AddMinutes(-1));
         Assert.Equal(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.ForOtherDatabase,
             VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.Classify(foreign, "VendorDb", Now));
         Assert.False(evaluate(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.ForOtherDatabase,
-            false, 0).Allowed);
+            Now, Now.AddMinutes(-1), false, 0).Allowed);
+    }
+
+    [Fact]
+    public void IntentNameMatchingIsCaseSensitive()
+    {
+        // On a case-sensitive server collation the two spellings are different databases.
+        var value = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.FormatValue("vendordb", Now.AddMinutes(-1));
+        Assert.Equal(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.IntentState.ForOtherDatabase,
+            VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.Classify(value, "VendorDb", Now));
+    }
+
+    [Fact]
+    public void IntentRecordsWithExtraDelimitersAreMalformed()
+    {
+        var issued = "2026-11-27T12:00:00.000Z";
+        Assert.False(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.TryParse(
+            $"VendorDb=VendorDb;;IssuedUtc={issued}", out _, out _));
+        Assert.False(VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.TryParse(
+            $"VendorDb=VendorDb;IssuedUtc={issued};extra", out _, out _));
     }
 
     [Fact]

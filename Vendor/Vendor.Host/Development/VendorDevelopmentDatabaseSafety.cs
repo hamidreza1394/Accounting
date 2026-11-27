@@ -173,7 +173,7 @@ internal static class VendorDevelopmentDatabaseSafety
 
                 var portSeparator = rest.IndexOf(',');
                 var instance = portSeparator < 0 ? rest : rest[..portSeparator];
-                if (instance.Length == 0 || instance.Length > 16)
+                if (instance.Trim().Length == 0 || instance.Length > 16)
                 {
                     error = "نام نمونهٔ SQL معتبر نیست.";
                     return false;
@@ -211,7 +211,21 @@ internal static class VendorDevelopmentDatabaseSafety
                 return false;
             }
 
+            // Bracket pairing is validated BEFORE trimming so an unbalanced form like "[::1"
+            // cannot pass by having its unmatched bracket silently removed.
+            if (host.StartsWith("[", StringComparison.Ordinal) != host.EndsWith("]", StringComparison.Ordinal))
+            {
+                error = "نام سرور معتبر نیست.";
+                return false;
+            }
+
             var hostName = host.Trim('[', ']').Trim();
+            if (hostName.Length == 0)
+            {
+                error = "نام سرور معتبر نیست.";
+                return false;
+            }
+
             if (IPAddress.TryParse(hostName, out var address))
             {
                 if (IPAddress.IsLoopback(address))
@@ -279,12 +293,23 @@ internal static class VendorDevelopmentDatabaseSafety
             // The marker name is a compile-time Vendor constant, bound as a parameter; the
             // SQL text itself is a literal at the call site (no dynamic SQL anywhere).
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT CAST(value AS nvarchar(256)) FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = @marker";
+            command.CommandText = "SELECT CAST(COUNT(*) AS int) FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = @marker";
             command.Parameters.Add(new SqlParameter("@marker", System.Data.SqlDbType.NVarChar, 128) { Value = MarkerName });
-            var value = await command.ExecuteScalarAsync(cancellationToken);
-            if (value is null or DBNull)
+            var count = await command.ExecuteScalarAsync(cancellationToken);
+            if (count is not int present || present == 0)
             {
                 return MarkerState.Absent;
+            }
+
+            // A row exists: SQL Server permits a NULL property value, and a NULL-valued
+            // marker is not a valid proof — it is treated as a foreign/fabricated marker.
+            await using var valueCommand = connection.CreateCommand();
+            valueCommand.CommandText = "SELECT CAST(value AS nvarchar(256)) FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = @marker";
+            valueCommand.Parameters.Add(new SqlParameter("@marker", System.Data.SqlDbType.NVarChar, 128) { Value = MarkerName });
+            var value = await valueCommand.ExecuteScalarAsync(cancellationToken);
+            if (value is null or DBNull)
+            {
+                return MarkerState.InvalidValue;
             }
 
             return string.Equals(value as string, MarkerValue, StringComparison.Ordinal)
@@ -369,14 +394,18 @@ internal static class VendorDevelopmentDatabaseSafety
     /// marker write: before the create, the flow records a provisioning intent as an extended
     /// property on <c>master</c> (name + UTC time); after the marker is written, the intent is
     /// cleared. If the process dies in between, the next run finds an empty, unmarked database
-    /// whose name matches a fresh intent record — proof that this provisioning flow (not some
-    /// other service) created it — and may recover it by writing the marker. The database is
-    /// never dropped; with no matching intent the database stays anonymous and fail-closed.
+    /// and recovery is allowed only when the intent matches the name exactly, is fresh, and
+    /// the database's server-recorded <c>create_date</c> is not older than the intent — the
+    /// binding that shows this provisioning flow (not some other service) created it. The
+    /// database is never dropped; without the full evidence it stays anonymous, fail-closed.
     /// </summary>
     internal static class VendorProvisioningIntent
     {
         internal const string IntentName = "FaranouVendorProvisioningIntent";
         internal static readonly TimeSpan MaximumIntentAge = TimeSpan.FromHours(24);
+        // SQL Server clock skew tolerance for the create-date binding (create_date must not
+        // be older than the intent, minus this tolerance to stay robust across hosts).
+        internal static readonly TimeSpan CreateDateSkewTolerance = TimeSpan.FromMinutes(1);
 
         internal enum IntentState
         {
@@ -399,8 +428,10 @@ internal static class VendorDevelopmentDatabaseSafety
                 return false;
             }
 
-            // The value is written by this flow only; parse strictly, without eval-style trust.
-            var parts = value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            // The value is written by this flow only; parse strictly, without eval-style
+            // trust. Empty entries are NOT removed: exactly two `;`-separated fields in the
+            // exact emitted order are accepted, so a record with extra delimiters cannot pass.
+            var parts = value.Split(';', StringSplitOptions.None);
             if (parts.Length != 2)
             {
                 return false;
@@ -440,12 +471,37 @@ internal static class VendorDevelopmentDatabaseSafety
                 return IntentState.NotMatching;
             }
 
-            if (!string.Equals(intentName, databaseName, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(intentName, databaseName, StringComparison.Ordinal))
             {
+                // Case-sensitive comparison on purpose: on a case-sensitive server collation
+                // `VendorDb` and `vendordb` are different databases, and matching loosely
+                // could authorize recovery of a database the intent never named.
                 return IntentState.ForOtherDatabase;
             }
 
-            return nowUtc - issuedUtc.Value <= MaximumIntentAge ? IntentState.Matching : IntentState.Expired;
+            var age = nowUtc - issuedUtc.Value;
+            return age >= TimeSpan.Zero && age <= MaximumIntentAge ? IntentState.Matching : IntentState.Expired;
+        }
+
+        /// <summary>
+        /// Reads the server-recorded creation time of a database (UTC) from
+        /// <c>sys.databases</c>; used as the recovery evidence binding (see EvaluateRecovery).
+        /// </summary>
+        public static async Task<DateTimeOffset?> ReadDatabaseCreatedUtcAsync(
+            SqlConnection masterConnection,
+            string databaseName,
+            CancellationToken cancellationToken)
+        {
+            await using var command = masterConnection.CreateCommand();
+            command.CommandText = "SELECT create_date FROM sys.databases WHERE name = @name";
+            command.Parameters.Add(new SqlParameter("@name", System.Data.SqlDbType.NVarChar, 128) { Value = databaseName });
+            var created = await command.ExecuteScalarAsync(cancellationToken);
+            if (created is not DateTime createdUtc)
+            {
+                return null;
+            }
+
+            return new DateTimeOffset(createdUtc, TimeSpan.Zero);
         }
 
         public static async Task<string?> ReadAsync(SqlConnection masterConnection, CancellationToken cancellationToken)
@@ -485,11 +541,16 @@ internal static class VendorDevelopmentDatabaseSafety
 
         /// <summary>
         /// Pure recovery decision: an empty, unmarked database may only be recovered when a
-        /// fresh intent record matches its name exactly. Anything else (content, an expired
-        /// or foreign intent, no intent) fails closed; the database is never dropped here.
+        /// fresh intent record matches its name exactly AND the database's server-recorded
+        /// creation time is not older than the intent (minus the skew tolerance) — the
+        /// binding that ties the database to this flow's own create attempt. A database that
+        /// existed before the intent was recorded, or any other mismatch, fails closed; the
+        /// database is never dropped here.
         /// </summary>
         public static (bool Allowed, string? Refusal) EvaluateRecovery(
             IntentState intentState,
+            DateTimeOffset? databaseCreatedUtc,
+            DateTimeOffset? intentIssuedUtc,
             bool historyTableExists,
             int userTableCount)
         {
@@ -501,6 +562,14 @@ internal static class VendorDevelopmentDatabaseSafety
             if (historyTableExists || userTableCount > 0)
             {
                 return (false, "دیتابیس هم‌نام رکورد راه‌اندازی پیدا شد اما خالی نیست؛ Recovery خودکار انجام نمی‌شود و وضعیت با مدیر سرور بررسی شود.");
+            }
+
+            if (databaseCreatedUtc is null || intentIssuedUtc is null ||
+                databaseCreatedUtc.Value < intentIssuedUtc.Value - CreateDateSkewTolerance)
+            {
+                // The database existed before the intent was recorded, or its creation time
+                // cannot be proven: the intent alone is not ownership proof, so stay closed.
+                return (false, "زمان ایجاد ثبت‌شدهٔ دیتابیس با رکورد راه‌اندازی هم‌خوان نیست؛ این دیتابیس با این جریان ساخته نشده و Recovery انجام نمی‌شود.");
             }
 
             return (true, null);
