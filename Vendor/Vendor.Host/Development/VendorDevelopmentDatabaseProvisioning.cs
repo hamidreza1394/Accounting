@@ -919,8 +919,10 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
                 {
                     await using var command = connection.CreateCommand();
-                    command.CommandText = $"CREATE LOGIN {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)} WITH PASSWORD = @password, CHECK_POLICY = ON, DEFAULT_DATABASE = {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.Database)}";
-                    command.Parameters.Add(new SqlParameter("@password", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimePassword! });
+                    // CREATE LOGIN does not accept variables for the password in T-SQL, so the
+                    // value must be embedded as a literal: single quotes are doubled, which
+                    // makes the embedding safe for any password the validation accepted.
+                    command.CommandText = $"CREATE LOGIN {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)} WITH PASSWORD = '{input.RuntimePassword!.Replace("'", "''", StringComparison.Ordinal)}', CHECK_POLICY = ON, DEFAULT_DATABASE = {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.Database)}";
                     await command.ExecuteNonQueryAsync(CancellationToken.None);
 
                     // Least visibility: without it the login could list every database name on the
