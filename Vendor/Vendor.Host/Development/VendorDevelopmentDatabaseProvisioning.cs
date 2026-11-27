@@ -299,7 +299,12 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 // would be indistinguishable from an empty database created for another purpose.
                 await OpenServerConnectionAsync(TargetBuilder(input), async connection =>
                 {
+                    // The in-database intent record is written BEFORE the ownership marker: it
+                    // is the durable evidence that this flow (not another service) created the
+                    // database, and recovery of a crash before the marker depends on it.
+                    await VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.WriteInDatabaseAsync(connection, input.Database, DateTimeOffset.UtcNow, CancellationToken.None);
                     await VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.WriteAsync(connection, CancellationToken.None);
+                    await VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.ClearInDatabaseAsync(connection, CancellationToken.None);
                     return true;
                 }, CancellationToken.None);
                 markerEnsured = true;
@@ -388,7 +393,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
             SetStage(stages, "runtimeIdentity", "running", "در حال تنظیم هویت Runtime…");
             createdFresh = await EnsureRuntimeIdentityAsync(input, logger);
             SetStage(stages, "runtimeIdentity", "success",
-                input.GeneratedRuntimePassword
+                createdFresh
                     ? $"هویت Runtime کم‌اختیار «{input.RuntimeUsername}» ساخته شد؛ دسترسی آن فقط روی همین دیتابیس (خواندن/نوشتن) است و هیچ نقش یا مجوز سطح سرور ندارد."
                     : $"از Login موجود «{input.RuntimeUsername}» با اثبات گذرواژه استفاده شد (بدون تغییر گذرواژه)؛ نقش‌های خواندن/نوشتن روی همین دیتابیس تضمین شد و هیچ نقش یا مجوز سطح سرور مجاز شمرده نمی‌شود.");
         }
@@ -470,8 +475,16 @@ internal static class VendorDevelopmentDatabaseProvisioning
 
             var intentState = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.Classify(intentValue, input.Database, DateTimeOffset.UtcNow);
             var parsed = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.TryParse(intentValue, out _, out var issuedUtc);
+            string? inDatabaseIntentValue = null;
+            await OpenServerConnectionAsync(TargetBuilder(input), async connection =>
+            {
+                inDatabaseIntentValue = await VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.ReadInDatabaseAsync(connection, cancellationToken);
+                return true;
+            }, cancellationToken);
+            var inDatabaseIntentPresent = !string.IsNullOrEmpty(inDatabaseIntentValue);
             var (allowed, refusal) = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.EvaluateRecovery(
-                intentState, createdUtc, parsed ? issuedUtc : null, inspection.HistoryTableExists, inspection.UserTableCount);
+                intentState, createdUtc, parsed ? issuedUtc : null, inspection.HistoryTableExists, inspection.UserTableCount,
+                inDatabaseIntentPresent);
             if (!allowed)
             {
                 return (false, refusal, null);
@@ -980,7 +993,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
                     // CREATE LOGIN does not accept variables for the password in T-SQL, so the
                     // value must be embedded as a literal: single quotes are doubled, which
                     // makes the embedding safe for any password the validation accepted.
-                    command.CommandText = $"CREATE LOGIN {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)} WITH PASSWORD = '{input.RuntimePassword!.Replace("'", "''", StringComparison.Ordinal)}', CHECK_POLICY = ON, DEFAULT_DATABASE = {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.Database)}";
+                    command.CommandText = $"CREATE LOGIN {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)} WITH PASSWORD = N'{input.RuntimePassword!.Replace("'", "''", StringComparison.Ordinal)}', CHECK_POLICY = ON, DEFAULT_DATABASE = {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.Database)}";
                     await command.ExecuteNonQueryAsync(CancellationToken.None);
 
                     // Least visibility: without it the login could list every database name on the
@@ -1009,6 +1022,51 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 mappingPreExisted = userCount;
                 if (userCount)
                 {
+                    // A same-SID user can still carry management-level access (db_owner-class
+                    // roles or direct CONTROL/ALTER grants) that contradicts least privilege.
+                    await using var excessRolesCommand = connection.CreateCommand();
+                    excessRolesCommand.CommandText = """
+                        SELECT r.name
+                        FROM sys.database_role_members drm
+                        JOIN sys.database_principals r ON r.principal_id = drm.role_principal_id
+                        JOIN sys.database_principals m ON m.principal_id = drm.member_principal_id
+                        WHERE m.name = @login
+                          AND r.name IN (N'db_owner', N'db_securityadmin', N'db_accessadmin', N'db_backupoperator', N'db_ddladmin')
+                        """;
+                    excessRolesCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                    var excessRoles = new List<string>();
+                    await using (var reader = await excessRolesCommand.ExecuteReaderAsync(CancellationToken.None))
+                    {
+                        while (await reader.ReadAsync(CancellationToken.None))
+                        {
+                            excessRoles.Add(reader.GetString(0));
+                        }
+                    }
+
+                    await using var excessGrantsCommand = connection.CreateCommand();
+                    excessGrantsCommand.CommandText = """
+                        SELECT pe.permission_name
+                        FROM sys.database_permissions pe
+                        JOIN sys.database_principals g ON g.principal_id = pe.grantee_principal_id
+                        WHERE g.name = @login AND pe.state IN ('G', 'W')
+                          AND pe.permission_name IN (N'CONTROL', N'ALTER', N'TAKE OWNERSHIP', N'IMPERSONATE', N'VIEW DEFINITION')
+                        """;
+                    excessGrantsCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                    var excessGrants = new List<string>();
+                    await using (var reader = await excessGrantsCommand.ExecuteReaderAsync(CancellationToken.None))
+                    {
+                        while (await reader.ReadAsync(CancellationToken.None))
+                        {
+                            excessGrants.Add(reader.GetString(0));
+                        }
+                    }
+
+                    if (excessRoles.Count > 0 || excessGrants.Count > 0)
+                    {
+                        var detail = string.Join("، ", excessRoles.Concat(excessGrants).Distinct(StringComparer.OrdinalIgnoreCase));
+                        throw new VendorDatabaseMismatchException($"کاربر «{input.RuntimeUsername}» در دیتابیس هدف دسترسی مدیریتی دارد ({detail}) و به‌عنوان هویت کم‌اختیار پذیرفته نمی‌شود؛ دسترسی‌های اضافه را با مدیر سرور اصلاح کنید یا نام Runtime دیگری انتخاب کنید.");
+                    }
+
                     await using var sidCommand = connection.CreateCommand();
                     sidCommand.CommandText = """
                         SELECT CAST(COUNT(*) AS int)
@@ -1099,8 +1157,17 @@ internal static class VendorDevelopmentDatabaseProvisioning
             await RollBackUserMappingAsync(input, logger, mappingPreExisted: false);
             await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
             {
+                await using var guardCommand = connection.CreateCommand();
+                guardCommand.CommandText = "SELECT CAST(COUNT(*) AS int) FROM sys.server_principals WHERE name = @login AND type = 'S'";
+                guardCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                var loginExists = await ExecuteScalarAsync(guardCommand, CancellationToken.None) is int existingLogins && existingLogins > 0;
+                if (!loginExists)
+                {
+                    return true;
+                }
+
                 await using var command = connection.CreateCommand();
-                command.CommandText = $"DROP LOGIN IF EXISTS {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
+                command.CommandText = $"DROP LOGIN {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
                 await command.ExecuteNonQueryAsync(CancellationToken.None);
                 return true;
             }, CancellationToken.None);
@@ -1173,7 +1240,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
         string? actualDatabase = null;
         string? actualLogin = null;
         var isDbOwner = false;
-        await OpenServerConnectionAsync(new SqlConnectionStringBuilder(runtimeConnectionString), async connection =>
+        await OpenServerConnectionAsync(new SqlConnectionStringBuilder(runtimeConnectionString) { Pooling = false }, async connection =>
         {
             await using var databaseNameCommand = connection.CreateCommand();
             databaseNameCommand.CommandText = "SELECT DB_NAME()";
@@ -1203,9 +1270,31 @@ internal static class VendorDevelopmentDatabaseProvisioning
             throw new InvalidOperationException("هویت Runtime نباید عضو db_owner باشد.");
         }
 
+        // The effective write/read path the application needs must really be available: a
+        // db_denydatareader/db_denydatawriter membership would silently break the app after
+        // readiness reported success.
+        await OpenServerConnectionAsync(new SqlConnectionStringBuilder(runtimeConnectionString) { Pooling = false }, async connection =>
+        {
+            await using var denyReaderCommand = connection.CreateCommand();
+            denyReaderCommand.CommandText = "SELECT IS_ROLEMEMBER('db_denydatareader')";
+            var denyReader = IsMembershipTrue(await ExecuteScalarAsync(denyReaderCommand, CancellationToken.None));
+            await using var denyWriterCommand = connection.CreateCommand();
+            denyWriterCommand.CommandText = "SELECT IS_ROLEMEMBER('db_denydatawriter')";
+            var denyWriter = IsMembershipTrue(await ExecuteScalarAsync(denyWriterCommand, CancellationToken.None));
+            if (denyReader || denyWriter)
+            {
+                throw new InvalidOperationException("هویت Runtime عضو نقش‌های db_denydatareader/db_denydatawriter است؛ دسترسی مؤثر خواندن/نوشتن برقرار نیست و readiness گزارش نمی‌شود.");
+            }
+
+            return true;
+        }, CancellationToken.None);
+
         // Schema check with the application model, through the runtime identity: pending
-        // migrations must be zero after stage 5 succeeded.
-        await using var context = CreateDbContext(runtimeConnectionString);
+        // migrations must be zero after stage 5 succeeded. The readiness connections use no
+        // pooling so they never leave authenticated sessions behind (a rollback after a
+        // failed verify can then drop the login without waiting for pool retirement).
+        var readinessBuilder = new SqlConnectionStringBuilder(runtimeConnectionString) { Pooling = false };
+        await using var context = CreateDbContext(readinessBuilder.ConnectionString);
         var pending = (await context.Database.GetPendingMigrationsAsync(CancellationToken.None)).ToList();
         if (pending.Count > 0)
         {

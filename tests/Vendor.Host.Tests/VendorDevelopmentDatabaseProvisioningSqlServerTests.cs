@@ -587,7 +587,14 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
 
             try
             {
-                await ExecuteAsync("master", $"DROP LOGIN IF EXISTS [{RuntimeLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+                // DROP LOGIN has no IF EXISTS form: guard through the catalog, then drop.
+                var loginExists = await ScalarAsync("master",
+                    "SELECT COUNT(*) FROM sys.server_principals WHERE name = @name AND type = 'S'",
+                    new SqlParameter("@name", SqlDbType.NVarChar, 128) { Value = RuntimeLoginName }) is > 0;
+                if (loginExists)
+                {
+                    await ExecuteAsync("master", $"DROP LOGIN [{RuntimeLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+                }
             }
             catch (SqlException)
             {
