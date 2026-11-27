@@ -13,6 +13,8 @@ public sealed class VendorLicenseAmendmentRequest
     public const string StatusRequested = "Requested";
     public const string StatusPendingApproval = "PendingApproval";
     public const string StatusIssued = "Issued";
+    public const string StatusDelivered = "Delivered";
+    public const string StatusApplied = "Applied";
     public const string StatusRejected = "Rejected";
     public const string StatusFailed = "Failed";
 
@@ -36,6 +38,15 @@ public sealed class VendorLicenseAmendmentRequest
     public string Status { get; set; } = StatusRequested;
     public Guid RequestedByUserId { get; set; }
     public Guid? ApprovalRequestId { get; set; }
+    public int? IssuedSequence { get; set; }
+    public string? DeliveryNonce { get; set; }
+    public string? DeliveryPayloadSha256 { get; set; }
+    public DateTimeOffset? DeliveredAtUtc { get; set; }
+    public string? AcknowledgementSha256 { get; set; }
+    public string? AcknowledgementKeyId { get; set; }
+    public string? AcknowledgementResult { get; set; }
+    public DateTimeOffset? CustomerProcessedAtUtc { get; set; }
+    public DateTimeOffset? AcknowledgedAtUtc { get; set; }
     public string? FailureCode { get; set; }
     public DateTimeOffset CreatedAtUtc { get; set; }
     public DateTimeOffset UpdatedAtUtc { get; set; }
