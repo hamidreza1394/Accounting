@@ -274,7 +274,16 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 SetStage(stages, "createDatabase", "running", "در حال ایجاد دیتابیس…");
                 // The intent record binds a crash after CREATE DATABASE to this very flow: the
                 // next run may then recover the empty unmarked database in a controlled way.
-                await WriteProvisioningIntentAsync(input, logger, cancellationToken);
+                try
+                {
+                    await WriteProvisioningIntentAsync(input, logger, cancellationToken);
+                }
+                catch (Exception intentException) when (intentException is SqlException or InvalidOperationException or TimeoutException)
+                {
+                    logger.LogWarning(intentException, "Vendor development provisioning could not record the provisioning intent; the database create is stopped.");
+                    SetStage(stages, "createDatabase", "failed", "ثبت رکورد قصد راه‌اندازی روی سرور ممکن نشد؛ برای جلوگیری از گذاشتن دیتابیس بی‌نشانِ بدون امکان Recovery، ایجاد دیتابیس متوقف شد.");
+                    return ProvisionOutcome.Failed(stages, "ثبت رکورد قصد راه‌اندازی روی سرور ممکن نشد؛ ایجاد دیتابیس متوقف شد. دسترسی هویت پیکربندی روی master بررسی شود.");
+                }
                 // CREATE DATABASE cannot be parameterized; the name passed the identifier
                 // validation (stage 1) and is bracket-quoted here. A browser closing mid-run
                 // must not leave a half-started create, so this runs to completion.
@@ -294,7 +303,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
                     return true;
                 }, CancellationToken.None);
                 markerEnsured = true;
-                await ClearProvisioningIntentAsync(input, logger, cancellationToken);
+                await ClearProvisioningIntentAsync(input, logger, CancellationToken.None);
                 SetStage(stages, "createDatabase", "success", $"دیتابیس {input.Database} ساخته شد و نشانهٔ مالکیت Vendor روی آن ثبت شد.");
             }
             catch (SqlException exception) when (exception.Number == 1801)
@@ -326,16 +335,13 @@ internal static class VendorDevelopmentDatabaseProvisioning
                     inspection.UserTableCount);
                 if (!concurrentAllowed)
                 {
-                    var (recoveryAllowed, recoveryRefusal, recoveryMessage) = await TryRecoverCrashWindowOrphanAsync(input, logger, inspection, CancellationToken.None);
-                    if (!recoveryAllowed)
-                    {
-                        SetStage(stages, "createDatabase", "failed", "دیتابیس هم‌زمان ساخته شد اما مالکیت Vendor روی آن قابل اثبات نیست؛ به‌طور خودکار تصاحب نمی‌شود.");
-                        return ProvisionOutcome.Failed(stages, recoveryRefusal ?? concurrentRefusal!);
-                    }
-
-                    markerEnsured = true;
+                    // This run's intent record cannot prove that ANOTHER process's create
+                    // belongs to Vendor: after a 1801 race, only independent ownership proof
+                    // (marker or Vendor migration history) is accepted, and recovery of a
+                    // crash-window orphan is left to the next clean run.
                     await ClearProvisioningIntentAsync(input, logger, CancellationToken.None);
-                    SetStage(stages, "createDatabase", "skipped", recoveryMessage!);
+                    SetStage(stages, "createDatabase", "failed", "دیتابیس هم‌زمان ساخته شد اما مالکیت Vendor روی آن قابل اثبات نیست؛ به‌طور خودکار تصاحب نمی‌شود.");
+                    return ProvisionOutcome.Failed(stages, concurrentRefusal!);
                 }
                 else
                 {
@@ -376,12 +382,15 @@ internal static class VendorDevelopmentDatabaseProvisioning
         }
 
         // ── Stage 6: ensure the least-privilege SQL runtime identity, granted only here. ──
+        var createdFresh = false;
         try
         {
             SetStage(stages, "runtimeIdentity", "running", "در حال تنظیم هویت Runtime…");
-            await EnsureRuntimeIdentityAsync(input, logger);
+            createdFresh = await EnsureRuntimeIdentityAsync(input, logger);
             SetStage(stages, "runtimeIdentity", "success",
-                $"هویت Runtime کم‌اختیار «{input.RuntimeUsername}» آماده است؛ دسترسی فقط روی همین دیتابیس (خواندن/نوشتن) و هیچ دیتابیس دیگری.{(input.GeneratedRuntimePassword ? string.Empty : " از Login موجود با اثبات گذرواژه استفاده شد؛ گذرواژهٔ آن تغییر نکرده است.")}");
+                input.GeneratedRuntimePassword
+                    ? $"هویت Runtime کم‌اختیار «{input.RuntimeUsername}» ساخته شد؛ دسترسی آن فقط روی همین دیتابیس (خواندن/نوشتن) است و هیچ نقش یا مجوز سطح سرور ندارد."
+                    : $"از Login موجود «{input.RuntimeUsername}» با اثبات گذرواژه استفاده شد (بدون تغییر گذرواژه)؛ نقش‌های خواندن/نوشتن روی همین دیتابیس تضمین شد و هیچ نقش یا مجوز سطح سرور مجاز شمرده نمی‌شود.");
         }
         catch (VendorDatabaseMismatchException exception)
         {
@@ -395,6 +404,11 @@ internal static class VendorDevelopmentDatabaseProvisioning
         {
             logger.LogWarning(exception, "Vendor development provisioning failed while configuring the runtime identity.");
             SetStage(stages, "runtimeIdentity", "failed", DescribeSqlError(exception));
+            if (createdFresh)
+            {
+                await RollBackFreshLoginAsync(input, logger);
+            }
+
             return ProvisionOutcome.Failed(stages, DescribeSqlError(exception));
         }
 
@@ -410,6 +424,11 @@ internal static class VendorDevelopmentDatabaseProvisioning
         {
             logger.LogWarning(exception, "Vendor development provisioning failed while verifying the runtime connection.");
             SetStage(stages, "verify", "failed", "اتصال Runtime آماده نیست؛ گذرواژه و نقش‌های هویت Runtime بررسی شود.");
+            if (createdFresh)
+            {
+                await RollBackFreshLoginAsync(input, logger);
+            }
+
             return ProvisionOutcome.Failed(stages, "بررسی آمادگی با اتصال Runtime ناموفق بود.");
         }
 
@@ -441,6 +460,13 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 createdUtc = await VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.ReadDatabaseCreatedUtcAsync(connection, input.Database, cancellationToken);
                 return true;
             }, cancellationToken);
+
+            // A foreign/fabricated marker blocks recovery: only a genuinely unmarked orphan
+            // may be recovered, and only with the full evidence set below.
+            if (inspection.MarkerState != VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.MarkerState.Absent)
+            {
+                return (false, "دیتابیس هدف نشانهٔ مالکیت (درست یا نادرست) دارد و مسیر Recovery رکورد قصد روی آن اعمال نمی‌شود؛ وضعیت را با مدیر سرور بررسی کنید.", null);
+            }
 
             var intentState = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.Classify(intentValue, input.Database, DateTimeOffset.UtcNow);
             var parsed = VendorDevelopmentDatabaseSafety.VendorProvisioningIntent.TryParse(intentValue, out _, out var issuedUtc);
@@ -686,7 +712,12 @@ internal static class VendorDevelopmentDatabaseProvisioning
             var tables = await ExecuteScalarAsync(tablesCommand, cancellationToken);
             userTableCount = tables is int count ? count : 0;
             await using var historyCommand = connection.CreateCommand();
-            historyCommand.CommandText = "SELECT COUNT(*) FROM sys.tables WHERE name = @history";
+            historyCommand.CommandText = """
+                SELECT COUNT(*)
+                FROM sys.tables t
+                JOIN sys.schemas s ON s.schema_id = t.schema_id
+                WHERE t.name = @history AND s.name = N'dbo'
+                """;
             historyCommand.Parameters.Add(new SqlParameter("@history", System.Data.SqlDbType.NVarChar, 128) { Value = MigrationsHistoryTable });
             var history = await ExecuteScalarAsync(historyCommand, cancellationToken);
             historyTableExists = history is int h && h > 0;
@@ -766,7 +797,12 @@ internal static class VendorDevelopmentDatabaseProvisioning
         var connection = (SqlConnection)context.Database.GetDbConnection();
         await connection.OpenAsync();
         await using var historyCommand = connection.CreateCommand();
-        historyCommand.CommandText = "SELECT COUNT(*) FROM sys.tables WHERE name = @history";
+        historyCommand.CommandText = """
+            SELECT COUNT(*)
+            FROM sys.tables t
+            JOIN sys.schemas s ON s.schema_id = t.schema_id
+            WHERE t.name = @history AND s.name = N'dbo'
+            """;
         historyCommand.Parameters.Add(new SqlParameter("@history", System.Data.SqlDbType.NVarChar, 128) { Value = MigrationsHistoryTable });
         var historyExists = await ExecuteScalarAsync(historyCommand, CancellationToken.None) is int h && h > 0;
         await using var userTablesCommand = connection.CreateCommand();
@@ -787,11 +823,15 @@ internal static class VendorDevelopmentDatabaseProvisioning
 
         var knownMigrations = context.Database.GetMigrations().ToHashSet(StringComparer.Ordinal);
         var unknownCount = appliedIds.Count(id => !knownMigrations.Contains(id));
-        // The marker was ensured for databases this run created or recovered; otherwise trust
-        // only what the database itself can prove right now.
-        var markerState = markerEnsured
-            ? VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.MarkerState.Valid
-            : await VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.ReadStateAsync(connection, CancellationToken.None);
+        // Trust only what the database itself can prove RIGHT NOW on the migration
+        // connection: if a marker this run wrote earlier is not visible here, it is written
+        // again before the ownership decision (never bypassed).
+        var markerState = await VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.ReadStateAsync(connection, CancellationToken.None);
+        if (markerState != VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.MarkerState.Valid && markerEnsured)
+        {
+            await VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.WriteAsync(connection, CancellationToken.None);
+            markerState = await VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.ReadStateAsync(connection, CancellationToken.None);
+        }
         var (ownershipAllowed, ownershipRefusal) = VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.EvaluateOwnership(
             markerState, historyExists, appliedIds.Count, unknownCount, userTableCount);
         if (!ownershipAllowed)
@@ -832,14 +872,16 @@ internal static class VendorDevelopmentDatabaseProvisioning
     }
 
     /// <summary>
-    /// Ensures the least-privilege SQL runtime identity. A fresh login is created with
-    /// CHECK_POLICY=ON and denied server-wide catalog visibility. An existing login of the
-    /// same name is NEVER password-reset and NEVER auto-enabled: reuse happens only when the
-    /// operator supplies that login's own credentials and a real login with them succeeds;
-    /// otherwise the flow fails closed and any user mapping it created for the proof is
-    /// removed again, leaving the login untouched.
+    /// Ensures the least-privilege SQL runtime identity. A fresh login is created first
+    /// (CHECK_POLICY=ON, least catalog visibility), then mapped to a user of the target
+    /// database only, with read/write roles. For an existing login this flow NEVER resets
+    /// the password and NEVER re-enables a disabled login: reuse happens only when the
+    /// operator proves the login with its own credentials BEFORE any role grant, and a
+    /// mapping created by this run for the proof is removed again when the proof fails.
+    /// The database user is matched to the login by SID, so a same-name user of another
+    /// login is refused instead of silently receiving the grants.
     /// </summary>
-    private static async Task EnsureRuntimeIdentityAsync(ProvisionInput input, ILogger logger)
+    private static async Task<bool> EnsureRuntimeIdentityAsync(ProvisionInput input, ILogger logger)
     {
         var createdFresh = false;
 
@@ -849,9 +891,13 @@ internal static class VendorDevelopmentDatabaseProvisioning
             existingCommand.CommandText = "SELECT CAST(principal_id AS int) FROM sys.server_principals WHERE name = @login AND type = 'S'";
             existingCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
             var existing = await ExecuteScalarAsync(existingCommand, CancellationToken.None);
+            var reusedExistingLogin = existing is int;
 
-            if (existing is int)
+            if (reusedExistingLogin)
             {
+                // An existing login must carry no server-level power at all: no fixed or
+                // instance-created server role membership, no granted server permission
+                // beyond CONNECT SQL, and no CONNECT SQL deny.
                 var roles = new List<string>();
                 await using (var rolesCommand = connection.CreateCommand())
                 {
@@ -887,7 +933,24 @@ internal static class VendorDevelopmentDatabaseProvisioning
                     }
                 }
 
-                if (VendorRuntimeIdentity.HasExcessiveServerAccess(roles, grants, out var serverDetail))
+                var denies = new List<string>();
+                await using (var deniesCommand = connection.CreateCommand())
+                {
+                    deniesCommand.CommandText = """
+                        SELECT pe.permission_name
+                        FROM sys.server_permissions pe
+                        JOIN sys.server_principals g ON g.principal_id = pe.grantee_principal_id
+                        WHERE g.name = @login AND pe.state = 'D'
+                        """;
+                    deniesCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                    await using var reader = await deniesCommand.ExecuteReaderAsync(CancellationToken.None);
+                    while (await reader.ReadAsync(CancellationToken.None))
+                    {
+                        denies.Add(reader.GetString(0));
+                    }
+                }
+
+                if (VendorRuntimeIdentity.HasExcessiveServerAccess(roles, grants, denies, out var serverDetail))
                 {
                     throw new VendorDatabaseMismatchException($"هویت Runtime «{input.RuntimeUsername}» از قبل مجوزهای سطح سرور دارد ({serverDetail}) و به‌عنوان هویت کم‌اختیار قابل استفاده نیست؛ نام دیگری انتخاب کنید یا مجوزهای سرور را با تصمیم مدیر سرور اصلاح کنید.");
                 }
@@ -908,12 +971,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
                     throw new VendorDatabaseMismatchException($"هویت Runtime «{input.RuntimeUsername}» غیرفعال است؛ فعال‌کردن Login تصمیم مدیر سرور است و به‌طور خودکار انجام نمی‌شود.");
                 }
             }
-
-            var reusedExistingLogin = existing is int;
-            // Server level first: a fresh login is created here (CHECK_POLICY=ON, least
-            // visibility). An existing login has already passed the audit and refusals above;
-            // its password is never touched.
-            if (!reusedExistingLogin)
+            else
             {
                 createdFresh = true;
                 await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
@@ -934,35 +992,75 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 }, CancellationToken.None);
             }
 
-            // Database level: map the login to a user of the target database only, with read
-            // and write roles. No db_owner, no other database, no server role is granted. For
-            // an existing login this mapping happens BEFORE the credential proof and is
-            // reverted again if the proof fails, so an unproven login gains nothing.
-            var mappedExistingUser = false;
+            // Database level: map the login to a user of the target database only. The user is
+            // matched to the login by SID: a same-name user belonging to another login is
+            // refused instead of receiving this identity's grants.
+            var mappingPreExisted = false;
             await OpenServerConnectionAsync(TargetBuilder(input), async connection =>
             {
-                await using var userExistsCommand = connection.CreateCommand();
-                userExistsCommand.CommandText = "SELECT COUNT(*) FROM sys.database_principals WHERE name = @login AND type IN ('S', 'U')";
-                userExistsCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
-                var userExists = await ExecuteScalarAsync(userExistsCommand, CancellationToken.None) is int u && u > 0;
-                mappedExistingUser = userExists;
-                if (!userExists)
+                await using var userCommand = connection.CreateCommand();
+                userCommand.CommandText = """
+                    SELECT CAST(COUNT(*) AS int)
+                    FROM sys.database_principals dp
+                    WHERE dp.name = @login AND dp.type IN ('S', 'U')
+                    """;
+                userCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                var userCount = await ExecuteScalarAsync(userCommand, CancellationToken.None) is int users && users > 0;
+                mappingPreExisted = userCount;
+                if (userCount)
+                {
+                    await using var sidCommand = connection.CreateCommand();
+                    sidCommand.CommandText = """
+                        SELECT CAST(COUNT(*) AS int)
+                        FROM sys.database_principals dp
+                        WHERE dp.name = @login AND dp.type IN ('S', 'U')
+                          AND dp.sid = (SELECT sp.sid FROM sys.server_principals sp WHERE sp.name = @login AND sp.type = 'S')
+                        """;
+                    sidCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                    var sameSid = await ExecuteScalarAsync(sidCommand, CancellationToken.None) is int sidCount && sidCount > 0;
+                    if (!sameSid)
+                    {
+                        throw new VendorDatabaseMismatchException($"کاربر هم‌نام «{input.RuntimeUsername}» در دیتابیس هدف به Login دیگری تعلق دارد؛ برای جلوگیری از اعطای دسترسی به هویت اشتباه، عملیات متوقف شد. نام Runtime دیگری انتخاب کنید یا mapping موجود را با مدیر سرور اصلاح کنید.");
+                    }
+                }
+                else
                 {
                     await using var createUser = connection.CreateCommand();
                     createUser.CommandText = $"CREATE USER {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)} FOR LOGIN {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
                     await createUser.ExecuteNonQueryAsync(CancellationToken.None);
                 }
 
+                return true;
+            }, CancellationToken.None);
+
+            if (reusedExistingLogin)
+            {
+                // Ownership proof BEFORE any role grant: a real login attempt with the
+                // credentials the operator supplied. A wrong password leaves the existing
+                // login and its pre-existing mapping untouched.
+                if (!await RuntimeLoginCanConnectAsync(input))
+                {
+                    await RollBackUserMappingAsync(input, logger, mappingPreExisted);
+                    throw new VendorDatabaseMismatchException($"اتصال با گذرواژهٔ ارائه‌شده برای «{input.RuntimeUsername}» تأیید نشد؛ مالکیت Login موجود اثبات نشد. گذرواژهٔ درست را وارد کنید یا نام Runtime جدیدی انتخاب کنید؛ گذرواژهٔ Login موجود تغییر نمی‌کند و دسترسی تازه‌ای به آن داده نمی‌شود.");
+                }
+
+                logger.LogInformation("Vendor development reuses the existing runtime login after a successful credential proof.");
+            }
+
+            // Role grants come after the (fresh creation or) successful ownership proof. For
+            // the fresh path there is nothing to prove: this flow created the login itself.
+            await OpenServerConnectionAsync(TargetBuilder(input), async connection =>
+            {
                 foreach (var role in new[] { VendorReaderRole, VendorWriterRole })
                 {
-                    // IS_ROLEMEMBER returns '1'/'0' as varchar(2); NULL means the role or login
-                    // could not be resolved, which still warrants adding the membership.
                     await using var membershipCommand = connection.CreateCommand();
                     membershipCommand.CommandText = "SELECT IS_ROLEMEMBER(@role, @login)";
                     membershipCommand.Parameters.Add(new SqlParameter("@role", System.Data.SqlDbType.NVarChar, 128) { Value = role });
                     membershipCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
                     var membership = await ExecuteScalarAsync(membershipCommand, CancellationToken.None);
-                    if (!string.Equals(membership as string, "1", StringComparison.Ordinal))
+                    // IS_ROLEMEMBER answers with int 1/0 (NULL when the pair is unresolved);
+                    // treat anything but int 1 as "not a member".
+                    if (!IsMembershipTrue(membership))
                     {
                         // sp_addrolemember keeps the role and member names fully parameterized;
                         // no dynamic SQL is needed for the fixed database roles.
@@ -977,25 +1075,41 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 return true;
             }, CancellationToken.None);
 
-            if (reusedExistingLogin)
-            {
-                // Ownership proof for an existing login: a real login attempt with the
-                // credentials the operator supplied. A wrong password leaves the login
-                // untouched and rolls back the user mapping created above.
-                if (!await RuntimeLoginCanConnectAsync(input))
-                {
-                    await RollBackUserMappingAsync(input, logger, mappedExistingUser);
-                    throw new VendorDatabaseMismatchException($"اتصال با گذرواژهٔ ارائه‌شده برای «{input.RuntimeUsername}» تأیید نشد؛ مالکیت Login موجود اثبات نشد. گذرواژهٔ درست را وارد کنید یا نام Runtime جدیدی انتخاب کنید؛ گذرواژهٔ Login موجود تغییر نمی‌کند و دسترسی تازه‌ای به آن داده نمی‌شود.");
-                }
-
-                logger.LogInformation("Vendor development reuses the existing runtime login after a successful credential proof.");
-            }
-
             logger.LogInformation(
                 "Vendor development runtime identity ensured (fresh login: {FreshLogin}).",
                 !reusedExistingLogin);
             return true;
         }, CancellationToken.None);
+
+        return createdFresh;
+    }
+
+    private static bool IsMembershipTrue(object? membership) =>
+        membership is 1 || string.Equals(membership as string, "1", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Removes a login (and its mapping) that THIS run created when a later stage fails:
+    /// the generated password is shown once and would otherwise be lost, leaving an
+    /// unusable login behind. Only principals created by this attempt are removed.
+    /// </summary>
+    private static async Task RollBackFreshLoginAsync(ProvisionInput input, ILogger logger)
+    {
+        try
+        {
+            await RollBackUserMappingAsync(input, logger, mappingPreExisted: false);
+            await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = $"DROP LOGIN IF EXISTS {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
+                await command.ExecuteNonQueryAsync(CancellationToken.None);
+                return true;
+            }, CancellationToken.None);
+            logger.LogWarning("Vendor development removed the freshly created runtime login after a later-stage failure.");
+        }
+        catch (Exception exception) when (exception is SqlException or InvalidOperationException or TimeoutException)
+        {
+            logger.LogWarning(exception, "Vendor development could not remove the freshly created runtime login after a later-stage failure.");
+        }
     }
 
     private static async Task RollBackUserMappingAsync(ProvisionInput input, ILogger logger, bool mappingPreExisted)
@@ -1036,6 +1150,9 @@ internal static class VendorDevelopmentDatabaseProvisioning
             TrustServerCertificate = input.SetupBuilder.TrustServerCertificate,
             ConnectTimeout = 15,
             PersistSecurityInfo = false,
+            // Every ownership proof must be a real login: a pooled connection from an earlier
+            // proof would bypass authentication entirely.
+            Pooling = false,
             ApplicationName = "Faranou Vendor Development Runtime Proof"
         };
         try
@@ -1067,8 +1184,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
             // IS_ROLEMEMBER returns '1'/'0' as varchar(2) for the current user.
             await using var ownerMembershipCommand = connection.CreateCommand();
             ownerMembershipCommand.CommandText = "SELECT IS_ROLEMEMBER('db_owner')";
-            var ownerMembership = await ExecuteScalarAsync(ownerMembershipCommand, CancellationToken.None) as string;
-            isDbOwner = string.Equals(ownerMembership, "1", StringComparison.Ordinal);
+            isDbOwner = IsMembershipTrue(await ExecuteScalarAsync(ownerMembershipCommand, CancellationToken.None));
             return true;
         }, CancellationToken.None);
 
@@ -1211,21 +1327,28 @@ internal static class VendorDevelopmentDatabaseProvisioning
     /// </summary>
     internal static class VendorRuntimeIdentity
     {
-        private static readonly HashSet<string> FixedServerRoles = new(StringComparer.OrdinalIgnoreCase)
-            { "sysadmin", "serveradmin", "securityadmin", "processadmin", "setupadmin", "bulkadmin", "diskadmin", "dbcreator" };
         private const string ConnectSqlPermission = "CONNECT SQL";
 
         public static bool HasExcessiveServerAccess(
             IEnumerable<string> roleNames,
             IEnumerable<string> grantedPermissions,
+            IEnumerable<string> deniedPermissions,
             out string detail)
         {
-            var roles = roleNames.Where(FixedServerRoles.Contains).ToList();
+            // NO server role is acceptable for a runtime identity — fixed or instance-created
+            // (SQL Server 2022 ships extra ##MS_…## roles and operators can define their own).
+            var roles = roleNames.Where(name => !string.IsNullOrWhiteSpace(name)).ToList();
             var grants = grantedPermissions
                 .Where(permission => !string.Equals(permission, ConnectSqlPermission, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-            detail = string.Join("، ", roles.Concat(grants).Distinct());
-            return roles.Count > 0 || grants.Count > 0;
+            // A deny is restrictive and normally fine — the flow itself denies VIEW ANY
+            // DATABASE on fresh logins — but a CONNECT SQL deny makes the login unusable.
+            var denies = deniedPermissions
+                .Where(permission => string.Equals(permission, ConnectSqlPermission, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            detail = string.Join("، ", roles.Concat(grants).Concat(denies)
+                .Distinct(StringComparer.OrdinalIgnoreCase));
+            return roles.Count > 0 || grants.Count > 0 || denies.Count > 0;
         }
     }
 }

@@ -560,20 +560,48 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
 
         public async ValueTask DisposeAsync()
         {
-            try
+            // Each cleanup step runs independently (one failure never skips the rest) and
+            // without the test token, so a cancelled test still cleans up. SINGLE_USER ends
+            // sessions the pipeline left pooled on the fixture databases before the drop.
+            foreach (var database in new[] { DatabaseName, ForeignDatabaseName })
             {
-                foreach (var database in new[] { DatabaseName, ForeignDatabaseName })
+                var quoted = $"[{database.Replace("]", "]]", StringComparison.Ordinal)}]";
+                try
                 {
-                    await ExecuteAsync("master", $"DROP DATABASE IF EXISTS [{database.Replace("]", "]]", StringComparison.Ordinal)}]");
+                    await ExecuteAsync("master", $"ALTER DATABASE {quoted} SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
+                }
+                catch (SqlException)
+                {
+                    // Best effort: the CI server is ephemeral and discarded after the run.
                 }
 
+                try
+                {
+                    await ExecuteAsync("master", $"DROP DATABASE IF EXISTS {quoted}");
+                }
+                catch (SqlException)
+                {
+                    // Best effort.
+                }
+            }
+
+            try
+            {
                 await ExecuteAsync("master", $"DROP LOGIN IF EXISTS [{RuntimeLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+            }
+            catch (SqlException)
+            {
+                // Best effort.
+            }
+
+            try
+            {
                 await ExecuteAsync("master",
                     "IF EXISTS (SELECT 1 FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = 'FaranouVendorProvisioningIntent') EXEC sys.sp_dropextendedproperty @name = N'FaranouVendorProvisioningIntent';");
             }
             catch (SqlException)
             {
-                // Ignore: the CI server is ephemeral and discarded wholesale after the run.
+                // Best effort.
             }
         }
     }
