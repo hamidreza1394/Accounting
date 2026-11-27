@@ -909,6 +909,29 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 }
             }
 
+            var reusedExistingLogin = existing is int;
+            // Server level first: a fresh login is created here (CHECK_POLICY=ON, least
+            // visibility). An existing login has already passed the audit and refusals above;
+            // its password is never touched.
+            if (!reusedExistingLogin)
+            {
+                createdFresh = true;
+                await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
+                {
+                    await using var command = connection.CreateCommand();
+                    command.CommandText = $"CREATE LOGIN {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)} WITH PASSWORD = @password, CHECK_POLICY = ON, DEFAULT_DATABASE = {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.Database)}";
+                    command.Parameters.Add(new SqlParameter("@password", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimePassword! });
+                    await command.ExecuteNonQueryAsync(CancellationToken.None);
+
+                    // Least visibility: without it the login could list every database name on the
+                    // instance. Databases it has no user in stay invisible and inaccessible anyway.
+                    await using var deny = connection.CreateCommand();
+                    deny.CommandText = $"DENY VIEW ANY DATABASE TO {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
+                    await deny.ExecuteNonQueryAsync(CancellationToken.None);
+                    return true;
+                }, CancellationToken.None);
+            }
+
             // Database level: map the login to a user of the target database only, with read
             // and write roles. No db_owner, no other database, no server role is granted. For
             // an existing login this mapping happens BEFORE the credential proof and is
@@ -952,7 +975,6 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 return true;
             }, CancellationToken.None);
 
-            var reusedExistingLogin = existing is int;
             if (reusedExistingLogin)
             {
                 // Ownership proof for an existing login: a real login attempt with the
@@ -965,26 +987,11 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 }
 
                 logger.LogInformation("Vendor development reuses the existing runtime login after a successful credential proof.");
-                return true;
             }
 
-            createdFresh = true;
-            await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
-            {
-                await using var command = connection.CreateCommand();
-                command.CommandText = $"CREATE LOGIN {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)} WITH PASSWORD = @password, CHECK_POLICY = ON, DEFAULT_DATABASE = {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.Database)}";
-                command.Parameters.Add(new SqlParameter("@password", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimePassword! });
-                await command.ExecuteNonQueryAsync(CancellationToken.None);
-
-                // Least visibility: without it the login could list every database name on the
-                // instance. Databases it has no user in stay invisible and inaccessible anyway.
-                await using var deny = connection.CreateCommand();
-                deny.CommandText = $"DENY VIEW ANY DATABASE TO {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
-                await deny.ExecuteNonQueryAsync(CancellationToken.None);
-                return true;
-            }, CancellationToken.None);
-
-            logger.LogInformation("Vendor development runtime login created fresh: {FreshLogin}.", createdFresh);
+            logger.LogInformation(
+                "Vendor development runtime identity ensured (fresh login: {FreshLogin}).",
+                !reusedExistingLogin);
             return true;
         }, CancellationToken.None);
     }
