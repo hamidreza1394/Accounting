@@ -1,7 +1,7 @@
 # آمادگی استقرار محلی و راه دور Vendor فرانو
 
 - **Issue:** [#768](https://github.com/hamidreza1394/Accounting/issues/768)
-- **مبنای بررسی:** main@50a15eae81d4b88657a3a981f59e0ae89f271a91؛ بازبینی 2026-11-25 پس از Merge PR #787
+- **مبنای بررسی:** main@110d797fe7a3a40466c7ff3aa520cfa73ff22536؛ بازبینی 2026-11-27 پس از Merge PR #800 (Issue #797)
 - **وضعیت این سند:** نقشه اجرای مرحله‌ای؛ نه Runbook اجراشده و نه گواه Production readiness.
 - **هدف:** اجرای مستقل Vendor در Visual Studio روی سیستم توسعه و استقرار آن روی Windows Server، با امکان تغییر endpoint بدون تغییر کد Customer.
 
@@ -19,9 +19,9 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 
 | حوزه | وضعیت در main | پیامد برای استقرار |
 |---|---|---|
-| Solution مستقل | Vendor.sln در ریشه مخزن؛ Host در Vendor/Vendor.Host/Vendor.Host.csproj | پایه اجرای مستقل وجود دارد؛ اجرای واقعی در Visual Studio هنوز باید روی دستگاه توسعه اثبات شود |
+| Solution مستقل | Vendor.sln در ریشه مخزن؛ Host در Vendor/Vendor.Host/Vendor.Host.csproj؛ PR #796/#799 خطاهای Solution و Configuration را اصلاح کردند | پایه اجرای مستقل و CI تأیید شده؛ اجرای واقعی در Visual Studio هنوز باید روی دستگاه توسعه اثبات شود |
 | جداسازی Vendor/Customer | مرز پروژه و دیتابیس مستقل در معماری وجود دارد | در Staging باید دو دیتابیس مستقل با دو Connection String مجزا ساخته شوند |
-| Native Windows Service hosting (#768/#787) | PR #787 برای دو Host نام‌های مستقل `Farano Vendor` و `Farano Customer` را اضافه کرد؛ CLI/Key Ceremony console-only است؛ CI پس از Merge ۲۰/۲۰ و main فعلی ۱۲/۱۲ موفق | **Not Verified عملیاتی** — نصب واقعی سرویس، هویت سرویس، ACL و اتصال SQL روی میزبان هدف اجرا نشده است |
+| Native Windows Service hosting (#768/#787) | PR #787 برای دو Host نام‌های مستقل `Farano Vendor` و `Farano Customer` را اضافه کرد؛ CLI/Key Ceremony console-only است؛ CI پس از Merge #787 برابر ۲۰/۲۰ و main@110d797 پس از #800 برابر ۱۶/۱۶ موفق | **Not Verified عملیاتی** — نصب واقعی سرویس، هویت سرویس، ACL و اتصال SQL روی میزبان هدف اجرا نشده است |
 | CNG مرکزی | Provider ویندوزی CNG/Certificate Store برای License و Provisioning پیاده شده و با Signing:CertificateStore:Enabled opt-in می‌شود | کلید واقعی، ACL هویت سرویس و Key Ceremony روی میزبان هدف هنوز عملیاتی تأیید نشده‌اند |
 | PKCS#11 | مسیر مجزای D-055/D-056 برای دامنه‌هایی که D-107 supersede نکرده باقی است | PKCS#11/HSM پیش‌نیاز signer مرکزی License/Provisioning در Vendor V1 نیست |
 | Publish guard (D-041/G2) | PR #771 گارد و نرمال‌سازی مسیر Windows را وارد main کرد؛ PR #787 سه dependency دقیق Windows Service را به allow-list افزود | پذیرش مالک و ممیزی دستی artifact هدف هنوز انجام نشده است |
@@ -58,6 +58,7 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 - در نبود اتصال، Host سبکِ setup بدون Persistence/Identity بالا می‌آید؛ پس از آزمون موفق، اتصال در Windows Credential Manager همان کاربر ذخیره و در اجرای بعدی Development بارگذاری می‌شود. تنظیم صریح Environment/Configuration بر مقدار ذخیره‌شده اولویت دارد.
 - صفحه و APIهای آن loopback-only و HTTPS هستند؛ POST/DELETE با antiforgery و Origin check محافظت می‌شوند. صفحه رمز را بازنمایی یا ذخیره مرورگری نمی‌کند.
 - ابزار فقط به Vendor DB وصل می‌شود؛ دیتابیس را ایجاد یا Migration را اعمال نمی‌کند. برای SQL محلی با گواهی توسعه‌ای می‌توان گزینه TrustServerCertificate را آگاهانه انتخاب کرد.
+- PR #800 (Issue #797) در main ادغام شده و CI پس از Merge روی `110d797` برابر ۱۶/۱۶ Check Run موفق است؛ این نتیجه فقط کد/CI را تأیید می‌کند. اجرای واقعی Visual Studio، گواهی HTTPS توسعه، Windows Credential Manager و اتصال SQL روی دستگاه مالک همچنان NotVerified است.
 
 ### B. Staging روی Windows Server
 
