@@ -16,13 +16,15 @@ public static class VendorLicenseAmendmentRules
     public const string StatusRequested = Faranou.Vendor.Persistence.Domain.VendorLicenseAmendmentRequest.StatusRequested;
     public const string StatusPendingApproval = Faranou.Vendor.Persistence.Domain.VendorLicenseAmendmentRequest.StatusPendingApproval;
     public const string StatusIssued = Faranou.Vendor.Persistence.Domain.VendorLicenseAmendmentRequest.StatusIssued;
+    public const string StatusDelivered = Faranou.Vendor.Persistence.Domain.VendorLicenseAmendmentRequest.StatusDelivered;
+    public const string StatusApplied = Faranou.Vendor.Persistence.Domain.VendorLicenseAmendmentRequest.StatusApplied;
     public const string StatusRejected = Faranou.Vendor.Persistence.Domain.VendorLicenseAmendmentRequest.StatusRejected;
     public const string StatusFailed = Faranou.Vendor.Persistence.Domain.VendorLicenseAmendmentRequest.StatusFailed;
 
     /// <summary>Active states that block a second amendment request for the same purchased line.</summary>
     public static readonly string[] BlockingStatuses =
     [
-        StatusRequested, StatusPendingApproval, StatusIssued
+        StatusRequested, StatusPendingApproval, StatusIssued, StatusDelivered
     ];
 
     /// <summary>
