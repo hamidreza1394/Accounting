@@ -10,6 +10,7 @@
     <EmbeddedResource Include="Development/StaticFiles/**/*">
       <LogicalName>Faranou.Vendor.Host.Development.StaticFiles.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
+    <InternalsVisibleTo Include="Vendor.Host.Tests" />
     <ProjectReference Include="..\Vendor.Persistence\Vendor.Persistence.csproj" />
     <ProjectReference Include="..\..\Licensing.Contracts\Licensing.Contracts.csproj" />
     <PackageReference Include="Pkcs11Interop" />
