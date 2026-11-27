@@ -438,11 +438,28 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
 
         public async Task<bool> IsMemberAsync(string loginName, string role)
         {
-            // IS_ROLEMEMBER answers '1'/'0' as varchar(2); NULL means the pair could not be resolved.
-            var membership = await ScalarAsync(DatabaseName, "SELECT IS_ROLEMEMBER(@role, @login)",
-                new SqlParameter("@role", SqlDbType.NVarChar, 128) { Value = role },
-                new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName }) as string;
-            return string.Equals(membership, "1", StringComparison.Ordinal);
+            // Catalog-based membership check (visible to the admin connection immediately);
+            // a short retry absorbs any catalog-freshness delay right after the pipeline run.
+            for (var attempt = 0; attempt < 6; attempt++)
+            {
+                var member = await ScalarAsync(DatabaseName, """
+                    SELECT COUNT(*)
+                    FROM sys.database_role_members drm
+                    JOIN sys.database_principals r ON r.principal_id = drm.role_principal_id
+                    JOIN sys.database_principals m ON m.principal_id = drm.member_principal_id
+                    WHERE r.name = @role AND m.name = @login
+                    """,
+                    new SqlParameter("@role", SqlDbType.NVarChar, 128) { Value = role },
+                    new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName }) is > 0;
+                if (member)
+                {
+                    return true;
+                }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+            }
+
+            return false;
         }
 
         public async Task<string> DescribeStateAsync(string loginName, string? databaseName = null)
