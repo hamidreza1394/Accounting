@@ -202,7 +202,6 @@ else if (cngSigningEnabled)
         builder.Configuration.GetSection("Signing:CertificateStore"));
     builder.Services.RemoveAll<ILicenseSigningProvider>();
     builder.Services.RemoveAll<IProvisioningSigningProvider>();
-    builder.Services.RemoveAll<IOfflineRevocationSigningProvider>();
     builder.Services.AddSingleton<IWindowsCngSigningModule, WindowsCngCertificateStoreSigningModule>();
     builder.Services.AddScoped<ILicenseSigningProvider, WindowsCngLicenseSigningProvider>();
     builder.Services.AddScoped<IProvisioningSigningProvider, WindowsCngProvisioningSigningProvider>();
