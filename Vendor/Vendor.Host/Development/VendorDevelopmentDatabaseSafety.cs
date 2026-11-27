@@ -276,10 +276,12 @@ internal static class VendorDevelopmentDatabaseSafety
 
         public static async Task<MarkerState> ReadStateAsync(SqlConnection connection, CancellationToken cancellationToken)
         {
-            var value = await ReadScalarAsync(connection,
-                "SELECT CAST(value AS nvarchar(256)) FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = @marker",
-                cancellationToken,
-                new SqlParameter("@marker", System.Data.SqlDbType.NVarChar, 128) { Value = MarkerName });
+            // The marker name is a compile-time Vendor constant, bound as a parameter; the
+            // SQL text itself is a literal at the call site (no dynamic SQL anywhere).
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT CAST(value AS nvarchar(256)) FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = @marker";
+            command.Parameters.Add(new SqlParameter("@marker", System.Data.SqlDbType.NVarChar, 128) { Value = MarkerName });
+            var value = await command.ExecuteScalarAsync(cancellationToken);
             if (value is null or DBNull)
             {
                 return MarkerState.Absent;
@@ -448,10 +450,11 @@ internal static class VendorDevelopmentDatabaseSafety
 
         public static async Task<string?> ReadAsync(SqlConnection masterConnection, CancellationToken cancellationToken)
         {
-            var value = await ReadScalarAsync(masterConnection,
-                "SELECT CAST(value AS nvarchar(512)) FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = @intent",
-                cancellationToken,
-                new SqlParameter("@intent", System.Data.SqlDbType.NVarChar, 128) { Value = IntentName });
+            // The intent name is a compile-time Vendor constant, bound as a parameter.
+            await using var command = masterConnection.CreateCommand();
+            command.CommandText = "SELECT CAST(value AS nvarchar(512)) FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = @intent";
+            command.Parameters.Add(new SqlParameter("@intent", System.Data.SqlDbType.NVarChar, 128) { Value = IntentName });
+            var value = await command.ExecuteScalarAsync(cancellationToken);
             return value as string;
         }
 
@@ -505,21 +508,5 @@ internal static class VendorDevelopmentDatabaseSafety
 
         internal static string RecoveryMessage(string databaseName) =>
             $"دیتابیس «{databaseName}» خالی است و نشانهٔ مالکیت ندارد؛ با این حال رکورد راه‌اندازی این جریان روی آن ثبت شده است (احتمالاً اجرای قبلی بین ساخت دیتابیس و ثبت نشانه متوقف شده). دیتابیس حذف نمی‌شود و مالکیت آن به‌صورت کنترل‌شده بازسازی می‌شود.";
-    }
-
-    private static async Task<object?> ReadScalarAsync(
-        SqlConnection connection,
-        string commandText,
-        CancellationToken cancellationToken,
-        params SqlParameter[] parameters)
-    {
-        await using var command = connection.CreateCommand();
-        command.CommandText = commandText;
-        foreach (var parameter in parameters)
-        {
-            command.Parameters.Add(parameter);
-        }
-
-        return await command.ExecuteScalarAsync(cancellationToken);
     }
 }
