@@ -120,7 +120,8 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         Assert.True(await fixture.IsMemberAsync(fixture.RuntimeLoginName, "db_datareader"));
         Assert.True(await fixture.IsMemberAsync(fixture.RuntimeLoginName, "db_datawriter"));
         Assert.False(await fixture.IsMemberAsync(fixture.RuntimeLoginName, "db_owner"));
-        Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword));
+        Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword),
+            await fixture.DescribeRuntimeLoginConnectAsync(fixture.RuntimeLoginName, runtimePassword));
 
         // Re-run is idempotent: the database is kept, migrations stay applied, the existing
         // login is reused through its own credentials (proof, not reset) and readiness verifies.
@@ -194,7 +195,10 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         Assert.True(states["connection"] == "failed" || states["inspect"] == "failed",
             $"connection={states["connection"]}, inspect={states["inspect"]}");
         Assert.Equal("pending", states["createDatabase"]);
-        Assert.Contains("سیستمی", states["connection"] + states["inspect"], StringComparison.Ordinal);
+        Assert.Contains("سیستمی",
+            outcome.StageResults.First(stage => stage.Key == "connection").Message +
+            outcome.StageResults.First(stage => stage.Key == "inspect").Message,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -267,8 +271,9 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         await fixture.DropOwnershipMarkerAsync();
         Assert.False(await fixture.HasOwnershipMarkerAsync());
 
-        var rerunPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
-        var rerun = await RunPipelineAsync(fixture.CreateRequest(runtimePassword: rerunPassword));
+        // The existing login is reused through its own credentials; a different password
+        // must never be able to adopt it (covered by the dedicated regression test).
+        var rerun = await RunPipelineAsync(fixture.CreateRequest(runtimePassword: runtimePassword));
         var rerunStates = States(rerun);
 
         Assert.Equal("skipped", rerunStates["createDatabase"]);
@@ -438,7 +443,7 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
             return string.Equals(membership, "1", StringComparison.Ordinal);
         }
 
-        public async Task<bool> RuntimeLoginCanConnectAsync(string loginName, string runtimePassword)
+        public async Task<string> DescribeRuntimeLoginConnectAsync(string loginName, string runtimePassword)
         {
             var builder = new SqlConnectionStringBuilder
             {
@@ -457,15 +462,18 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
                 await connection.OpenAsync(TestContext.Current.CancellationToken);
                 await using var command = connection.CreateCommand();
                 command.CommandText = "SELECT COUNT(*) FROM VendorAdminUsers";
-                var count = await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
-                return count is int;
+                await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
+                return "connected";
             }
-            catch (SqlException)
+            catch (SqlException exception)
             {
                 // A refused login (bad password, denied access) is a valid negative answer.
-                return false;
+                return $"refused: {exception.Number} {exception.Message}";
             }
         }
+
+        public async Task<bool> RuntimeLoginCanConnectAsync(string loginName, string runtimePassword) =>
+            (await DescribeRuntimeLoginConnectAsync(loginName, runtimePassword)) == "connected";
 
         public async Task CreateForeignDatabaseAsync()
         {
