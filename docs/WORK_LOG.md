@@ -3796,3 +3796,13 @@
 - **اعتبارسنجی:** Restore/Build (Release) موفق با SDK 10.0.404؛ `dotnet test Vendor.Host.Tests -c Release`: total 567 / succeeded 470 / failed 12 / skipped 85 — مجموعهٔ ۱۲ failed دقیقاً همان baselineِ main خالص در همین محیط (وابسته به build ClientApp و محیط؛ با stash روی main خالص هم ۱۲ failed) و هیچ تست جدیدی ناموفق نیست. تست‌های SQL گیت‌دار در محیط Skip شدند (بدون Docker/SQL Server) و در Vendor CI روی SQL Server 2022 Disposable اجرا می‌شوند.
 - **محدودهٔ ممنوع حفظ شد:** Customer و `Server/**` دست‌نخورده؛ بدون Migration، بدون Schema، بدون اسرار در Git، بدون DROP در هیچ مسیری.
 - **Git:** Branch `feat/vendor-db-provisioning-ownership`؛ Issue [#802](https://github.com/hamidreza1394/Accounting/issues/802).
+
+
+## 2026-11-27 — Issue #802 (PR-2): Pipeline هفت‌مرحله‌ای Provisioning و اجرای Migrationهای Vendor
+- **دامنه:** pipeline محلی راه‌اندازی کامل دیتابیس Vendor (بدون Endpoint، بدون تغییر Customer)؛ ادامهٔ PR-1 (#803).
+- **اصلاح ۳.۱ بازبینی مأموریت:** گذرواژهٔ Login موجود هرگز Reset نمی‌شود؛ Login غیرفعال خودکار فعال نمی‌شود؛ استفادهٔ مجدد فقط با آزمون واقعی اتصال به گذرواژهٔ ارائه‌شده و در شکست، بازگشت mapping ساخته‌شده. تست Regression روی SQL Server گیت‌دار اضافه شد (اجرای مجدد با گذرواژهٔ متفاوت ⇒ شکست و حفظ گذرواژهٔ اصلی).
+- **پیاده‌سازی:** `VendorDevelopmentDatabaseProvisioning.cs` با مراحل connection/test/inspect/createDatabase/migrate/runtimeIdentity/verify؛ رکورد قصد پیش از CREATE و حذف پس از Marker؛ Recovery کنترل‌شدهٔ یتیم پنجرهٔ شکست با اتصال create_date (تست انتها-به-انتها)؛ گارد مالکیت Fail-fast در createDatabase؛ قفل یک‌زمان `SemaphoreSlim` شامل رکورد قصد؛ Timeout=120s برای CREATE و `CancellationToken.None` برای عملیات تغییردهنده.
+- **مستندات:** handoff `ISSUE-802-vendor-db-provisioning-migrations.md` و فهرست در INDEX.md.
+- **اعتبارسنجی:** Build Release موفق؛ `dotnet test Vendor.Host.Tests -c Release`: total 597 / succeeded 491 / failed 12 / skipped 94 — ۱۲ failed همان baseline محیطی main و هیچ تست جدیدی ناموفق نیست. تست‌های SQL گیت‌دار در محیط Skip و در Vendor CI اجرا می‌شوند.
+- **محدودهٔ ممنوع حفظ شد:** بدون Migration جدید، بدون EnsureCreated/Drop، بدون Endpoint، بدون تغییر Customer/`Server/**`، بدون اسرار در Git.
+- **Git:** Branch `feat/vendor-db-provisioning-migrations`؛ Issue [#802](https://github.com/hamidreza1394/Accounting/issues/802).

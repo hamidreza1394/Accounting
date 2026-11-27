@@ -514,6 +514,46 @@ internal static class VendorDevelopmentDatabaseSafety
             return value as string;
         }
 
+        /// <summary>
+        /// Writes the intent evidence INSIDE the target database as well. Together with the
+        /// master-side record this is the durable proof that THIS flow created the database:
+        /// another service creating a same-name database after our master-side intent would
+        /// never carry the in-database record, so recovery stays closed for it.
+        /// </summary>
+        public static async Task WriteInDatabaseAsync(SqlConnection targetConnection, string databaseName, DateTimeOffset issuedUtc, CancellationToken cancellationToken)
+        {
+            await using var command = targetConnection.CreateCommand();
+            command.CommandText = """
+                IF EXISTS (SELECT 1 FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = @intent)
+                    EXEC sys.sp_updateextendedproperty @name = @intent, @value = @value;
+                ELSE
+                    EXEC sys.sp_addextendedproperty @name = @intent, @value = @value;
+                """;
+            command.Parameters.Add(new SqlParameter("@intent", System.Data.SqlDbType.NVarChar, 128) { Value = IntentName });
+            command.Parameters.Add(new SqlParameter("@value", System.Data.SqlDbType.NVarChar, 512) { Value = FormatValue(databaseName, issuedUtc) });
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        public static async Task<string?> ReadInDatabaseAsync(SqlConnection targetConnection, CancellationToken cancellationToken)
+        {
+            await using var command = targetConnection.CreateCommand();
+            command.CommandText = "SELECT CAST(value AS nvarchar(512)) FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = @intent";
+            command.Parameters.Add(new SqlParameter("@intent", System.Data.SqlDbType.NVarChar, 128) { Value = IntentName });
+            var value = await command.ExecuteScalarAsync(cancellationToken);
+            return value as string;
+        }
+
+        public static async Task ClearInDatabaseAsync(SqlConnection targetConnection, CancellationToken cancellationToken)
+        {
+            await using var command = targetConnection.CreateCommand();
+            command.CommandText = """
+                IF EXISTS (SELECT 1 FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = @intent)
+                    EXEC sys.sp_dropextendedproperty @name = @intent;
+                """;
+            command.Parameters.Add(new SqlParameter("@intent", System.Data.SqlDbType.NVarChar, 128) { Value = IntentName });
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
         public static async Task WriteAsync(SqlConnection masterConnection, string databaseName, DateTimeOffset issuedUtc, CancellationToken cancellationToken)
         {
             await using var command = masterConnection.CreateCommand();
@@ -552,11 +592,19 @@ internal static class VendorDevelopmentDatabaseSafety
             DateTimeOffset? databaseCreatedUtc,
             DateTimeOffset? intentIssuedUtc,
             bool historyTableExists,
-            int userTableCount)
+            int userTableCount,
+            bool inDatabaseIntentPresent = true)
         {
             if (intentState != IntentState.Matching)
             {
                 return (false, null);
+            }
+
+            if (!inDatabaseIntentPresent)
+            {
+                // The in-database record is the durable proof that THIS flow created the
+                // database; without it, timing and emptiness alone prove nothing.
+                return (false, "رکورد قصد داخل دیتابیس یافت نشد؛ این دیتابیس با این جریان ساخته نشده است و Recovery انجام نمی‌شود.");
             }
 
             if (historyTableExists || userTableCount > 0)
