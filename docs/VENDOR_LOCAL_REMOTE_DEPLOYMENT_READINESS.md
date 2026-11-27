@@ -56,7 +56,7 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 
 - پروفایل Visual Studio `Vendor.Host` صفحهٔ setup محلی را در `https://localhost:5001/development/database-setup` باز می‌کند. این مسیر تنها با `Development` و پرچم صریح launch profile فعال است.
 - در نبود اتصال، Host سبکِ setup بدون Persistence/Identity بالا می‌آید؛ پس از آزمون موفق، اتصال در Windows Credential Manager همان کاربر ذخیره و در اجرای بعدی Development بارگذاری می‌شود. تنظیم صریح Environment/Configuration بر مقدار ذخیره‌شده اولویت دارد.
-- صفحه و APIهای آن loopback-only و HTTPS هستند؛ POST/DELETE با antiforgery و Origin check محافظت می‌شوند. صفحه رمز را بازنمایی یا ذخیره مرورگری نمی‌کند.
+- صفحه و APIهای setup loopback-only هستند. در setup-only mode، Host صریحاً روی `https://localhost:5001` bind می‌شود؛ در full-host mode، endpointها از FallbackPolicy و cookieهای auth/antiforgery با `SecurePolicy.Always` استفاده می‌کنند، ولی route-specific HTTPS redirect ندارند؛ مرورگر باید از HTTPS endpoint پیکربندی‌شده استفاده کند. POST/DELETE با antiforgery و Origin check محافظت می‌شوند. صفحه رمز را بازنمایی یا در storage مرورگر پایدار نمی‌کند.
 - ابزار فقط به Vendor DB وصل می‌شود؛ دیتابیس را ایجاد یا Migration را اعمال نمی‌کند. برای SQL محلی با گواهی توسعه‌ای می‌توان گزینه TrustServerCertificate را آگاهانه انتخاب کرد.
 - PR #800 (Issue #797) در main ادغام شده و CI پس از Merge روی `110d797` برابر ۱۶/۱۶ Check Run موفق است؛ این نتیجه فقط کد/CI را تأیید می‌کند. اجرای واقعی Visual Studio، گواهی HTTPS توسعه، Windows Credential Manager و اتصال SQL روی دستگاه مالک همچنان NotVerified است.
 
