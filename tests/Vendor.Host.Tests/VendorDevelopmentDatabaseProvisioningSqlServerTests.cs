@@ -115,10 +115,12 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         // Schema exists through migrations and the runtime identity holds exactly reader/writer.
         Assert.True(await fixture.DatabaseExistsAsync());
         Assert.True(await fixture.HasMigrationsHistoryAsync());
-        Assert.True(await fixture.HasOwnershipMarkerAsync());
-        Assert.True(await fixture.LoginExistsAsync(fixture.RuntimeLoginName));
-        Assert.True(await fixture.IsMemberAsync(fixture.RuntimeLoginName, "db_datareader"));
-        Assert.True(await fixture.IsMemberAsync(fixture.RuntimeLoginName, "db_datawriter"));
+        Assert.True(await fixture.HasOwnershipMarkerAsync(), await fixture.DescribeStateAsync(fixture.RuntimeLoginName));
+        Assert.True(await fixture.LoginExistsAsync(fixture.RuntimeLoginName), await fixture.DescribeStateAsync(fixture.RuntimeLoginName));
+        Assert.True(await fixture.IsMemberAsync(fixture.RuntimeLoginName, "db_datareader"),
+            await fixture.DescribeStateAsync(fixture.RuntimeLoginName));
+        Assert.True(await fixture.IsMemberAsync(fixture.RuntimeLoginName, "db_datawriter"),
+            await fixture.DescribeStateAsync(fixture.RuntimeLoginName));
         Assert.False(await fixture.IsMemberAsync(fixture.RuntimeLoginName, "db_owner"));
         Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword),
             await fixture.DescribeRuntimeLoginConnectAsync(fixture.RuntimeLoginName, runtimePassword));
@@ -441,6 +443,25 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
                 new SqlParameter("@role", SqlDbType.NVarChar, 128) { Value = role },
                 new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName }) as string;
             return string.Equals(membership, "1", StringComparison.Ordinal);
+        }
+
+        public async Task<string> DescribeStateAsync(string loginName, string? databaseName = null)
+        {
+            var db = databaseName ?? DatabaseName;
+            var marker = await ScalarAsync(db,
+                "SELECT COUNT(*) FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = 'FaranouVendorOwnership'");
+            var userExists = await ScalarAsync(db,
+                "SELECT COUNT(*) FROM sys.database_principals WHERE name = @name AND type IN ('S', 'U')",
+                new SqlParameter("@name", SqlDbType.NVarChar, 128) { Value = loginName });
+            var readerRole = await ScalarAsync(db, "SELECT IS_ROLEMEMBER(@role, @login)",
+                new SqlParameter("@role", SqlDbType.NVarChar, 128) { Value = "db_datareader" },
+                new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName });
+            var writerRole = await ScalarAsync(db, "SELECT IS_ROLEMEMBER(@role, @login)",
+                new SqlParameter("@role", SqlDbType.NVarChar, 128) { Value = "db_datawriter" },
+                new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName });
+            var users = await ScalarAsync(db,
+                "SELECT STRING_AGG(name + ':' + type, ',') FROM sys.database_principals WHERE type IN ('S', 'U')");
+            return $"marker={marker}, userExists={userExists}, reader={readerRole}, writer={writerRole}, users={users}";
         }
 
         public async Task<string> DescribeRuntimeLoginConnectAsync(string loginName, string runtimePassword)
