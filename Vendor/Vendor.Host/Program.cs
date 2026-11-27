@@ -135,9 +135,21 @@ if (developmentSetupEnabled &&
                     Window = TimeSpan.FromMinutes(1)
                 }));
     });
+    builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+    builder.Services.AddSingleton<VendorDevelopmentSetupBootstrapToken>();
+    builder.Services.AddSingleton<VendorDevelopmentSetupChallenge>();
     builder.WebHost.UseUrls("https://localhost:5001");
     var setupApp = builder.Build();
     VendorDevelopmentDatabaseSetup.Map(setupApp, setupOnly: true);
+    // The console challenge binds the anonymous-but-local setup surface to the real local
+    // operator: the code lives only in this process console and is never served over HTTP.
+    var challengeCode = setupApp.Services.GetRequiredService<VendorDevelopmentSetupChallenge>().Issue();
+    Console.WriteLine();
+    Console.WriteLine(VendorDevelopmentSetupChallenge.ConsoleHeader);
+    Console.WriteLine("کد نشست راه‌اندازی (Setup challenge) — این کد را در صفحهٔ setup وارد کنید:");
+    Console.WriteLine($"    {challengeCode}");
+    Console.WriteLine("این کد فقط در همین کنسول نمایش داده می‌شود و با restart فرایند تغییر می‌کند.");
+    Console.WriteLine();
     await setupApp.RunAsync();
     return;
 }
@@ -452,6 +464,10 @@ if (builder.Environment.IsProduction())
         "vendor-audit-checkpoint",
         tags: new[] { "audit-checkpoint", "ready" });
 }
+
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddSingleton<VendorDevelopmentSetupBootstrapToken>();
+builder.Services.AddSingleton<VendorDevelopmentSetupChallenge>();
 
 builder.Services.AddHostedService<VendorAuditCheckpointStartupService>();
 

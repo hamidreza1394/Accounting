@@ -3815,3 +3815,13 @@
 - **اعتبارسنجی:** Build Release موفق؛ `dotnet test Vendor.Host.Tests -c Release`: total 625 / succeeded 516 / failed 12 / skipped 97 — همان baseline محیطی؛ تست‌های SQL گیت‌دار در CI اجرا می‌شوند.
 - **محدودهٔ ممنوع حفظ شد:** بدون تغییر Customer/`Server/**`، بدون Migration، بدون Endpoint.
 - **Git:** Branch `fix/vendor-provisioning-runtime-identity`؛ Issue #802.
+
+
+## 2026-11-27 — Issue #802 (PR-4): Endpointهای inspect/provision با اتصال به اپراتور محلی واقعی
+- **دامنه:** نقشهٔ Endpointهای setup، Bootstrap یک‌بارمصرف با TimeProvider و Challenge کنسولی صادره از خود فرآیند؛ بدون تغییر Customer.
+- **اصلاح ۳.۲ بازبینی مأموریت:** دریافت توکن از GET عمودی احراز هویت نیست؛ صدور توکن به‌تنهایی مجوز عملیات نمی‌سازد. حالا همهٔ عملیات تغییردهندهٔ setup (test/save/saved/inspect/provision) علاوه بر loopback+Origin+antiforgery+rate limit به کد نشست (Challenge) نیاز دارند که فقط در کنسول خود فرآیند چاپ می‌شود و از هیچ Endpoint قابل دریافت نیست. مقایسهٔ ثابت-زمان، ذخیرهٔ hash در حافظه، انقضای ۱۲ ساعته، و تغییر با restart. Bootstrap یک‌بارمصرف با Cookie سخت‌گیرانه (HttpOnly/Secure/SameSite=Strict) و TimeProvider تزریقی حفظ شد و مصرف آن یک‌بارمصرف است.
+- **Endpointها:** `GET /provision-token` (غیرمجوزدهنده)، `POST /inspect`، `POST /provision` (rate limit سخت‌گیرانهٔ ۳/دقیقه) اضافه شدند؛ test/save/saved به Allow-list مقصد SQL متصل شدند.
+- **امنیت:** توکن در URL/Log/Storage دائمی نمی‌آید؛ پاسخ توکن با no-store؛ چیزی از مقدار Challenge در HTTP برگردانده نمی‌شود.
+- **مستندات:** handoff `ISSUE-802-vendor-setup-endpoint-security.md`، WORK_LOG، INDEX.
+- **اعتبارسنجی:** Build Release موفق؛ `dotnet test Vendor.Host.Tests -c Release`: همهٔ تست‌های جدید (Bootstrap token با TimeProvider، SetupChallenge) سبز؛ ۱۲ failed همان baseline محیطی (+۱ flaky زمان‌محور از قبل موجود).
+- **Git:** Branch `fix/vendor-provisioning-endpoint-security`؛ Issue #802.
