@@ -14,7 +14,7 @@
       <div class="badge" aria-hidden="true">V</div>
       <div>
         <p class="eyebrow">FARANOU · VENDOR</p>
-        <h1>تنظیم اتصال دیتابیس</h1>
+        <h1>تنظیم و راه‌اندازی دیتابیس</h1>
         <p class="intro">این صفحه فقط برای اجرای Development روی همین رایانه در دسترس است.</p>
       </div>
     </header>
@@ -45,12 +45,33 @@
         <input type="checkbox" name="trustServerCertificate">
         اعتماد به گواهی سرور (فقط برای SQL محلی/توسعه)
       </label>
-      <p class="hint">رمز فقط برای آزمون و ذخیره به سرور ارسال می‌شود؛ در مرورگر نگه‌داری نمی‌شود. اتصال رمزگذاری‌شده است.</p>
+      <p class="hint">رمز فقط برای آزمون و ذخیره به سرور ارسال می‌شود؛ در مرورگر نگه‌داری نمی‌شود. اتصال رمزگذاری‌شده است. این هویت «هویت پیکربندی» است و فقط در همین صفحه استفاده می‌شود.</p>
+      <fieldset>
+        <legend>هویت Runtime کم‌اختیار (برای راه‌اندازی کامل)</legend>
+        <div class="grid">
+          <label>نام کاربری Runtime
+            <input name="runtimeUsername" maxlength="128" placeholder="FaranouVendorRuntime" autocomplete="off">
+          </label>
+          <label>گذرواژهٔ Runtime
+            <input name="runtimePassword" type="password" maxlength="1024" autocomplete="new-password">
+          </label>
+        </div>
+        <p class="hint">اگر گذرواژهٔ Runtime را خالی بگذارید، گذرواژهٔ ایمن ساخته می‌شود و فقط همین یک‌بار نمایش داده می‌شود. اگر Login هم‌نام از قبل روی سرور وجود داشته باشد، گذرواژهٔ آن با مقدار این فرم بازنشانی می‌شود؛ نامی مخصوص Vendor انتخاب کنید. هویت Runtime فقط خواندن و نوشتن روی همین دیتابیس می‌گیرد و به هیچ دیتابیس دیگری — از جمله دیتابیس مشتری — دسترسی ندارد.</p>
+      </fieldset>
       <div class="actions">
         <button type="button" class="secondary" id="test-button">آزمون اتصال</button>
+        <button type="button" class="secondary" id="inspect-button">بررسی وضعیت سرور و دیتابیس</button>
+        <button type="button" class="primary" id="provision-button">راه‌اندازی کامل دیتابیس</button>
         <button type="submit" id="save-button" disabled>ذخیره اتصال موفق</button>
       </div>
+      <ol class="stages" id="stage-list" hidden></ol>
+      <p class="hint" id="stages-note" hidden>مراحل ۱ تا ۳ فقط بازرسی‌اند؛ مرحلهٔ ۴ به بعد دیتابیس و هویت Runtime را واقعاً می‌سازند.</p>
     </form>
+    <div class="secret" id="runtime-secret" hidden>
+      <strong>هویت Runtime ساخته شد</strong>
+      <p id="runtime-secret-body"></p>
+      <p class="hint">این گذرواژه در Windows Credential Manager (اتصال ذخیره‌شده) نگه داشته می‌شود؛ در جای دیگری ذخیره نمی‌شود و دوباره نشان داده نمی‌شود.</p>
+    </div>
     <section class="result" id="result" role="status" aria-live="polite"></section>
     <section class="saved" id="saved-section" hidden>
       <div>
@@ -59,7 +80,7 @@
       </div>
       <button type="button" class="danger" id="delete-button">حذف تنظیم ذخیره‌شده</button>
     </section>
-    <footer>این فرم دیتابیس را ایجاد نمی‌کند و Migration اجرا نمی‌کند. دیتابیس مستقل Vendor باید از قبل آماده باشد.</footer>
+    <footer>«راه‌اندازی کامل» در صورت نبود، دیتابیس اختصاصی Vendor را می‌سازد، Migrationهای موجود EF Core را اعمال می‌کند و هویت Runtime کم‌اختیار را تنظیم می‌کند؛ سپس اتصال Runtime ذخیره می‌شود و اجرای مجدد برنامه لازم است. هرگز DROP اجرا نمی‌شود، دیتابیس موجود حذف یا بازسازی نمی‌شود و هیچ دیتابیس دیگری (از جمله دیتابیس مشتری) تغییر نمی‌کند.</footer>
   </main>
 </body>
 </html>

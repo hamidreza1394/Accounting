@@ -29,11 +29,14 @@ public sealed class VendorDevelopmentDatabaseSetupExposureTests
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
-        using var post = await client.PostAsync(
-            "/api/development/database-setup/save",
-            new StringContent("{}", System.Text.Encoding.UTF8, "application/json"),
-            TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.NotFound, post.StatusCode);
+        foreach (var path in new[] { "save", "inspect", "provision" })
+        {
+            using var post = await client.PostAsync(
+                $"/api/development/database-setup/{path}",
+                new StringContent("{}", System.Text.Encoding.UTF8, "application/json"),
+                TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.NotFound, post.StatusCode);
+        }
     }
 
     [Fact]
@@ -49,6 +52,15 @@ public sealed class VendorDevelopmentDatabaseSetupExposureTests
         {
             using var response = await client.GetAsync(path, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        foreach (var path in new[] { "save", "inspect", "provision" })
+        {
+            using var post = await client.PostAsync(
+                $"/api/development/database-setup/{path}",
+                new StringContent("{}", System.Text.Encoding.UTF8, "application/json"),
+                TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.NotFound, post.StatusCode);
         }
 
         using var setupPage = await client.GetAsync("/development/database-setup", TestContext.Current.CancellationToken);
