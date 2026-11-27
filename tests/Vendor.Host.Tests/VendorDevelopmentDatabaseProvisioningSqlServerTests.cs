@@ -246,7 +246,10 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         var createdUtc = await fixture.ReadDatabaseCreatedUtcAsync(fixture.ForeignDatabaseName);
         Assert.NotNull(createdUtc);
         var intentIssuedUtc = createdUtc.Value.AddMinutes(-2);
+        // Simulate the real crash order: master-side intent, then the in-database record —
+        // a crash right after the in-database write leaves both records and no marker.
         await fixture.WriteProvisioningIntentAsync(fixture.ForeignDatabaseName, intentIssuedUtc);
+        await fixture.WriteInDatabaseIntentAsync(fixture.ForeignDatabaseName, intentIssuedUtc);
 
         var withIntent = await RunPipelineAsync(
             fixture.CreateRequest(databaseName: fixture.ForeignDatabaseName, runtimePassword: VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate()));
@@ -400,6 +403,27 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         public async Task WriteProvisioningIntentAsync(string databaseName, DateTimeOffset issuedUtc)
         {
             await using var connection = new SqlConnection(TargetBuilder("master").ConnectionString);
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                IF EXISTS (SELECT 1 FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = 'FaranouVendorProvisioningIntent')
+                    EXEC sys.sp_updateextendedproperty @name = N'FaranouVendorProvisioningIntent', @value = @value;
+                ELSE
+                    EXEC sys.sp_addextendedproperty @name = N'FaranouVendorProvisioningIntent', @value = @value;
+                """;
+            command.Parameters.Add(new SqlParameter("@value", SqlDbType.NVarChar, 512)
+            {
+                Value = FormattableString.Invariant($"VendorDb={databaseName};IssuedUtc={issuedUtc:yyyy-MM-dd'T'HH:mm:ss.fff'Z'}")
+            });
+            await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        }
+
+        public async Task WriteInDatabaseIntentAsync(string databaseName, DateTimeOffset issuedUtc)
+        {
+            // The pipeline writes the in-database intent right after CREATE DATABASE and the
+            // master-side one before it; a crash between the two leaves the in-DB record too,
+            // so the recovery evidence set is master + in-database + create-date binding.
+            await using var connection = new SqlConnection(TargetBuilder(databaseName).ConnectionString);
             await connection.OpenAsync(TestContext.Current.CancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = """
