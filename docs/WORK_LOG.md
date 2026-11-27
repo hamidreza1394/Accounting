@@ -3769,6 +3769,25 @@
 - **Git:** Branch `agent/797-vendor-dev-db-setup`؛ PR [#800](https://github.com/hamidreza1394/Accounting/pull/800). پس از Merge شدن #796، شاخه روی `main@4a8a028` rebase و base PR به `main` تغییر داده شد.
 
 
+## 2026-11-27 — Vendor: ثبت Merge #800 و هم‌ترازی وضعیت main
+
+- **مبنای ممیزی:** `main@110d797fe7a3a40466c7ff3aa520cfa73ff22536`؛ در شروع اجرا صفر PR باز و ۱۰ Issue مرتبط باز بود. #797 بسته شده و #768 همچنان باز است.
+- **Merge واقعی #800:** PR [#800](https://github.com/hamidreza1394/Accounting/pull/800) در 2026-11-26T17:41:51Z با merge commit `110d797fe7a3a40466c7ff3aa520cfa73ff22536` ادغام شد و Issue #797 بسته شد. HEAD نهایی PR `9586e27d92413c371c35ca48b57d2c42094a95f5` بود. فرم setup اتصال DB فقط برای Development ویندوز و loopback است؛ اتصال را پیش از ذخیره در Windows Credential Manager می‌آزماید، DB نمی‌سازد و Migration اجرا نمی‌کند.
+- **شواهد PR head:** .NET CI run #45867980923، Vendor CI run #45867980991، Semgrep run #45867980980 و CodeQL run #45867977087 روی HEAD نهایی موفق‌اند. تلاش‌های قدیمی‌تر همان HEAD که به‌دلیل اجرای مجدد لغو شدند، نتیجهٔ نهایی موفق را تغییر نمی‌دهند.
+- **شواهد پس از Merge:** روی merge SHA فعلی ۱۶/۱۶ Check Run موفق است: .NET CI #45869907350 (۷ Job)، Vendor CI #45869907458 (۴ Job)، Semgrep #45869907173 (۱ Job) و CodeQL/Push on main #45869907193 (۴ تحلیل). Publish Linux/Windows، E2E، Build/Test، Secret Scan و checkpoint regressions در همین مجموعه موفق‌اند.
+- **Solution:** PR #796 با merge commit `c71af271d345b8acc1459f248f7c8b4050272477` و PR #799 با merge commit `4a8a028a2a78599b49d04c76b64450f56b16dea3` ادغام شده‌اند؛ #794 و #793 نیز در main هستند.
+- **PRهای مرجع:** #281 روی merge SHA خود ۱۲/۱۲، #282 برابر ۱۳/۱۳ و #284 برابر ۱۳/۱۳ Check Run موفق دارند؛ برای #282 CI پس از Merge جداگانه روی merge SHA خوانده شد. ترتیب Authorization در #284 حفظ شده است.
+- **مرور Actions:** از ۱۰۰ اجرای اخیر ۸۵ موفق، ۱۵ لغوشده و صفر شکست؛ همه تکمیل شده‌اند و در لحظهٔ ممیزی صفر Run queued/in-progress وجود داشت. این آمار محدود به ۱۰۰ اجرای اخیر از ۱۰٬۸۹۶ اجراست.
+- **مستندات این PR:** Snapshot بالای `docs/PROJECT_STATUS.md`، رکورد append-only در `docs/WORK_LOG.md`، handoff #797، چک‌لیست آمادگی عملیاتی، راهنمای Local/Remote و شرح متناظر در `docs/INDEX.md` هم‌تراز شدند.
+- **دامنه/ایمنی:** فقط مستندات؛ هیچ کد اجرایی، Schema، Migration، Customer consumer، `Server/**`، Runtime Gate، Provisioning v5 Gate، کلید یا Secret تغییر نکرد. نصب Windows Service، اجرای واقعی Visual Studio/SQL، Key Ceremony، Staging و آزمون دو میزبان ادعا نمی‌شود.
+- **اعتبارسنجی این اجرا:** وضعیت‌ها و Check Runها از GitHub خوانده شدند. Build/Test محلی و `git diff --check` در این نشست اجرا نشدند؛ CI این PR مستنداتی باید روی HEAD نهایی تکمیل شود.
+- **گام بعدی:** پس از CI این PR، ادامهٔ برش Vendor-only در #228/#393 بدون ورود به Customer consumer، `Server/**` یا Customer Migration؛ قرارداد S-B، sink مستقل Production و عملیات Windows هدف تا تصمیم/دسترسی لازم مسدود می‌مانند.
+
+- **PR جاری این هم‌ترازی:** [#801](https://github.com/hamidreza1394/Accounting/pull/801)، شاخه `docs/vendor-main-110d797-status-2026-11-27`؛ HEAD هنگام ثبت این الحاقیه `429d9e212bcfcbd5ff553f611824db524fd0dbc6` بود. PR `mergeable=true` است اما Check Runها کامل نشده‌اند؛ ۲ موفق، ۱ neutral و ۸ در حال اجرا. هیچ Merge انجام نشده است.
+
+- **بازبینی امنیتی PR #801 (CodeRabbit، 2026-11-27):** ادعای HTTPS برای هر دو حالت بیش از حد کلی بود. کد بررسی شد: setup-only با `https://localhost:5001` bind می‌شود؛ در full-host، `Access` به endpointها `AllowAnonymous` نمی‌دهد، FallbackPolicy احراز هویت و `VendorAdminAccessRequirement` را اعمال می‌کند و cookieهای auth/antiforgery با `SecurePolicy.Always` هستند. بنابراین مرورگر بدون cookie امن به endpointهای full-host از HTTP دسترسی ندارد؛ بااین‌حال route-specific HTTPS redirect وجود ندارد. متن وضعیت و راهنمای Local/Remote برای تفکیک این دو حالت دقیق شد؛ رفتار کد تغییر نکرد و تست جدیدی لازم نبود. Thread #4716973122 پس از پاسخ مستند resolve شد.
+
+
 ## 2026-11-27 — Issue #802 (PR-1): مالکیت دیتابیس و محدودسازی مقصد SQL در Provisioning توسعهٔ Vendor
 - **دامنه:** primitives خالص مالکیت و مقصد برای جریان راه‌اندازی خودکار دیتابیس Vendor؛ بدون Endpoint، بدون pipeline، بدون تغییر Customer.
 - **یافته:** دو شاخهٔ عامل (`agent/vendor-db-provisioning`، `fix/vendor-provisioning-security`) از main@110d797 Diverge شده‌اند؛ بازبینی مأموریت سه اشکال واقعی در پیش‌نویس شاخهٔ امنیتی یافت: بازنشانی گذرواژهٔ Login موجود، Bootstrap فقط با توکن قابل دریافت از GET عمومی، و نبود Recovery کنترل‌شده برای پنجرهٔ شکست CREATE DATABASE/Marker. جلوگیری از Reset گذرواژه و Bootstrap اپراتور در PR-2 و PR-4 تحویل می‌شود؛ Recovery کنترل‌شده در همین PR با رکورد قصد پیاده شد.
