@@ -459,9 +459,15 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
             var writerRole = await ScalarAsync(db, "SELECT IS_ROLEMEMBER(@role, @login)",
                 new SqlParameter("@role", SqlDbType.NVarChar, 128) { Value = "db_datawriter" },
                 new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName });
-            var users = await ScalarAsync(db,
-                "SELECT STRING_AGG(name + ':' + type, ',') FROM sys.database_principals WHERE type IN ('S', 'U')");
-            return $"marker={marker}, userExists={userExists}, reader={readerRole}, writer={writerRole}, users={users}";
+            var markerInMaster = await ScalarAsync("master",
+                "SELECT COUNT(*) FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = 'FaranouVendorOwnership'");
+            var userInMaster = await ScalarAsync("master",
+                "SELECT COUNT(*) FROM sys.database_principals WHERE name = @name AND type IN ('S', 'U')",
+                new SqlParameter("@name", SqlDbType.NVarChar, 128) { Value = loginName });
+            var readerInMaster = await ScalarAsync("master", "SELECT IS_ROLEMEMBER(@role, @login)",
+                new SqlParameter("@role", SqlDbType.NVarChar, 128) { Value = "db_datareader" },
+                new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName });
+            return $"target[{db}]: marker={marker}, userExists={userExists}, reader={readerRole}, writer={writerRole} | master: marker={markerInMaster}, user={userInMaster}, reader={readerInMaster}";
         }
 
         public async Task<string> DescribeRuntimeLoginConnectAsync(string loginName, string runtimePassword)
