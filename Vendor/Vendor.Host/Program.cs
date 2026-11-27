@@ -134,6 +134,18 @@ if (developmentSetupEnabled &&
                     QueueLimit = 0,
                     Window = TimeSpan.FromMinutes(1)
                 }));
+        // The full provisioning pipeline touches schema and logins; it is far stricter than
+        // the plain connection test that only opens and closes a connection.
+        options.AddPolicy("vendor-development-setup-provision", context =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 3,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1)
+                }));
     });
     builder.WebHost.UseUrls("https://localhost:5001");
     var setupApp = builder.Build();
@@ -190,6 +202,7 @@ else if (cngSigningEnabled)
         builder.Configuration.GetSection("Signing:CertificateStore"));
     builder.Services.RemoveAll<ILicenseSigningProvider>();
     builder.Services.RemoveAll<IProvisioningSigningProvider>();
+    builder.Services.RemoveAll<IOfflineRevocationSigningProvider>();
     builder.Services.AddSingleton<IWindowsCngSigningModule, WindowsCngCertificateStoreSigningModule>();
     builder.Services.AddScoped<ILicenseSigningProvider, WindowsCngLicenseSigningProvider>();
     builder.Services.AddScoped<IProvisioningSigningProvider, WindowsCngProvisioningSigningProvider>();
@@ -354,6 +367,16 @@ builder.Services.AddRateLimiter(options =>
                 {
                     AutoReplenishment = true,
                     PermitLimit = 10,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1)
+                }));
+        options.AddPolicy("vendor-development-setup-provision", context =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 3,
                     QueueLimit = 0,
                     Window = TimeSpan.FromMinutes(1)
                 }));
