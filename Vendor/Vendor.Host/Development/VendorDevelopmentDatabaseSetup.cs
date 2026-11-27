@@ -597,7 +597,7 @@ internal static class VendorDevelopmentDatabaseSetup
             public uint AttributeCount;
             public IntPtr Attributes;
             public IntPtr TargetAlias;
-            public uint UserName;
+            public IntPtr UserName;
         }
 
         [DllImport("Advapi32.dll", EntryPoint = "CredReadW", CharSet = CharSet.Unicode, SetLastError = true)]
