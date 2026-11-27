@@ -3499,3 +3499,28 @@ Entity یا جدول `Tenant` در Core وجود ندارد؛ `Domain/Company.cs
 - ترتیب دقیق Migrationها و Sequenceهای Core؛ جزئیات Backfill و سیاست رکوردهای بدون نگاشت؛ سیاست حذف/غیرفعال‌سازی داده قدیمی.
 - سازوکار رساندن نگاشت معتبر به Trade بدون وابستگی Trade به جدول‌های Core (D-090): پیشنهاد در handoff بخش ۸؛ تصمیم مالک لازم است.
 - تغییر `TradeAccessContext`/`TradePeriodScope` (N-5/N-5b) و هر تغییر Permission/Entitlement.
+
+
+## D-122 — مالکیت دیتابیس Vendor، رکورد قصد راه‌اندازی و محدودسازی مقصد SQL در Provisioning توسعه (2026-11-27)
+
+- **وضعیت تصمیم:** Proposed — نیازمند تأیید مالک؛ تا پیش از تأیید، رفتارهای Fail Closed این سند الزامی و تغییرناپذیرند.
+- **وضعیت پیاده‌سازی:** Implemented / Not yet Verified (PR-1 از Issue #802: primitives و تست‌ها؛ pipeline در PR-2).
+- **مراجع:** Issue #797 / PR #800؛ Issue #802؛ `docs/superpowers/specs/2026-11-27-vendor-db-provisioning-ownership-design.md`؛ `docs/handoffs/ISSUE-802-vendor-db-ownership-safety.md`.
+
+### زمینه
+صفحهٔ Development برای راه‌اندازی خودکار دیتابیس Vendor نیاز دارد دیتابیس جدید بسازد و Migration اجرا کند، بدون تصاحب دیتابیس‌های دیگر (از جمله دیتابیس خالی Customer) و بدون تبدیل‌شدن به ابزار SQL علیه میزبان‌های دلخواه.
+
+### تصمیم
+1. مالکیت دیتابیس Vendor فقط با Extended Property `FaranouVendorOwnership` با مقدار ثابت Vendor اثبات می‌شود؛ صرف وجود Extended Property هم‌نام با مقدار دیگر، نشانهٔ جعلی است و Fail Closed می‌شود.
+2. دیتابیس‌های قدیمی فارنو با تاریخچهٔ Migration اعمال‌شدهٔ فارنو پذیرفته می‌شوند و نشانه پس از Migration موفق Backfill می‌شود؛ دیتابیس خالی/بی‌نشان هرگز خودکار تصاحب نمی‌شود و هیچ مسیری DROP انجام نمی‌دهد.
+3. برای پنجرهٔ شکست بین `CREATE DATABASE` و ثبت نشانه، پیش از ساخت یک «رکورد قصد» به‌صورت Extended Property `FaranouVendorProvisioningIntent` روی `master` ثبت و پس از ثبت نشانه حذف می‌شود؛ Recovery کنترل‌شده فقط با رکورد قصدِ تازه (≤۲۴ ساعت) هم‌نام (حساس به حروف)، دیتابیس خالی و اتصال `create_date` سرور به زمان ثبت رکورد مجاز است؛ رکورد به‌تنهایی اثبات مالکیت نیست و دیتابیس هیچ‌وقت حذف نمی‌شود. ثبت/حذف رکورد فقط درون قفل یک‌زمان pipeline انجام می‌شود تا بازنویسی هم‌زمان ممکن نباشد.
+4. مقصد SQL به مقصدهای محلی و Allow-list دقیق (`FARANO_VENDOR_Development__Provisioning__AllowedSqlHosts` / کلید پیکربندی `Faranou:Development:Provisioning:AllowedSqlHosts`) محدود است؛ wildcard در هیچ لایه‌ای اثر ندارد و نام ماشین خاصی در کد Hardcode نمی‌شود.
+5. اعتبارسنجی نام دیتابیس و شناسهٔ SQL با قواعد مسیر مشتری و Bracket-quote با escape سهوی انجام می‌شود.
+
+### الزام‌ها و محدودیت‌ها
+- هر تغییر در این قواعد باید تست ماتریس مالکیت/Recovery را به‌روزرسانی کند و رد‌های Fail Closed را حفظ کند.
+- اجرای واقعی روی SQL Server مالک فقط با مجوز عملیاتی جداگانه انجام می‌شود.
+
+### باز می‌ماند
+- تأیید مالک برای تبدیل این ADR به Accepted.
+- اتصال primitives به pipeline در PR-2 و هویت Runtime در PR-3 (Issue #802).
