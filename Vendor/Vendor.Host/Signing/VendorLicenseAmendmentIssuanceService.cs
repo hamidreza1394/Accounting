@@ -57,6 +57,17 @@ public sealed class VendorLicenseAmendmentIssuanceService(
             !request.RowVersion.AsSpan().SequenceEqual(approval.ExpectedResourceRowVersion))
             return VendorLicenseAmendmentIssuanceResult.Conflict("approval_resource_stale");
 
+        // A license can have only one outstanding amendment delivery at a time. This keeps
+        // sequence N from being superseded before its exact package is delivered and acknowledged.
+        // The License rowversion and unique (LicenseId, Sequence) index remain the concurrency backstop.
+        var pendingDelivery = await db.LicenseAmendmentRequests.AsNoTracking().AnyAsync(
+            item => item.Id != request.Id && item.LicenseId == request.LicenseId &&
+                (item.Status == VendorLicenseAmendmentRequest.StatusIssued ||
+                 item.Status == VendorLicenseAmendmentRequest.StatusDelivered),
+            cancellationToken);
+        if (pendingDelivery)
+            return VendorLicenseAmendmentIssuanceResult.Conflict("amendment_delivery_pending");
+
         var license = await db.Licenses.SingleOrDefaultAsync(
             item => item.Id == request.LicenseId, cancellationToken);
         if (license is null)
@@ -133,6 +144,7 @@ public sealed class VendorLicenseAmendmentIssuanceService(
         db.Entry(request).Property(item => item.RowVersion).OriginalValue =
             approval.ExpectedResourceRowVersion;
         request.Status = VendorLicenseAmendmentRequest.StatusIssued;
+        request.IssuedSequence = candidate.Sequence;
         request.UpdatedAtUtc = now;
         request.ApprovalRequestId = approval.Id;
         license.LastIssuedSequence = candidate.Sequence;
