@@ -11,6 +11,7 @@ namespace Faranou.Vendor.Host.Tests;
 /// FARANO_VENDOR_TEST_SQLSERVER points at a disposable local SQL Server; the fixture
 /// creates and drops only its own uniquely named objects.
 /// </summary>
+[Collection("VendorDevelopmentDatabaseSequential")]
 public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
 {
     [Fact]

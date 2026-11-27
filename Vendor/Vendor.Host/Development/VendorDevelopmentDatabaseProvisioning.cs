@@ -939,8 +939,12 @@ internal static class VendorDevelopmentDatabaseProvisioning
                     var membership = await ExecuteScalarAsync(membershipCommand, CancellationToken.None);
                     if (!string.Equals(membership as string, "1", StringComparison.Ordinal))
                     {
+                        // sp_addrolemember keeps the role and member names fully parameterized;
+                        // no dynamic SQL is needed for the fixed database roles.
                         await using var addMember = connection.CreateCommand();
-                        addMember.CommandText = $"ALTER ROLE {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(role)} ADD MEMBER {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
+                        addMember.CommandText = "EXEC sys.sp_addrolemember @rolename = @role, @membername = @member";
+                        addMember.Parameters.Add(new SqlParameter("@role", System.Data.SqlDbType.NVarChar, 128) { Value = role });
+                        addMember.Parameters.Add(new SqlParameter("@member", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
                         await addMember.ExecuteNonQueryAsync(CancellationToken.None);
                     }
                 }
