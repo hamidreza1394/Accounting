@@ -3782,3 +3782,5 @@
 - **دامنه/ایمنی:** فقط مستندات؛ هیچ کد اجرایی، Schema، Migration، Customer consumer، `Server/**`، Runtime Gate، Provisioning v5 Gate، کلید یا Secret تغییر نکرد. نصب Windows Service، اجرای واقعی Visual Studio/SQL، Key Ceremony، Staging و آزمون دو میزبان ادعا نمی‌شود.
 - **اعتبارسنجی این اجرا:** وضعیت‌ها و Check Runها از GitHub خوانده شدند. Build/Test محلی و `git diff --check` در این نشست اجرا نشدند؛ CI این PR مستنداتی باید روی HEAD نهایی تکمیل شود.
 - **گام بعدی:** پس از CI این PR، ادامهٔ برش Vendor-only در #228/#393 بدون ورود به Customer consumer، `Server/**` یا Customer Migration؛ قرارداد S-B، sink مستقل Production و عملیات Windows هدف تا تصمیم/دسترسی لازم مسدود می‌مانند.
+
+- **PR جاری این هم‌ترازی:** [#801](https://github.com/hamidreza1394/Accounting/pull/801)، شاخه `docs/vendor-main-110d797-status-2026-11-27`؛ HEAD هنگام ثبت این الحاقیه `429d9e212bcfcbd5ff553f611824db524fd0dbc6` بود. PR `mergeable=true` است اما Check Runها کامل نشده‌اند؛ ۲ موفق، ۱ neutral و ۸ در حال اجرا. هیچ Merge انجام نشده است.
