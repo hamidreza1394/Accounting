@@ -386,7 +386,8 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
                 Password = runtimePassword,
                 Encrypt = true,
                 TrustServerCertificate = new SqlConnectionStringBuilder(_baseConnection).TrustServerCertificate,
-                ConnectTimeout = 15
+                ConnectTimeout = 15,
+                Pooling = false
             };
             try
             {
@@ -580,11 +581,14 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
             await ExecuteAsync(ForeignDatabaseName, $"CREATE USER {quotedLogin} FOR LOGIN {quotedLogin}");
         }
 
+        // Pooling is disabled for fixture-owned connections so DROP DATABASE never fights an
+        // idle pooled connection, and a fixture can never disturb other classes' pools.
         private static SqlConnectionStringBuilder TargetBuilder(string database) =>
             new(Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER")!)
             {
                 InitialCatalog = database,
-                ConnectTimeout = 15
+                ConnectTimeout = 15,
+                Pooling = false
             };
 
         private static async Task<object?> ScalarAsync(string database, string commandText, params SqlParameter[] parameters)
@@ -626,11 +630,6 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
             catch (SqlException)
             {
                 // Ignore: the CI server is ephemeral and discarded wholesale after the run.
-            }
-            finally
-            {
-                // Idle pooled connections can keep a dropped database alive; clear the pools.
-                SqlConnection.ClearAllPools();
             }
         }
     }

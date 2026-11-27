@@ -153,7 +153,7 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
 
         public async Task CreateEmptyDatabaseAsync()
         {
-            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = "master" };
+            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = "master", Pooling = false };
             await using var connection = new SqlConnection(builder.ConnectionString);
             await connection.OpenAsync(TestContext.Current.CancellationToken);
             await using var command = connection.CreateCommand();
@@ -164,7 +164,7 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
 
         public async Task<bool> DatabaseExistsAsync()
         {
-            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = "master" };
+            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = "master", Pooling = false };
             await using var connection = new SqlConnection(builder.ConnectionString);
             await connection.OpenAsync(TestContext.Current.CancellationToken);
             await using var command = connection.CreateCommand();
@@ -175,7 +175,7 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
 
         public async Task<VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.MarkerState> ReadMarkerStateAsync()
         {
-            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = DatabaseName };
+            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = DatabaseName, Pooling = false };
             await using var connection = new SqlConnection(builder.ConnectionString);
             await connection.OpenAsync(TestContext.Current.CancellationToken);
             return await VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.ReadStateAsync(connection, TestContext.Current.CancellationToken);
@@ -183,7 +183,7 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
 
         public async Task<int> UserTableCountAsync()
         {
-            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = DatabaseName };
+            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = DatabaseName, Pooling = false };
             await using var connection = new SqlConnection(builder.ConnectionString);
             await connection.OpenAsync(TestContext.Current.CancellationToken);
             await using var command = connection.CreateCommand();
@@ -194,7 +194,7 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
 
         public async Task DropOwnershipMarkerAsync()
         {
-            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = DatabaseName };
+            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = DatabaseName, Pooling = false };
             await using var connection = new SqlConnection(builder.ConnectionString);
             await connection.OpenAsync(TestContext.Current.CancellationToken);
             await using var command = connection.CreateCommand();
@@ -205,7 +205,7 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
 
         public async Task ExecuteAsync(string database, string commandText)
         {
-            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = database };
+            var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = database, Pooling = false };
             await using var connection = new SqlConnection(builder.ConnectionString);
             await connection.OpenAsync(TestContext.Current.CancellationToken);
             await using var command = connection.CreateCommand();
@@ -217,7 +217,7 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
         {
             try
             {
-                var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = "master" };
+                var builder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = "master", Pooling = false };
                 await using var connection = new SqlConnection(builder.ConnectionString);
                 await connection.OpenAsync(TestContext.Current.CancellationToken);
                 await using var command = connection.CreateCommand();
@@ -227,12 +227,6 @@ public sealed class VendorDevelopmentDatabaseSafetySqlServerTests
             catch (SqlException)
             {
                 // Ignore: the CI server is ephemeral and discarded wholesale after the run.
-            }
-            finally
-            {
-                // Idle pooled connections to the dropped database keep it alive; clearing the
-                // pools releases them so the next fixture run can recreate the name cleanly.
-                SqlConnection.ClearAllPools();
             }
         }
     }
