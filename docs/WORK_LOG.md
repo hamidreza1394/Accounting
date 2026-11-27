@@ -3767,3 +3767,13 @@
 - **بازبینی پیش از Merge (Claude):** `security-reviewer` بدون یافتهٔ blocking؛ یافته‌های M1/M2 (ناشناس‌بودن setup در حالت برنامهٔ کامل) و L1–L5 (فیلتر Host، هدرها، CSP، log خطا، تست) در همین PR اصلاح شدند. Build و Test محلی Vendor (469 تست، 0 ناموفق، 82 skip) موفق؛ جزئیات در handoff Issue #797.
 - **مستندات:** مشخصات طراحی، راهنمای Vendor، readiness محلی/راه دور و handoff Issue #797 به‌روز شدند.
 - **Git:** Branch `agent/797-vendor-dev-db-setup`؛ PR [#800](https://github.com/hamidreza1394/Accounting/pull/800). پس از Merge شدن #796، شاخه روی `main@4a8a028` rebase و base PR به `main` تغییر داده شد.
+
+
+## 2026-11-27 — Issue #802 (PR-1): مالکیت دیتابیس و محدودسازی مقصد SQL در Provisioning توسعهٔ Vendor
+- **دامنه:** primitives خالص مالکیت و مقصد برای جریان راه‌اندازی خودکار دیتابیس Vendor؛ بدون Endpoint، بدون pipeline، بدون تغییر Customer.
+- **یافته:** دو شاخهٔ عامل (`agent/vendor-db-provisioning`، `fix/vendor-provisioning-security`) از main@110d797 Diverge شده‌اند؛ بازبینی مأموریت سه اشکال واقعی در پیش‌نویس شاخهٔ امنیتی یافت: بازنشانی گذرواژهٔ Login موجود، Bootstrap فقط با توکن قابل دریافت از GET عمومی، و نبود Recovery کنترل‌شده برای پنجرهٔ شکست CREATE DATABASE/Marker. جلوگیری از Reset گذرواژه و Bootstrap اپراتور در PR-2 و PR-4 تحویل می‌شود؛ Recovery کنترل‌شده در همین PR با رکورد قصد پیاده شد.
+- **اصلاح:** `VendorDevelopmentDatabaseSafety.cs` شامل `VendorSqlIdentifier`، `VendorDatabaseName`، `VendorRuntimeLoginName`، `VendorSqlServerTarget` (Allow-list دقیق، رد wildcard)، `VendorOwnershipMarker` (سه‌حالته؛ نشانهٔ جعلی ⇒ Fail Closed) و `VendorProvisioningIntent` (رکورد قصد روی `master`، Recovery فقط با رکورد تازه هم‌نام، دیتابیس هرگز حذف نمی‌شود). `InternalsVisibleTo` برای تست.
+- **مستندات:** سند طراحی `docs/superpowers/specs/2026-11-27-vendor-db-provisioning-ownership-design.md`، handoff `docs/handoffs/ISSUE-802-vendor-db-ownership-safety.md`، ADR D-122 در DECISIONS.md با وضعیت **Proposed** (شماره بعدی واقعی از انتهای DECISIONS.md خوانده شد: پس از D-121)، فهرست در INDEX.md.
+- **اعتبارسنجی:** Restore/Build (Release) موفق با SDK 10.0.404؛ `dotnet test Vendor.Host.Tests -c Release`: total 567 / succeeded 470 / failed 12 / skipped 85 — مجموعهٔ ۱۲ failed دقیقاً همان baselineِ main خالص در همین محیط (وابسته به build ClientApp و محیط؛ با stash روی main خالص هم ۱۲ failed) و هیچ تست جدیدی ناموفق نیست. تست‌های SQL گیت‌دار در محیط Skip شدند (بدون Docker/SQL Server) و در Vendor CI روی SQL Server 2022 Disposable اجرا می‌شوند.
+- **محدودهٔ ممنوع حفظ شد:** Customer و `Server/**` دست‌نخورده؛ بدون Migration، بدون Schema، بدون اسرار در Git، بدون DROP در هیچ مسیری.
+- **Git:** Branch `feat/vendor-db-provisioning-ownership`؛ Issue [#802](https://github.com/hamidreza1394/Accounting/issues/802).
