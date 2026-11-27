@@ -64,10 +64,11 @@ internal static class VendorDevelopmentDatabaseProvisioning
         IReadOnlyList<StageResult> StageResults,
         string? RuntimeUsername,
         string? GeneratedPassword,
+        bool SavedToCredentialManager,
         string Message)
     {
         public static ProvisionOutcome Failed(List<StageResult> stageResults, string message) =>
-            new(false, stageResults, null, null, message);
+            new(false, stageResults, null, null, false, message);
     }
 
     internal sealed record StageResult(string Key, string State, string Message);
@@ -155,6 +156,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
     public static async Task<ProvisionOutcome> RunAsync(
         ProvisionRequest request,
         ILogger logger,
+        bool canSaveConnection,
         IReadOnlyList<string> extraAllowedSqlHosts,
         CancellationToken cancellationToken)
     {
@@ -165,7 +167,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
 
         try
         {
-            return await RunLockedAsync(request, logger, extraAllowedSqlHosts, cancellationToken);
+            return await RunLockedAsync(request, logger, canSaveConnection, extraAllowedSqlHosts, cancellationToken);
         }
         finally
         {
@@ -176,6 +178,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
     private static async Task<ProvisionOutcome> RunLockedAsync(
         ProvisionRequest request,
         ILogger logger,
+        bool canSaveConnection,
         IReadOnlyList<string> extraAllowedSqlHosts,
         CancellationToken cancellationToken)
     {
@@ -437,10 +440,45 @@ internal static class VendorDevelopmentDatabaseProvisioning
             return ProvisionOutcome.Failed(stages, "بررسی آمادگی با اتصال Runtime ناموفق بود.");
         }
 
-        var finalMessage = input.GeneratedRuntimePassword
-            ? "راه‌اندازی کامل شد. نام کاربری Runtime و گذرواژهٔ ساخته‌شده را در منبع تنظیم اتصال (FARANO_VENDOR_ConnectionStrings__VendorDb) ثبت کنید."
-            : $"راه‌اندازی کامل شد؛ اتصال Runtime با هویت «{input.RuntimeUsername}» آماده است.";
-        return new ProvisionOutcome(true, stages, input.RuntimeUsername, input.GeneratedRuntimePassword ? input.RuntimePassword : null, finalMessage);
+        // Persist the runtime (least-privilege) connection for the next Host run. Only the
+        // runtime identity is ever persisted; the admin/provisioning credentials from the
+        // request are never stored, logged or returned.
+        var saveFailed = false;
+        var savedToCredentialManager = false;
+        if (canSaveConnection)
+        {
+            try
+            {
+                VendorDevelopmentDatabaseSetup.WriteSavedConnection(runtimeConnectionString);
+                savedToCredentialManager = true;
+            }
+            catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+            {
+                // The exception carries only the Win32 error; never log the connection string.
+                logger.LogError(exception, "Saving the provisioned Vendor runtime connection to Windows Credential Manager failed.");
+                saveFailed = true;
+            }
+        }
+
+        string finalMessage;
+        if (saveFailed)
+        {
+            finalMessage = "راه‌اندازی کامل شد اما ذخیرهٔ اتصال Runtime در Windows Credential Manager ناموفق بود؛ از دکمهٔ ذخیرهٔ صفحه استفاده کنید یا دوباره تلاش کنید.";
+        }
+        else if (savedToCredentialManager)
+        {
+            finalMessage = $"راه‌اندازی کامل شد. اتصال Runtime کم‌اختیار برای کاربر فعلی ذخیره شد؛ برای اعمال، Vendor را دوباره اجرا کنید.{(input.GeneratedRuntimePassword ? " گذرواژهٔ ساخته‌شدهٔ Runtime فقط همین یک‌بار نمایش داده می‌شود." : string.Empty)}";
+        }
+        else if (input.GeneratedRuntimePassword)
+        {
+            finalMessage = "راه‌اندازی کامل شد؛ اما به‌دلیل اینکه تنظیم اتصال از Environment/Configuration می‌آید، چیزی ذخیره نشد. نام کاربری Runtime و گذرواژهٔ ساخته‌شده را در همان منبع تنظیم کنید.";
+        }
+        else
+        {
+            finalMessage = $"راه‌اندازی کامل شد؛ اتصال Runtime با هویت «{input.RuntimeUsername}» آماده است.";
+        }
+
+        return new ProvisionOutcome(true, stages, input.RuntimeUsername, input.GeneratedRuntimePassword ? input.RuntimePassword : null, savedToCredentialManager, finalMessage);
     }
 
     /// <summary>
@@ -963,9 +1001,45 @@ internal static class VendorDevelopmentDatabaseProvisioning
                     }
                 }
 
-                if (VendorRuntimeIdentity.HasExcessiveServerAccess(roles, grants, denies, out var serverDetail))
+                if (VendorDevelopmentRuntimeIdentity.VendorRuntimeIdentity.HasExcessiveServerAccess(roles, grants, denies, out var serverDetail))
                 {
                     throw new VendorDatabaseMismatchException($"هویت Runtime «{input.RuntimeUsername}» از قبل مجوزهای سطح سرور دارد ({serverDetail}) و به‌عنوان هویت کم‌اختیار قابل استفاده نیست؛ نام دیگری انتخاب کنید یا مجوزهای سرور را با تصمیم مدیر سرور اصلاح کنید.");
+                }
+
+                // A least-privilege runtime identity must not hold user mappings in any other
+                // database: that is exactly how access would leak beyond the vendor database.
+                var otherDatabases = new List<string>();
+                await using (var otherDatabasesCommand = connection.CreateCommand())
+                {
+                    otherDatabasesCommand.CommandText = """
+                        SELECT d.name
+                        FROM sys.databases d
+                        WHERE HAS_DBACCESS(d.name) = 1 AND d.database_id <> DB_ID(@target)
+                        """;
+                    otherDatabasesCommand.Parameters.Add(new SqlParameter("@target", System.Data.SqlDbType.NVarChar, 128) { Value = input.Database });
+                    await using var reader = await otherDatabasesCommand.ExecuteReaderAsync(CancellationToken.None);
+                    while (await reader.ReadAsync(CancellationToken.None))
+                    {
+                        otherDatabases.Add(reader.GetString(0));
+                    }
+                }
+
+                var mappedInOther = new List<string>();
+                foreach (var otherDatabase in otherDatabases)
+                {
+                    await using var mappedCommand = connection.CreateCommand();
+                    mappedCommand.CommandText = $"SELECT CAST(COUNT(*) AS int) FROM {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(otherDatabase)}.sys.database_principals AS dp WHERE dp.type IN ('S', 'U') AND dp.sid = (SELECT sp.sid FROM sys.server_principals AS sp WHERE sp.name = @login AND sp.type = 'S')";
+                    mappedCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                    if (await ExecuteScalarAsync(mappedCommand, CancellationToken.None) is int mappedCount && mappedCount > 0)
+                    {
+                        mappedInOther.Add(otherDatabase);
+                    }
+                }
+
+                var (crossDbAllowed, crossDbRefusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateUserMappings(input.RuntimeUsername, mappedInOther);
+                if (!crossDbAllowed)
+                {
+                    throw new VendorDatabaseMismatchException(crossDbRefusal!);
                 }
 
                 // A generated password can never prove ownership of an existing login: fail
@@ -1335,18 +1409,28 @@ internal static class VendorDevelopmentDatabaseProvisioning
         return builder.ConnectionString;
     }
 
-    private static string DescribeSqlError(Exception exception) => exception switch
+    internal static string DescribeSqlError(Exception exception) => exception switch
     {
-        SqlException { Number: 18456 } => "ورود به SQL Server رد شد؛ نام کاربری و گذرواژهٔ هویت پیکربندی را بررسی کنید.",
-        SqlException { Number: 18452 } => "احراز هویت ویندوز از این نشست پذیرفته نشد.",
-        SqlException { Number: 4060 or 916 } => "دیتابیس هدف در دسترس نیست؛ نام دیتابیس و دسترسی کاربر را بررسی کنید.",
-        SqlException { Number: 262 or 229 or 15247 } => "دسترسی لازم برای این عملیات داده نشد؛ هویت پیکربندی باید دسترسی مدیریتی روی سرور داشته باشد.",
-        SqlException { Number: 5170 or 5133 or 5120 or 1802 } => "ایجاد فایل‌های دیتابیس روی سرور ناموفق بود.",
-        SqlException { Number: 1105 or 9002 } => "فضای دیسک سرور برای این عملیات کافی نیست.",
-        SqlException { Number: -2 } => "عملیات از مهلت مجاز عبور کرد.",
-        SqlException { Number: 53 or 2 or 10060 or 11001 } => "سرور SQL در دسترس نیست؛ نام سرور، شبکه و پورت را بررسی کنید.",
-        SqlException { Number: 26 or 40 } => "نمونهٔ SQL Server پیدا نشد؛ نام نمونه را بررسی کنید.",
+        SqlException sql => DescribeSqlError(sql.Number),
         TimeoutException => "عملیات از مهلت مجاز عبور کرد.",
+        _ => "عملیات روی SQL Server ناموفق بود؛ جزئیات در لاگ برنامه ثبت شد."
+    };
+
+    /// <summary>
+    /// Maps a SQL Server error number to a fixed Persian guidance message. The exception's
+    /// own text (user names, hosts, connection details) is never included in the answer.
+    /// </summary>
+    internal static string DescribeSqlError(int sqlErrorNumber) => sqlErrorNumber switch
+    {
+        18456 => "ورود به SQL Server رد شد؛ نام کاربری و گذرواژهٔ هویت پیکربندی را بررسی کنید.",
+        18452 => "احراز هویت ویندوز از این نشست پذیرفته نشد.",
+        4060 or 916 => "دیتابیس هدف در دسترس نیست؛ نام دیتابیس و دسترسی کاربر را بررسی کنید.",
+        262 or 229 or 15247 => "دسترسی لازم برای این عملیات داده نشد؛ هویت پیکربندی باید دسترسی مدیریتی روی سرور داشته باشد.",
+        5170 or 5133 or 5120 or 1802 => "ایجاد فایل‌های دیتابیس روی سرور ناموفق بود.",
+        1105 or 9002 => "فضای دیسک سرور برای این عملیات کافی نیست.",
+        -2 => "عملیات از مهلت مجاز عبور کرد.",
+        53 or 2 or 10060 or 11001 => "سرور SQL در دسترس نیست؛ نام سرور، شبکه و پورت را بررسی کنید.",
+        26 or 40 => "نمونهٔ SQL Server پیدا نشد؛ نام نمونه را بررسی کنید.",
         _ => "عملیات روی SQL Server ناموفق بود؛ جزئیات در لاگ برنامه ثبت شد."
     };
 
@@ -1409,37 +1493,6 @@ internal static class VendorDevelopmentDatabaseProvisioning
         }
     }
 
-    /// <summary>
-    /// Least-privilege rule for a runtime identity: no fixed server role membership and no
-    /// granted server permission beyond CONNECT SQL is acceptable. A login carrying more is
-    /// refused as a runtime identity instead of being silently reused.
-    /// </summary>
-    internal static class VendorRuntimeIdentity
-    {
-        private const string ConnectSqlPermission = "CONNECT SQL";
-
-        public static bool HasExcessiveServerAccess(
-            IEnumerable<string> roleNames,
-            IEnumerable<string> grantedPermissions,
-            IEnumerable<string> deniedPermissions,
-            out string detail)
-        {
-            // NO server role is acceptable for a runtime identity — fixed or instance-created
-            // (SQL Server 2022 ships extra ##MS_…## roles and operators can define their own).
-            var roles = roleNames.Where(name => !string.IsNullOrWhiteSpace(name)).ToList();
-            var grants = grantedPermissions
-                .Where(permission => !string.Equals(permission, ConnectSqlPermission, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-            // A deny is restrictive and normally fine — the flow itself denies VIEW ANY
-            // DATABASE on fresh logins — but a CONNECT SQL deny makes the login unusable.
-            var denies = deniedPermissions
-                .Where(permission => string.Equals(permission, ConnectSqlPermission, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-            detail = string.Join("، ", roles.Concat(grants).Concat(denies)
-                .Distinct(StringComparer.OrdinalIgnoreCase));
-            return roles.Count > 0 || grants.Count > 0 || denies.Count > 0;
-        }
-    }
 }
 
 /// <summary>Request body of the Development setup inspect/provision endpoints.</summary>

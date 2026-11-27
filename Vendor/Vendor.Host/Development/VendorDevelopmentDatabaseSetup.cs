@@ -20,6 +20,10 @@ internal static class VendorDevelopmentDatabaseSetup
     public static void SetConfigurationSource(bool hasExplicitConfiguration) =>
         _explicitConfiguration = hasExplicitConfiguration;
 
+    /// <summary>Persists the validated runtime connection for the next Host run (setup flow).</summary>
+    internal static void WriteSavedConnection(string connectionString) =>
+        WindowsCredential.Write(CredentialTarget, connectionString);
+
     public static string? ReadSavedConnection()
     {
         if (!OperatingSystem.IsWindows())

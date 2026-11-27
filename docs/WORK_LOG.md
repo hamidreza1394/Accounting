@@ -3806,3 +3806,12 @@
 - **اعتبارسنجی:** Build Release موفق؛ `dotnet test Vendor.Host.Tests -c Release`: total 597 / succeeded 491 / failed 12 / skipped 94 — ۱۲ failed همان baseline محیطی main و هیچ تست جدیدی ناموفق نیست. تست‌های SQL گیت‌دار در محیط Skip و در Vendor CI اجرا می‌شوند.
 - **محدودهٔ ممنوع حفظ شد:** بدون Migration جدید، بدون EnsureCreated/Drop، بدون Endpoint، بدون تغییر Customer/`Server/**`، بدون اسرار در Git.
 - **Git:** Branch `feat/vendor-db-provisioning-migrations`؛ Issue [#802](https://github.com/hamidreza1394/Accounting/issues/802).
+
+
+## 2026-11-27 — Issue #802 (PR-3): ممیزی کامل هویت Runtime و ذخیرهٔ فقط اتصال Runtime
+- **دامنه:** سخت‌سازی نهایی هویت Runtime و Credential Safety؛ بدون Endpoint جدید.
+- **اصلاحات:** قواعد خالص هویت به فایل مستقل منتقل شد (رد هر نقش سرور شامل نقش‌های نمونه‌ای 2022، GRANT غیر CONNECT SQL، DENY CONNECT SQL)؛ رد mapping کاربر در دیتابیس دیگر بر اساس SID؛ رد دسترسی مدیریتی کاربر هدف (db_owner-کلاس و CONTROL/ALTER/…); verify مؤثر با رد db_denydatareader/writer و اتصال بدون Pooling؛ ذخیرهٔ فقط اتصال Runtime در Credential Manager با گارد منبع؛ DescribeSqlError عدد-محور بدون نشت محتوای استثنا.
+- **مستندات:** handoff `ISSUE-802-vendor-runtime-identity.md`، WORK_LOG، INDEX.
+- **اعتبارسنجی:** Build Release موفق؛ `dotnet test Vendor.Host.Tests -c Release`: total 625 / succeeded 516 / failed 12 / skipped 97 — همان baseline محیطی؛ تست‌های SQL گیت‌دار در CI اجرا می‌شوند.
+- **محدودهٔ ممنوع حفظ شد:** بدون تغییر Customer/`Server/**`، بدون Migration، بدون Endpoint.
+- **Git:** Branch `fix/vendor-provisioning-runtime-identity`؛ Issue #802.
