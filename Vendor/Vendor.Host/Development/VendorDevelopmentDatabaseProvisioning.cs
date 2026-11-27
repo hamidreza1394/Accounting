@@ -108,8 +108,9 @@ internal static class VendorDevelopmentDatabaseProvisioning
             SetStage(stages, "test", "running", "در حال آزمون اتصال به سرور…");
             var serverVersion = await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
             {
-                var version = await ReadScalarAsync(connection, "SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128))", cancellationToken);
-                return version as string;
+                await using var command = connection.CreateCommand();
+                command.CommandText = "SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128))";
+                return await ExecuteScalarAsync(command, cancellationToken) as string;
             }, cancellationToken);
             if (serverVersion is null)
             {
@@ -194,8 +195,11 @@ internal static class VendorDevelopmentDatabaseProvisioning
         {
             SetStage(stages, "test", "running", "در حال آزمون اتصال به سرور…");
             var serverVersion = await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
-                await ReadScalarAsync(connection, "SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128))", cancellationToken) as string,
-                cancellationToken);
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = "SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128))";
+                return await ExecuteScalarAsync(command, cancellationToken) as string;
+            }, cancellationToken);
             if (serverVersion is null)
             {
                 SetStage(stages, "test", "failed", "اتصال برقرار شد اما نسخهٔ سرور خوانده نشد.");
@@ -620,19 +624,12 @@ internal static class VendorDevelopmentDatabaseProvisioning
         return await work(connection);
     }
 
-    private static async Task<object?> ReadScalarAsync(
-        SqlConnection connection,
-        string commandText,
-        CancellationToken cancellationToken,
-        params SqlParameter[] parameters)
+    /// <summary>
+    /// Executes an already-built command; SQL text is always a literal at the call site and
+    /// the values are parameters, so no SQL string is ever assembled dynamically here.
+    /// </summary>
+    private static async Task<object?> ExecuteScalarAsync(SqlCommand command, CancellationToken cancellationToken)
     {
-        await using var command = connection.CreateCommand();
-        command.CommandText = commandText;
-        foreach (var parameter in parameters)
-        {
-            command.Parameters.Add(parameter);
-        }
-
         return await command.ExecuteScalarAsync(cancellationToken);
     }
 
@@ -646,21 +643,25 @@ internal static class VendorDevelopmentDatabaseProvisioning
 
         await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
         {
-            serverVersion = (await ReadScalarAsync(connection,
-                "SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128))", cancellationToken) as string) ?? string.Empty;
+            await using var versionCommand = connection.CreateCommand();
+            versionCommand.CommandText = "SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128))";
+            serverVersion = (await ExecuteScalarAsync(versionCommand, cancellationToken) as string) ?? string.Empty;
             // Belt and braces against look-alike names: DB_ID resolves the homoglyph names to
             // the system database ids (1..4) even when string comparison misses them.
-            var databaseId = await ReadScalarAsync(connection, "SELECT DB_ID(@name)", cancellationToken,
-                new SqlParameter("@name", System.Data.SqlDbType.NVarChar, 128) { Value = input.Database });
+            await using var databaseIdCommand = connection.CreateCommand();
+            databaseIdCommand.CommandText = "SELECT DB_ID(@name)";
+            databaseIdCommand.Parameters.Add(new SqlParameter("@name", System.Data.SqlDbType.NVarChar, 128) { Value = input.Database });
+            var databaseId = await ExecuteScalarAsync(databaseIdCommand, cancellationToken);
             if (databaseId is int id && id is >= 1 and <= 4)
             {
                 throw new VendorDatabaseMismatchException("نام انتخابی به یک دیتابیس سیستمی SQL Server اشاره می‌کند و مجاز نیست.");
             }
 
             databaseExists = databaseId is not null and not DBNull;
-            var loginId = await ReadScalarAsync(connection,
-                "SELECT CAST(principal_id AS int) FROM sys.server_principals WHERE name = @login", cancellationToken,
-                new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+            await using var loginIdCommand = connection.CreateCommand();
+            loginIdCommand.CommandText = "SELECT CAST(principal_id AS int) FROM sys.server_principals WHERE name = @login";
+            loginIdCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+            var loginId = await ExecuteScalarAsync(loginIdCommand, cancellationToken);
             runtimeLoginExists = loginId is int;
             return true;
         }, cancellationToken);
@@ -680,12 +681,14 @@ internal static class VendorDevelopmentDatabaseProvisioning
 
         await OpenServerConnectionAsync(targetBuilder, async connection =>
         {
-            var tables = await ReadScalarAsync(connection,
-                "SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0", cancellationToken);
+            await using var tablesCommand = connection.CreateCommand();
+            tablesCommand.CommandText = "SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0";
+            var tables = await ExecuteScalarAsync(tablesCommand, cancellationToken);
             userTableCount = tables is int count ? count : 0;
-            var history = await ReadScalarAsync(connection,
-                "SELECT COUNT(*) FROM sys.tables WHERE name = @history", cancellationToken,
-                new SqlParameter("@history", System.Data.SqlDbType.NVarChar, 128) { Value = MigrationsHistoryTable });
+            await using var historyCommand = connection.CreateCommand();
+            historyCommand.CommandText = "SELECT COUNT(*) FROM sys.tables WHERE name = @history";
+            historyCommand.Parameters.Add(new SqlParameter("@history", System.Data.SqlDbType.NVarChar, 128) { Value = MigrationsHistoryTable });
+            var history = await ExecuteScalarAsync(historyCommand, cancellationToken);
             historyTableExists = history is int h && h > 0;
             markerState = await VendorDevelopmentDatabaseSafety.VendorOwnershipMarker.ReadStateAsync(connection, cancellationToken);
             if (historyTableExists)
@@ -762,12 +765,13 @@ internal static class VendorDevelopmentDatabaseProvisioning
         // know mean a newer application wrote to it.
         var connection = (SqlConnection)context.Database.GetDbConnection();
         await connection.OpenAsync();
-        var historyExists = await ReadScalarAsync(connection,
-            "SELECT COUNT(*) FROM sys.tables WHERE name = @history",
-            CancellationToken.None,
-            new SqlParameter("@history", System.Data.SqlDbType.NVarChar, 128) { Value = MigrationsHistoryTable }) is int h && h > 0;
-        var userTables = await ReadScalarAsync(connection,
-            "SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0", CancellationToken.None);
+        await using var historyCommand = connection.CreateCommand();
+        historyCommand.CommandText = "SELECT COUNT(*) FROM sys.tables WHERE name = @history";
+        historyCommand.Parameters.Add(new SqlParameter("@history", System.Data.SqlDbType.NVarChar, 128) { Value = MigrationsHistoryTable });
+        var historyExists = await ExecuteScalarAsync(historyCommand, CancellationToken.None) is int h && h > 0;
+        await using var userTablesCommand = connection.CreateCommand();
+        userTablesCommand.CommandText = "SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0";
+        var userTables = await ExecuteScalarAsync(userTablesCommand, CancellationToken.None);
         var userTableCount = userTables is int c && c > 0 ? c : 0;
         var appliedIds = new List<string>();
         if (historyExists)
@@ -801,7 +805,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
         await context.Database.MigrateAsync(CancellationToken.None);
         await using var appliedCommand = connection.CreateCommand();
         appliedCommand.CommandText = "SELECT COUNT(*) FROM dbo.__EFMigrationsHistory";
-        var appliedResult = await appliedCommand.ExecuteScalarAsync(CancellationToken.None);
+        var appliedResult = await ExecuteScalarAsync(appliedCommand, CancellationToken.None);
         var appliedAfter = appliedResult is int appliedCount ? appliedCount : appliedBefore;
         if (appliedAfter > appliedBefore)
         {
@@ -841,10 +845,10 @@ internal static class VendorDevelopmentDatabaseProvisioning
 
         await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
         {
-            var existing = await ReadScalarAsync(connection,
-                "SELECT CAST(principal_id AS int) FROM sys.server_principals WHERE name = @login AND type = 'S'",
-                CancellationToken.None,
-                new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+            await using var existingCommand = connection.CreateCommand();
+            existingCommand.CommandText = "SELECT CAST(principal_id AS int) FROM sys.server_principals WHERE name = @login AND type = 'S'";
+            existingCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+            var existing = await ExecuteScalarAsync(existingCommand, CancellationToken.None);
 
             if (existing is int)
             {
@@ -895,10 +899,10 @@ internal static class VendorDevelopmentDatabaseProvisioning
                     throw new VendorDatabaseMismatchException($"هویت Runtime «{input.RuntimeUsername}» از قبل وجود دارد؛ استفادهٔ مجدد فقط با واردکردن گذرواژهٔ خودِ همان Login ممکن است. گذرواژهٔ Login موجود هرگز تغییر داده نمی‌شود؛ اگر گذرواژهٔ آن را نمی‌دانید، نام Runtime جدیدی انتخاب کنید.");
                 }
 
-                var disabled = await ReadScalarAsync(connection,
-                    "SELECT is_disabled FROM sys.sql_logins WHERE name = @login",
-                    CancellationToken.None,
-                    new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                await using var disabledCommand = connection.CreateCommand();
+                disabledCommand.CommandText = "SELECT is_disabled FROM sys.sql_logins WHERE name = @login";
+                disabledCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                var disabled = await ExecuteScalarAsync(disabledCommand, CancellationToken.None);
                 if (disabled is bool isDisabled && isDisabled)
                 {
                     throw new VendorDatabaseMismatchException($"هویت Runtime «{input.RuntimeUsername}» غیرفعال است؛ فعال‌کردن Login تصمیم مدیر سرور است و به‌طور خودکار انجام نمی‌شود.");
@@ -912,16 +916,15 @@ internal static class VendorDevelopmentDatabaseProvisioning
             var mappedExistingUser = false;
             await OpenServerConnectionAsync(TargetBuilder(input), async connection =>
             {
-                var userExists = await ReadScalarAsync(connection,
-                    "SELECT COUNT(*) FROM sys.database_principals WHERE name = @login AND type IN ('S', 'U')",
-                    CancellationToken.None,
-                    new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername }) is int u && u > 0;
+                await using var userExistsCommand = connection.CreateCommand();
+                userExistsCommand.CommandText = "SELECT COUNT(*) FROM sys.database_principals WHERE name = @login AND type IN ('S', 'U')";
+                userExistsCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                var userExists = await ExecuteScalarAsync(userExistsCommand, CancellationToken.None) is int u && u > 0;
                 mappedExistingUser = userExists;
-                var quotedLogin = VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername);
                 if (!userExists)
                 {
                     await using var createUser = connection.CreateCommand();
-                    createUser.CommandText = $"CREATE USER {quotedLogin} FOR LOGIN {quotedLogin}";
+                    createUser.CommandText = $"CREATE USER {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)} FOR LOGIN {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
                     await createUser.ExecuteNonQueryAsync(CancellationToken.None);
                 }
 
@@ -929,15 +932,15 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 {
                     // IS_ROLEMEMBER returns '1'/'0' as varchar(2); NULL means the role or login
                     // could not be resolved, which still warrants adding the membership.
-                    var membership = await ReadScalarAsync(connection,
-                        "SELECT IS_ROLEMEMBER(@role, @login)",
-                        CancellationToken.None,
-                        new SqlParameter("@role", System.Data.SqlDbType.NVarChar, 128) { Value = role },
-                        new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                    await using var membershipCommand = connection.CreateCommand();
+                    membershipCommand.CommandText = "SELECT IS_ROLEMEMBER(@role, @login)";
+                    membershipCommand.Parameters.Add(new SqlParameter("@role", System.Data.SqlDbType.NVarChar, 128) { Value = role });
+                    membershipCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
+                    var membership = await ExecuteScalarAsync(membershipCommand, CancellationToken.None);
                     if (!string.Equals(membership as string, "1", StringComparison.Ordinal))
                     {
                         await using var addMember = connection.CreateCommand();
-                        addMember.CommandText = $"ALTER ROLE {role} ADD MEMBER {quotedLogin}";
+                        addMember.CommandText = $"ALTER ROLE {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(role)} ADD MEMBER {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
                         await addMember.ExecuteNonQueryAsync(CancellationToken.None);
                     }
                 }
@@ -964,16 +967,15 @@ internal static class VendorDevelopmentDatabaseProvisioning
             createdFresh = true;
             await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
             {
-                var quotedLogin = VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername);
                 await using var command = connection.CreateCommand();
-                command.CommandText = $"CREATE LOGIN {quotedLogin} WITH PASSWORD = @password, CHECK_POLICY = ON, DEFAULT_DATABASE = {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.Database)}";
+                command.CommandText = $"CREATE LOGIN {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)} WITH PASSWORD = @password, CHECK_POLICY = ON, DEFAULT_DATABASE = {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.Database)}";
                 command.Parameters.Add(new SqlParameter("@password", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimePassword! });
                 await command.ExecuteNonQueryAsync(CancellationToken.None);
 
                 // Least visibility: without it the login could list every database name on the
                 // instance. Databases it has no user in stay invisible and inaccessible anyway.
                 await using var deny = connection.CreateCommand();
-                deny.CommandText = $"DENY VIEW ANY DATABASE TO {quotedLogin}";
+                deny.CommandText = $"DENY VIEW ANY DATABASE TO {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
                 await deny.ExecuteNonQueryAsync(CancellationToken.None);
                 return true;
             }, CancellationToken.None);
@@ -995,9 +997,8 @@ internal static class VendorDevelopmentDatabaseProvisioning
         {
             await OpenServerConnectionAsync(TargetBuilder(input), async connection =>
             {
-                var quotedLogin = VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername);
                 await using var command = connection.CreateCommand();
-                command.CommandText = $"DROP USER IF EXISTS {quotedLogin}";
+                command.CommandText = $"DROP USER IF EXISTS {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(input.RuntimeUsername)}";
                 await command.ExecuteNonQueryAsync(CancellationToken.None);
                 return true;
             }, CancellationToken.None);
@@ -1044,11 +1045,16 @@ internal static class VendorDevelopmentDatabaseProvisioning
         var isDbOwner = false;
         await OpenServerConnectionAsync(new SqlConnectionStringBuilder(runtimeConnectionString), async connection =>
         {
-            actualDatabase = await ReadScalarAsync(connection, "SELECT DB_NAME()", CancellationToken.None) as string;
-            actualLogin = await ReadScalarAsync(connection, "SELECT SUSER_SNAME()", CancellationToken.None) as string;
+            await using var databaseNameCommand = connection.CreateCommand();
+            databaseNameCommand.CommandText = "SELECT DB_NAME()";
+            actualDatabase = await ExecuteScalarAsync(databaseNameCommand, CancellationToken.None) as string;
+            await using var loginNameCommand = connection.CreateCommand();
+            loginNameCommand.CommandText = "SELECT SUSER_SNAME()";
+            actualLogin = await ExecuteScalarAsync(loginNameCommand, CancellationToken.None) as string;
             // IS_ROLEMEMBER returns '1'/'0' as varchar(2) for the current user.
-            var ownerMembership = await ReadScalarAsync(
-                connection, "SELECT IS_ROLEMEMBER('db_owner')", CancellationToken.None) as string;
+            await using var ownerMembershipCommand = connection.CreateCommand();
+            ownerMembershipCommand.CommandText = "SELECT IS_ROLEMEMBER('db_owner')";
+            var ownerMembership = await ExecuteScalarAsync(ownerMembershipCommand, CancellationToken.None) as string;
             isDbOwner = string.Equals(ownerMembership, "1", StringComparison.Ordinal);
             return true;
         }, CancellationToken.None);

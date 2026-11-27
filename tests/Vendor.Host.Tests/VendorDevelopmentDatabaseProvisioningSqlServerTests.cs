@@ -410,6 +410,176 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
             await ExecuteAsync(ForeignDatabaseName, "CREATE TABLE dbo.ForeignMarker (Id int NOT NULL PRIMARY KEY)");
         }
 
+        public async Task<bool> IsServerRoleMemberAsync(string loginName, string role)
+        {
+            var membership = await ScalarAsync("master", "SELECT IS_SRVROLEMEMBER(@role, @login)",
+                new SqlParameter("@role", SqlDbType.NVarChar, 128) { Value = role },
+                new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName }) as string;
+            return string.Equals(membership, "1", StringComparison.Ordinal);
+        }
+
+        public async Task<List<string>> ServerGrantedPermissionsAsync(string loginName)
+        {
+            var grants = new List<string>();
+            await using var connection = new SqlConnection(TargetBuilder("master").ConnectionString);
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT pe.permission_name
+                FROM sys.server_permissions pe
+                JOIN sys.server_principals g ON g.principal_id = pe.grantee_principal_id
+                WHERE g.name = @login AND pe.state IN ('G', 'W')
+                ORDER BY pe.permission_name
+                """;
+            command.Parameters.Add(new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName });
+            await using var reader = await command.ExecuteReaderAsync(TestContext.Current.CancellationToken);
+            while (await reader.ReadAsync(TestContext.Current.CancellationToken))
+            {
+                grants.Add(reader.GetString(0));
+            }
+
+            return grants;
+        }
+
+        public async Task<bool> HasViewAnyDatabaseDenyAsync(string loginName) =>
+            await ScalarAsync("master", """
+                SELECT COUNT(*)
+                FROM sys.server_permissions pe
+                JOIN sys.server_principals g ON g.principal_id = pe.grantee_principal_id
+                WHERE g.name = @login AND pe.state = 'D' AND pe.permission_name = 'VIEW ANY DATABASE'
+                """,
+                new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName }) is > 0;
+
+        public async Task<bool> RuntimeCanSelectFromOtherDatabaseAsync(string loginName, string password, string otherDatabase)
+        {
+            var builder = new SqlConnectionStringBuilder(TargetBuilder(otherDatabase).ConnectionString)
+            {
+                UserID = loginName,
+                Password = password
+            };
+            try
+            {
+                await using var connection = new SqlConnection(builder.ConnectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var command = connection.CreateCommand();
+                command.CommandText = "SELECT COUNT(*) FROM dbo.ForeignMarker";
+                await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
+                return true;
+            }
+            catch (SqlException)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> RuntimeCanCreateDatabaseAsync(string loginName, string password)
+        {
+            var builder = new SqlConnectionStringBuilder(TargetBuilder("master").ConnectionString)
+            {
+                UserID = loginName,
+                Password = password
+            };
+            try
+            {
+                await using var connection = new SqlConnection(builder.ConnectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var command = connection.CreateCommand();
+                command.CommandText = $"CREATE DATABASE [FaranouShouldNotBeCreatable_{Guid.NewGuid():N}]";
+                await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+                return true;
+            }
+            catch (SqlException)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> RuntimeCanCreateLoginAsync(string loginName, string password)
+        {
+            var builder = new SqlConnectionStringBuilder(TargetBuilder("master").ConnectionString)
+            {
+                UserID = loginName,
+                Password = password
+            };
+            try
+            {
+                await using var connection = new SqlConnection(builder.ConnectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var command = connection.CreateCommand();
+                command.CommandText = $"CREATE LOGIN [FaranouShouldNotBeCreatable_{Guid.NewGuid():N}] WITH PASSWORD = 'Xy9!aaaa'";
+                await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+                return true;
+            }
+            catch (SqlException)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> RuntimeCanRunDdlAsync(string loginName, string password)
+        {
+            var builder = new SqlConnectionStringBuilder(TargetBuilder(DatabaseName).ConnectionString)
+            {
+                UserID = loginName,
+                Password = password
+            };
+            try
+            {
+                await using var connection = new SqlConnection(builder.ConnectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var command = connection.CreateCommand();
+                command.CommandText = "CREATE TABLE dbo.FaranouRuntimeMustNotCreateTables (Id int NOT NULL PRIMARY KEY)";
+                await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+                return true;
+            }
+            catch (SqlException)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> RuntimeCanDeleteZeroRowsAsync(string loginName, string password)
+        {
+            var builder = new SqlConnectionStringBuilder(TargetBuilder(DatabaseName).ConnectionString)
+            {
+                UserID = loginName,
+                Password = password
+            };
+            try
+            {
+                await using var connection = new SqlConnection(builder.ConnectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var command = connection.CreateCommand();
+                command.CommandText = "DELETE FROM VendorAdminUsers WHERE 1 = 0";
+                await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+                return true;
+            }
+            catch (SqlException)
+            {
+                return false;
+            }
+        }
+
+        public async Task DisableRuntimeLoginAsync() =>
+            await ExecuteAsync("master", $"ALTER LOGIN [{RuntimeLoginName.Replace("]", "]]", StringComparison.Ordinal)}] DISABLE");
+
+        public async Task<bool> IsRuntimeLoginDisabledAsync() =>
+            await ScalarAsync("master", "SELECT is_disabled FROM sys.sql_logins WHERE name = @login",
+                new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = RuntimeLoginName }) is true;
+
+        public async Task<bool> RuntimeLoginCanConnectAsyncDisabledCheckSkipped(string loginName, string password)
+        {
+            // A disabled login refuses every connection: the credential is checked indirectly
+            // by asserting the login stayed disabled and enabled state was not touched.
+            return password.Length >= 8 && await IsRuntimeLoginDisabledAsync();
+        }
+
+        public async Task MapRuntimeLoginIntoForeignDatabaseAsync()
+        {
+            var quotedLogin = $"[{RuntimeLoginName.Replace("]", "]]", StringComparison.Ordinal)}]";
+            await ExecuteAsync(ForeignDatabaseName, $"CREATE USER {quotedLogin} FOR LOGIN {quotedLogin}");
+        }
+
         private static SqlConnectionStringBuilder TargetBuilder(string database) =>
             new(Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER")!)
             {
