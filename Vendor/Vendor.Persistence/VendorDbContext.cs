@@ -286,18 +286,29 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.ToTable("VendorLicenseAmendmentRequests", table =>
             {
                 table.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Status",
-                    "[Status] IN (N'Requested', N'PendingApproval', N'Issued', N'Rejected', N'Failed')");
+                    "[Status] IN (N'Requested', N'PendingApproval', N'Issued', N'Delivered', N'Applied', N'Rejected', N'Failed')");
                 table.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Kind",
                     "[Kind] IN (N'maxCompanies', N'supportUpdates')");
+                table.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_DeliveryMetadata",
+                    "([DeliveryNonce] IS NULL AND [DeliveryPayloadSha256] IS NULL AND [DeliveredAtUtc] IS NULL) OR ([DeliveryNonce] IS NOT NULL AND [DeliveryPayloadSha256] IS NOT NULL AND [DeliveredAtUtc] IS NOT NULL)");
+                table.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_AcknowledgementMetadata",
+                    "([AcknowledgementSha256] IS NULL AND [AcknowledgementKeyId] IS NULL AND [AcknowledgementResult] IS NULL AND [CustomerProcessedAtUtc] IS NULL AND [AcknowledgedAtUtc] IS NULL) OR ([AcknowledgementSha256] IS NOT NULL AND [AcknowledgementKeyId] IS NOT NULL AND [AcknowledgementResult] IN (N'Applied', N'AlreadyApplied', N'Rejected') AND [CustomerProcessedAtUtc] IS NOT NULL AND [AcknowledgedAtUtc] IS NOT NULL)");
+                table.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_DeliveryState",
+                    "([Status] NOT IN (N'Delivered', N'Applied') OR ([IssuedSequence] >= 1 AND [DeliveredAtUtc] IS NOT NULL)) AND ([Status] <> N'Applied' OR [AcknowledgementResult] IN (N'Applied', N'AlreadyApplied')) AND ([Status] <> N'Delivered' OR [AcknowledgementSha256] IS NULL)");
             });
             entity.HasKey(item => item.Id);
             entity.Property(item => item.Kind).HasMaxLength(32).IsUnicode(false).IsRequired();
             entity.Property(item => item.Status).HasMaxLength(32).IsUnicode(false).IsRequired();
             entity.Property(item => item.FailureCode).HasMaxLength(64).IsUnicode(false);
+            entity.Property(item => item.DeliveryNonce).HasMaxLength(256).IsUnicode(false);
+            entity.Property(item => item.DeliveryPayloadSha256).HasMaxLength(64).IsUnicode(false).IsFixedLength();
+            entity.Property(item => item.AcknowledgementSha256).HasMaxLength(64).IsUnicode(false).IsFixedLength();
+            entity.Property(item => item.AcknowledgementKeyId).HasMaxLength(128);
+            entity.Property(item => item.AcknowledgementResult).HasMaxLength(16).IsUnicode(false);
             entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
             entity.Property(item => item.UpdatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
             entity.Property(item => item.RowVersion).IsRowVersion();
-            entity.HasIndex(item => item.OrderLineId).IsUnique().HasFilter("[Status] IN ('Requested', 'PendingApproval', 'Issued')");
+            entity.HasIndex(item => item.OrderLineId).IsUnique().HasFilter("[Status] IN ('Requested', 'PendingApproval', 'Issued', 'Delivered')");
             entity.HasIndex(item => item.LicenseId);
             entity.HasIndex(item => item.CustomerId);
             entity.HasIndex(item => item.OrderId);
