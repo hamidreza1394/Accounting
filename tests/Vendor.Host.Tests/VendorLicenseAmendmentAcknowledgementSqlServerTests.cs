@@ -158,7 +158,9 @@ public sealed class VendorLicenseAmendmentAcknowledgementSqlServerTests
         Assert.Null(request.FailureCode);
         Assert.Single(await fixture.Db.AuditEvents.AsNoTracking()
             .Where(item => item.ActionCode == "vendor.amendment.acknowledgement-confirmed").ToListAsync(ct));
-        Assert.Empty(await fixture.Db.AuditEvents.AsNoTracking()
+        // The exact signed retry appends the retried audit event by design (same as the
+        // provisioning acknowledgement intake) and never rewrites the first result.
+        Assert.Single(await fixture.Db.AuditEvents.AsNoTracking()
             .Where(item => item.ActionCode == "vendor.amendment.acknowledgement-retried").ToListAsync(ct));
     }
 
