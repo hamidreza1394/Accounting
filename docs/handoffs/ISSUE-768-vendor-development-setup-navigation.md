@@ -25,7 +25,7 @@
 ## خلاصه تغییرات
 
 - Launch profile به `launchUrl: /` تغییر کرد. در setup-only، خود Host مسیر ریشه را به Setup هدایت می‌کند؛ در حالت اتصال آماده، صفحه ورود باز می‌شود.
-- placeholder و راهنمای فیلد SQL Server برای `SERVER\\INSTANCE` و `SERVER,PORT` شفاف شد.
+- placeholder و راهنمای فیلد SQL Server برای `SERVER\INSTANCE` و `SERVER,PORT` شفاف شد.
 - Runbook مستقل فارسی برای اجرای محلی، انتخاب Vendor.sln/Host، راه‌اندازی مرحله‌ای، 401، پورت 5001 و خطاهای SQL اضافه شد.
 - هیچ Connection String، credential، schema، migration یا مجوزی تغییر نکرد.
 
