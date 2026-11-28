@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <title>تنظیم اتصال دیتابیس Vendor</title>
+  <title>راه‌اندازی دیتابیس Vendor</title>
   <link rel="stylesheet" href="/development/database-setup.css">
   <script src="/development/database-setup.js" defer></script>
 </head>
@@ -14,11 +14,19 @@
       <div class="badge" aria-hidden="true">V</div>
       <div>
         <p class="eyebrow">FARANOU · VENDOR</p>
-        <h1>تنظیم اتصال دیتابیس</h1>
-        <p class="intro">این صفحه فقط برای اجرای Development روی همین رایانه در دسترس است.</p>
+        <h1>راه‌اندازی دیتابیس Vendor</h1>
+        <p class="intro">این صفحه فقط از سمت خود رایانه (localhost) در دسترس است و برای اجرای Development به‌کار می‌رود.</p>
       </div>
     </header>
     <section class="notice" id="source-notice" role="status" hidden></section>
+
+    <section class="challenge" id="challenge-section">
+      <label>کد نشست راه‌اندازی (Setup challenge)
+        <input id="challenge-input" maxlength="64" placeholder="کدی که کنسول فرآیند چاپ کرده است" autocomplete="off">
+      </label>
+      <p class="hint">کد نشست روی کنسولی که Vendor را اجرا کرده، زیر عنوان FARANO VENDOR DEVELOPMENT SETUP چاپ می‌شود و از هیچ مسیر HTTP قابل دریافت نیست. با هر بار اجرای دوباره برنامه تغییر می‌کند و همهٔ عملیات تغییردهنده به آن نیاز دارند.</p>
+    </section>
+
     <form id="connection-form" autocomplete="off">
       <div class="grid">
         <label>آدرس SQL Server
@@ -31,13 +39,13 @@
       <fieldset>
         <legend>روش ورود</legend>
         <label class="choice"><input type="radio" name="authentication" value="windows" checked> احراز هویت ویندوز</label>
-        <label class="choice"><input type="radio" name="authentication" value="sql"> نام کاربری و گذرواژه SQL</label>
+        <label class="choice"><input type="radio" name="authentication" value="sql"> نام کاربری و گذرواژهٔ SQL</label>
       </fieldset>
       <div id="sql-credentials" class="grid" hidden>
         <label>نام کاربری SQL
           <input name="username" maxlength="256" autocomplete="off">
         </label>
-        <label>گذرواژه SQL
+        <label>گذرواژهٔ SQL
           <input name="password" type="password" maxlength="1024" autocomplete="new-password">
         </label>
       </div>
@@ -45,13 +53,37 @@
         <input type="checkbox" name="trustServerCertificate">
         اعتماد به گواهی سرور (فقط برای SQL محلی/توسعه)
       </label>
-      <p class="hint">رمز فقط برای آزمون و ذخیره به سرور ارسال می‌شود؛ در مرورگر نگه‌داری نمی‌شود. اتصال رمزگذاری‌شده است.</p>
+      <div class="grid">
+        <label>نام کاربری Runtime (اختیاری)
+          <input name="runtimeUsername" maxlength="128" placeholder="خالی = ساخته‌شدن نام کم‌اختیار" autocomplete="off">
+        </label>
+        <label>گذرواژهٔ Runtime (اختیاری)
+          <input name="runtimePassword" type="password" maxlength="128" placeholder="خالی = ساخت گذرواژهٔ قوی" autocomplete="new-password">
+        </label>
+      </div>
+      <p class="hint">هویت Runtime کم‌اختیار است: فقط خواندن/نوشتن روی همین دیتابیس و هیچ نقش یا مجوز سطح سرور ندارد. اگر Login موجودی را با گذرواژهٔ خودش معرفی کنید، گذرواژه هرگز تغییر داده نمی‌شود.</p>
       <div class="actions">
         <button type="button" class="secondary" id="test-button">آزمون اتصال</button>
-        <button type="submit" id="save-button" disabled>ذخیره اتصال موفق</button>
+        <button type="button" class="secondary" id="inspect-button">بازرسی سرور و دیتابیس</button>
+        <button type="submit" id="provision-button">راه‌اندازی کامل</button>
+        <button type="button" class="secondary" id="save-button" disabled>ذخیرهٔ اتصال موفق</button>
       </div>
     </form>
+
+    <section class="stages" id="stages-panel" hidden>
+      <h2>مراحل اجرا</h2>
+      <ol id="stage-list"></ol>
+    </section>
+    <section class="inspection" id="inspection-panel" hidden></section>
     <section class="result" id="result" role="status" aria-live="polite"></section>
+    <section class="runtime" id="runtime-panel" hidden>
+      <div>
+        <strong>هویت Runtime آماده است</strong>
+        <p id="runtime-username"></p>
+        <p id="runtime-password-wrap" hidden>گذرواژهٔ ساخته‌شده (فقط همین یک‌بار نمایش داده می‌شود): <code id="runtime-password"></code></p>
+        <p id="runtime-saved"></p>
+      </div>
+    </section>
     <section class="saved" id="saved-section" hidden>
       <div>
         <strong>تنظیم ذخیره‌شده برای این کاربر ویندوز</strong>
@@ -59,7 +91,7 @@
       </div>
       <button type="button" class="danger" id="delete-button">حذف تنظیم ذخیره‌شده</button>
     </section>
-    <footer>این فرم دیتابیس را ایجاد نمی‌کند و Migration اجرا نمی‌کند. دیتابیس مستقل Vendor باید از قبل آماده باشد.</footer>
+    <footer>«راه‌اندازی کامل» دیتابیس Vendor را می‌سازد، Migrationهای موجود را اعمال می‌کند، هویت Runtime کم‌اختیار را برمی‌سازد و اتصال Runtime را ذخیره می‌کند. هیچ چیز دیگری روی سرور تغییر نمی‌کند و هیچ Credential پیکربندی ذخیره نمی‌شود.</footer>
   </main>
 </body>
 </html>
