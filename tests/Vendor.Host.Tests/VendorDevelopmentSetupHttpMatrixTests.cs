@@ -110,12 +110,29 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
         string? antiforgeryToken = null,
         string? challenge = null,
         string? bootstrapToken = null,
-        string? origin = "https://localhost")
+        string? origin = "https://localhost") =>
+        await SendGuardedAsync(client, HttpMethod.Post, path, json, antiforgeryToken, challenge, bootstrapToken, origin);
+
+    private static async Task<HttpResponseMessage> SendGuardedAsync(
+        HttpClient client,
+        HttpMethod method,
+        string path,
+        string json,
+        string? antiforgeryToken = null,
+        string? challenge = null,
+        string? bootstrapToken = null,
+        string? origin = "https://localhost",
+        string? cookieOverride = null)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, path)
+        var request = new HttpRequestMessage(method, path)
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
+        if (cookieOverride is not null)
+        {
+            request.Headers.TryAddWithoutValidation("Cookie", cookieOverride);
+        }
+
         if (!string.IsNullOrWhiteSpace(origin))
         {
             request.Headers.TryAddWithoutValidation("Origin", origin);
@@ -168,9 +185,9 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
 
         var setCookie = Assert.Single(response.Headers.GetValues("Set-Cookie"));
         Assert.Contains("FaranouSetupBootstrap=", setCookie, StringComparison.Ordinal);
-        Assert.Contains("HttpOnly", setCookie, StringComparison.Ordinal);
-        Assert.Contains("Secure", setCookie, StringComparison.Ordinal);
-        Assert.Contains("SameSite=Strict", setCookie, StringComparison.Ordinal);
+        Assert.Contains("httponly", setCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("secure", setCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=strict", setCookie, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -207,16 +224,20 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
         using var _client = client;
         var bootstrapToken = await GetBootstrapTokenAsync(client);
 
-        // A token without its paired cookie fails closed and burns the pair.
+        // A token presented with a WRONG cookie value fails closed and burns the pair; a
+        // MISSING cookie fails closed before the lookup without burning (the unit tests
+        // cover both branches, this one proves the burn over real HTTP).
         using var cookieless = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             BaseAddress = new Uri("https://localhost/"),
             AllowAutoRedirect = false
         });
         var cookielessAntiforgery = await GetAntiforgeryTokenAsync(cookieless);
-        var refused = await PostSetupAsync(
-            cookieless, "/api/development/database-setup/provision", ProvisionBody, cookielessAntiforgery, challenge, bootstrapToken);
-        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+        var wrongCookie = await SendGuardedAsync(
+            cookieless, HttpMethod.Post, "/api/development/database-setup/provision", ProvisionBody,
+            cookielessAntiforgery, challenge, bootstrapToken,
+            cookieOverride: $"{VendorDevelopmentSetupBootstrapToken.CookieName}=deliberately-wrong");
+        Assert.Equal(HttpStatusCode.Forbidden, wrongCookie.StatusCode);
 
         // The paired client can no longer use the burned pair either.
         var pairedAntiforgery = await GetAntiforgeryTokenAsync(client);
@@ -250,22 +271,22 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
         using var _client = client;
         var antiforgeryToken = await GetAntiforgeryTokenAsync(client);
 
-        foreach (var path in new[]
+        foreach (var (method, path) in new[]
                  {
-                     "/api/development/database-setup/test",
-                     "/api/development/database-setup/save",
-                     "/api/development/database-setup/saved",
-                     "/api/development/database-setup/inspect",
+                     (HttpMethod.Post, "/api/development/database-setup/test"),
+                     (HttpMethod.Post, "/api/development/database-setup/save"),
+                     (HttpMethod.Delete, "/api/development/database-setup/saved"),
+                     (HttpMethod.Post, "/api/development/database-setup/inspect"),
                  })
         {
-            var noChallenge = await PostSetupAsync(client, path, ProvisionBody, antiforgeryToken, challenge: null);
+            var noChallenge = await SendGuardedAsync(client, method, path, ProvisionBody, antiforgeryToken, challenge: null);
             Assert.Equal(HttpStatusCode.Forbidden, noChallenge.StatusCode);
 
-            var wrongChallenge = await PostSetupAsync(client, path, ProvisionBody, antiforgeryToken, challenge: "wrong-code");
+            var wrongChallenge = await SendGuardedAsync(client, method, path, ProvisionBody, antiforgeryToken, challenge: "wrong-code");
             Assert.Equal(HttpStatusCode.Forbidden, wrongChallenge.StatusCode);
 
-            var wrongOrigin = await PostSetupAsync(
-                client, path, ProvisionBody, antiforgeryToken, challenge, origin: "https://attacker.example");
+            var wrongOrigin = await SendGuardedAsync(
+                client, method, path, ProvisionBody, antiforgeryToken, challenge, origin: "https://attacker.example");
             Assert.Equal(HttpStatusCode.Forbidden, wrongOrigin.StatusCode);
         }
     }
@@ -287,7 +308,12 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
         Assert.Equal(HttpStatusCode.OK, run.StatusCode);
         var payload = await run.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         Assert.False(payload.GetProperty("success").GetBoolean());
-        Assert.Equal("failed", payload.GetProperty("stages")[0].GetProperty("state").GetString());
+        // Stage "connection" only validates the request shape; the REAL connect attempt is
+        // stage "test", which must fail against the closed loopback port.
+        var stages = payload.GetProperty("stages");
+        var testStage = stages.EnumerateArray()
+            .Single(stage => stage.GetProperty("key").GetString() == "test");
+        Assert.Equal("failed", testStage.GetProperty("state").GetString());
     }
 
     [Fact]
