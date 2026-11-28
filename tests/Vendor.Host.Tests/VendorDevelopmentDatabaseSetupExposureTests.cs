@@ -17,6 +17,13 @@ public sealed class VendorDevelopmentDatabaseSetupExposureTests
         "/api/development/database-setup/antiforgery"
     ];
 
+    private static readonly string[] SetupAssetPaths =
+    [
+        "/development/database-setup.css",
+        "/development/database-setup.js",
+        "/development/database-setup-state.mjs"
+    ];
+
     [Fact]
     public async Task SetupApiIsNotMappedWithoutTheExplicitDevelopmentFlag()
     {
@@ -28,6 +35,8 @@ public sealed class VendorDevelopmentDatabaseSetupExposureTests
             using var response = await client.GetAsync(path, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
+
+        AssertAssetsAreNeverServedAnonymously(client);
 
         using var post = await client.PostAsync(
             "/api/development/database-setup/save",
@@ -51,8 +60,28 @@ public sealed class VendorDevelopmentDatabaseSetupExposureTests
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
+        AssertAssetsAreNeverServedAnonymously(client);
+
         using var setupPage = await client.GetAsync("/development/database-setup", TestContext.Current.CancellationToken);
         var body = await setupPage.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.DoesNotContain("connection-form", body, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The embedded setup assets are file paths. While the setup surface is unmapped (flag off
+    /// or a non-Windows host) they match no endpoint — <c>MapFallback</c> only covers non-file
+    /// paths — so the global fallback authorization policy rejects them with a 401 challenge.
+    /// Either rejection is fail-closed: the asset is never served to an anonymous caller.
+    /// </summary>
+    private static void AssertAssetsAreNeverServedAnonymously(HttpClient client)
+    {
+        foreach (var path in SetupAssetPaths)
+        {
+            using var response = client.GetAsync(path, TestContext.Current.CancellationToken)
+                .GetAwaiter().GetResult();
+            Assert.True(
+                response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized,
+                $"Expected a fail-closed rejection for {path} but got {(int)response.StatusCode}.");
+        }
     }
 }

@@ -3857,3 +3857,46 @@
 - **مرز:** فقط Vendor Host و تست Vendor؛ بدون تغییر Customer، `Server/**`، دیتابیس مشتری، Schema، Migration یا Secret.
 - **Git:** Branch `fix/vendor-provisioning-outcome-http-status`; PR پس از ثبت این یادداشت ایجاد می‌شود.
 
+
+
+## 2026-11-28 — ممیزی پس از Mergeهای Vendor و رفع race صفحه Development Setup (#809/#810)
+
+- **مبنای ممیزی:** `main@569622a534fc91cc3d4160e0b26aa8240a7dca80`. فهرست PRهای باز قبل از ایجاد این کار خالی بود؛ پس از ایجاد، PR #810 تنها PR باز این مسیر است.
+- **CI روی main:** چهار Workflow روی SHA فوق تکمیل شدند: .NET CI run 46126744489 (۷/۷)، Vendor CI run 46126744553 (۴/۴)، Semgrep run 46126744520 (۱/۱) و Push on main/CodeQL run 46126744268 (۴/۴)؛ مجموع ۱۶/۱۶ موفق.
+- **CI پس از Merge:** merge SHAهای #281/#282/#284 به‌ترتیب ۱۲/۱۲، ۱۳/۱۳ و ۱۳/۱۳ Check Run موفق دارند. #282 صریحاً پس از Merge بررسی شد. merge SHAهای #803/#804/#805/#806/#807/#808 نیز هرکدام ۱۶/۱۶ Check Run موفق دارند.
+- **#284 / Approval ordering:** کد جاری ابتدا Resource و مجوز دسترسی را resolve/authorize می‌کند و تنها پس از موفقیت Authorization، RowVersion و Status را بررسی می‌کند؛ بنابراین وضعیت Approval برای Resource غیرمجاز افشا نمی‌شود. تست HTTP/SQL موجود self-review همان اپراتور را طبق D-109 می‌پذیرد؛ منع self-approval یا شرط دو اپراتور دوباره اعمال نشد.
+- **یافتهٔ جدید #807:** پاسخ دیررس `POST /api/development/database-setup/test` می‌توانست پس از شروع Provisioning، تأیید Save را دوباره فعال کند. Save سپس می‌توانست Credential Target مشترک را با اتصال setup/admin بازنویسی و Runtime کم‌اختیار را کنار بزند. همچنین تغییر ورودی حین آزمون و هم‌زمانی Save/Delete/Provisioning باید بی‌اعتبار/سریالی می‌شد.
+- **Issue/PR:** Issue [#809](https://github.com/hamidreza1394/Accounting/issues/809) ایجاد و PR [#810](https://github.com/hamidreza1394/Accounting/pull/810) از شاخهٔ `fix/vendor-setup-test-race` به `main` باز شد.
+- **اصلاح:** state machine مستقل با generation token؛ invalidation در تغییر ورودی و شروع عملیات؛ پذیرش نتیجه فقط برای signature دقیق آزموده‌شده؛ serialization عملیات Save/Delete/Provisioning؛ غیرفعال‌سازی ورودی‌های فرم در طول تغییر Credential؛ ماژول ES به‌صورت Embedded Resource و route هم‌مبدأ با guardهای موجود. Exposure test مسیرهای CSS/JS/module را نیز کنترل می‌کند.
+- **Regression:** شش تست مستقل Node برای پاسخ دیررس پس از Provisioning، تغییر ورودی حین تست، تطبیق signature، شکست تست و عدم هم‌زمانی Save/Delete/Provisioning اضافه شد. اجرای محلی با Node v22.16.0: ۶ تست، ۶ موفق، صفر شکست/Skip. Vendor CI اکنون Node 24 را برای syntax check و اجرای این تست‌ها به‌کار می‌گیرد؛ HTTP matrix ویندوزی نیز route ماژول Embedded را بررسی می‌کند.
+- **محدوده:** فقط Vendor Development Setup، تست‌های اختصاصی و Vendor CI workflow؛ بدون `Server/**`، Customer code، Customer schema/Migration یا secret.
+- **وضعیت اعتبارسنجی:** در زمان ثبت، PR #810 باز است؛ CI Node 24، Build .NET، Windows HTTP matrix و SQL Integration هنوز باید روی HEAD نهایی PR تکمیل شوند. هیچ Build/CI/HTTP/SQL موفقی برای این PR ادعا نمی‌شود. اجرای عملیاتی روی سیستم مالک نیز انجام نشده است.
+
+
+
+## 2026-11-28 — تصمیم پذیرفته‌شده S-B برای Issue #393
+
+- مالک در کامنت Issue #393 مورخ 2026-11-24 گزینه A را پذیرفته است؛ قرارداد دیگر Proposed نیست.
+- پیاده‌سازی Vendor-only delivery/ACK اکنون مجاز است: metadata روی همان `VendorLicenseAmendmentRequest`، reuse پاکت/validator/trust store provisioning، binding به request/nonce/payload hash/CustomerReference/InstallationId، retry دقیق idempotent، conflict برای ACK متفاوت و ثبت state+Audit در یک transaction.
+- Applied فقط با ACK امضاشدهٔ Applied/AlreadyApplied و Rejected فقط با ACK امضاشدهٔ معتبر terminal می‌شود. هیچ ACK نامعتبر یا untrusted وضعیت را جلو نمی‌برد.
+- تولید/انتقال ACK سمت Customer و trust distribution/rotation در #235/#394 باقی است؛ Company-scoped entitlement تا #392 fail-closed می‌ماند. این تصمیم به معنی وجود پیاده‌سازی یا آزمون دو میزبان نیست.
+
+
+## 2026-11-28 — رفع یافتهٔ CodeRabbit در PR #810: قفل Inspect و نتیجهٔ بازرسی کهنه + اصلاح انتظار تست Exposure
+
+- **یافته:** CodeRabbit گزارش کرد که تغییر فرم در حین `POST /inspect` با `syncActionButtons()` دکمهٔ Inspect را دوباره فعال می‌کند، چون `isBusy()` فقط Mutation ها را می‌بیند؛ درخواست Inspect دوم قابل شروع بود و پاسخ دیررس اول می‌توانست نتیجهٔ دوم را بازنویسی کند. بررسی کد این یافته را تأیید کرد و دو ضعف هم‌ارز دیگر را نیز نشان داد: پاسخ بازرسی بدون کنترل نسخه (generation) رندر می‌شد و Mutation ها (Save/Delete/Provisioning) می‌توانستند هم‌زمان با یک بازرسی در جریان آغاز شوند.
+- **اصلاح State Machine:** وضعیت `inspectionInFlight` با همان الگوی token/generation آزمون اتصال اضافه شد (`beginInspection`/`completeInspection`/`endInspection`/`isInspectionInFlight`). قفل Inspection در برابر تغییر فرم دوام می‌آورد، Guard خود Handler درخواست هم‌زمان را رد می‌کند، `finally` قفل را در تمام مسیرهای خطا آزاد می‌کند و `isBusy()` حالا Inspection را هم می‌بیند تا همهٔ دکمه‌ها در طول بازرسی غیرفعال بمانند. `beginTest`/`beginSave`/`beginDelete`/`beginProvisioning` و `canSave` نیز وضعیت Inspection را رد می‌کنند؛ در نتیجه در هر لحظه حداکثر یک عملیات (Test/Inspect/Save/Delete/Provisioning) در جریان است و پاسخ متعلق به ورودی‌های قدیمی به‌عنوان `stale` دور ریخته می‌شود.
+- **رفع شکست CI (build-test-package روی Ubuntu):** تست Exposure مسیرهای asset را با انتظار 404 نوشته بود؛ ردیابی واقعی نشان داد مسیرهای فایل‌گونه وقتی Setup surface map نشده است هیچ Endpoint ای match نمی‌کنند (`MapFallback` الگوی `{*path:nonfile}` دارد) و FallbackPolicy کلی با چالش 401 رد می‌کند. این رفتار از قبل روی main نیز بود و فقط با اضافه‌شدن asset pathها به تست نمایان شد. انتظار تست به «401 یا 404 = fail-closed» اصلاح شد؛ هیچ رفتار runtime ای تغییر نکرد و `Program.cs` دست‌نخورده ماند.
+- **Regression:** هشت تست Node جدید به `tests/vendor-ui/setup-state.test.mjs` اضافه شد (مجموع ۱۴): شروع Inspect، رد درخواست هم‌زمان دوم، بی‌اثر بودن تغییر فرم روی قفل، عدم هم‌زمانی Inspection با Save/Delete/Provisioning در هر دو جهت، امکان Inspect مجدد پس از موفقیت، آزادسازی قفل پس از خطا/Exception/double-release، بی‌اثر شدن پاسخ کهنه روی نتیجهٔ جدید و انحصار متقابل Test/Inspection.
+- **اعتبارسنجی محلی:** Node v24.22.3 — `node --input-type=module --check` برای setup.js، `node --check` برای setup-state.mjs و `node --test` با ۱۴/۱۴ موفق، صفر شکست/Skip. تست‌های Exposure روی Linux (شبیه‌سازی CI با Connection String آزمایشی و ASPNETCORE_ENVIRONMENT=Development): ۲/۲ موفق؛ ۹ تست HTTP ماتریس روی Linux مطابق طراحی Skip می‌شوند و فقط روی job ویندوزی اجرا می‌شوند. Build `Vendor.Host` با صفر خطا کامل شد.
+- **مستندات:** handoff `ISSUE-809-vendor-setup-test-race.md` با بخش «اصلاح تکمیلی» به‌روز شد.
+- **مرز:** فقط `setup-state.mjs`، `setup.js`، تست‌های Node مربوط، تست Exposure و handoff؛ بدون `Server/**`، Customer، تغییر رفتار Endpoint یا secret. CI نهایی روی SHA جدید باید تأیید شود؛ هیچ موفقیت CI پیش از آن ادعا نمی‌شود.
+
+
+## 2026-11-28 — اصلاح دوم PR #810: پایداری قفل Test در برابر تغییر فرم
+
+- **یافتهٔ دوم CodeRabbit:** `invalidateTest()` هنگام تغییر فرم `testInFlight` را صفر می‌کرد؛ پس از آن `beginInspection()` یا یک `beginTest()` جدید می‌توانستند در حالی که درخواست آزمون قبلی هنوز در جریان بود شروع شوند. بررسی کد یافته را تأیید کرد: با این حالت، قرارداد «حداکثر یک عملیات در هر لحظه» که در اصلاح اول ادعا شده بود برای جهت Test→Inspect/Test کامل نبود.
+- **اصلاح:** `invalidateTest()` فقط generation و تأیید Save را باطل می‌کند و قفل درخواست را نگه می‌دارد؛ `beginTest()` نسل درخواست در جریان را در `testFlightGeneration` جدا ثبت می‌کند و `completeTest()` فقط توکن همان درخواست را مجاز به آزادکردن قفل می‌داند — پاسخ توکن مافوق «stale» است و هرگز قفل آزمون جدیدتر را نمی‌شکند. اگر ورودی حین پرواز تغییر کرده باشد، پاسخ با «stale» دور ریخته می‌شود اما درخواست رسماً settle می‌شود و دکمه‌ها آزاد می‌شوند. دکمهٔ Inspect نیز در طول Test در جریان غیرفعال می‌شود تا UI با قرارداد State Machine هم‌خوان باشد.
+- **Regression:** دو تست Node جدید (مجموع ۱۶) در `tests/vendor-ui/setup-state.test.mjs`: پایداری قفل Test با تغییر فرم تا settle شدن پاسخ و رد Inspection/Test جدید در همان بازه؛ و ناتوانی پاسخ توکن مافوق در آزادکردن قفل آزمون جدیدتر پس از takeover با Delete.
+- **اعتبارسنجی محلی:** Node v24.22.3 — ۱۶/۱۶ موفق، صفر شکست/Skip؛ syntax check هر دو فایل موفق. CI روی SHA جدید پس از push بررسی می‌شود؛ پیش از سبز شدن هیچ ادعایی ثبت نمی‌شود.
+- **مستندات:** handoff `ISSUE-809-vendor-setup-test-race.md` با بخش «اصلاح دوم» به‌روز شد. مرز تغییر: فقط `setup-state.mjs`، `setup.js`، تست‌های Node و مستندات.

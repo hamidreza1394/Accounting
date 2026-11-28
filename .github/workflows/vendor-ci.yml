@@ -8,6 +8,7 @@ on:
       - 'Vendor/**'
       - 'Vendor.sln'
       - 'tests/Vendor.Host.Tests/**'
+      - 'tests/vendor-ui/**'
       - 'Licensing.Contracts/**'
       - 'Directory.Packages.props'
       - 'Directory.Build.props'
@@ -19,6 +20,7 @@ on:
       - 'Vendor/**'
       - 'Vendor.sln'
       - 'tests/Vendor.Host.Tests/**'
+      - 'tests/vendor-ui/**'
       - 'Licensing.Contracts/**'
       - 'Directory.Packages.props'
       - 'Directory.Build.props'
@@ -88,6 +90,13 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: Vendor/Vendor.Web/package-lock.json
+      - name: Check Development setup UI module syntax and state regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module --check < Vendor/Vendor.Host/Development/StaticFiles/setup.js
+          node --check Vendor/Vendor.Host/Development/StaticFiles/setup-state.mjs
+          node --test tests/vendor-ui/setup-state.test.mjs
       - name: Install locked Vendor UI dependencies
         working-directory: Vendor/Vendor.Web
         run: npm ci --no-fund --no-audit

@@ -1,3 +1,5 @@
+import { createSetupState } from "./database-setup-state.mjs";
+
 const form=document.querySelector("#connection-form");
 const testButton=document.querySelector("#test-button");
 const inspectButton=document.querySelector("#inspect-button");
@@ -13,7 +15,7 @@ const stageList=document.querySelector("#stage-list");
 const inspectionPanel=document.querySelector("#inspection-panel");
 const runtimePanel=document.querySelector("#runtime-panel");
 let requestToken="";
-let testedSignature="";
+const setupState=createSetupState();
 let canSave=false;
 
 const stageNames={connection:"اعتبارسنجی اتصال",test:"آزمون اتصال",inspect:"بازرسی سرور و دیتابیس",createDatabase:"ایجاد دیتابیس",migrate:"اعمال Migrationها",runtimeIdentity:"هویت Runtime کم‌اختیار",verify:"بررسی آمادگی"};
@@ -25,8 +27,8 @@ async function api(path,options={}) {
   return {response,body};
 }
 function challenge(){return challengeInput.value.trim();}
-function guardHeaders(){
-  return {"Content-Type":"application/json","X-CSRF-TOKEN":requestToken,"X-Faranou-Setup-Challenge":challenge()};
+function guardHeaders(challengeValue=challenge()){
+  return {"Content-Type":"application/json","X-CSRF-TOKEN":requestToken,"X-Faranou-Setup-Challenge":challengeValue};
 }
 function showResult(text,ok){result.className="result "+(ok?"success":"error");result.textContent=text;}
 function requireChallenge(){
@@ -86,13 +88,24 @@ async function loadPageState() {
     sourceNotice.textContent=body.source==="environment"
       ?"اتصال از متغیر محیطی می‌آید؛ تغییر آن باید در تنظیمات اجرای Visual Studio انجام شود و ذخیرهٔ اتصال Runtime انجام نمی‌شود."
       :"اتصال از تنظیمات برنامه می‌آید؛ این صفحه برای جلوگیری از نادیده‌گرفته‌شدن مقدار ذخیره، ذخیره یا حذف را غیرفعال کرده است.";
-    saveButton.disabled=true;
-    deleteButton.disabled=true;
   }
+  syncActionButtons();
 }
 function signature() {
   const data=new FormData(form);
   return JSON.stringify([...data.entries()].map(([key,value])=>[key,key==="password"||key==="runtimePassword"?"provided":value]));
+}
+function syncActionButtons() {
+  const busy=setupState.isBusy();
+  testButton.disabled=busy||setupState.isTestInFlight();
+  inspectButton.disabled=busy||setupState.isTestInFlight()||setupState.isInspectionInFlight();
+  provisionButton.disabled=busy;
+  saveButton.disabled=busy||!setupState.canSave(signature(),canSave);
+  deleteButton.disabled=busy||!canSave;
+}
+function setFormBusy(busy) {
+  form.querySelectorAll("input,select,textarea").forEach(control=>{control.disabled=busy;});
+  syncActionButtons();
 }
 function provisioningPayload() {
   const data=new FormData(form);
@@ -105,29 +118,44 @@ function provisioningPayload() {
 }
 document.querySelectorAll('input[name="authentication"]').forEach(input=>input.addEventListener("change",()=>{
   document.querySelector("#sql-credentials").hidden=document.querySelector('input[name="authentication"]:checked').value!=="sql";
-  saveButton.disabled=true;testedSignature="";
+  setupState.invalidateTest();
+  syncActionButtons();
 }));
-form.addEventListener("input",()=>{saveButton.disabled=true;testedSignature="";});
+form.addEventListener("input",()=>{
+  setupState.invalidateTest();
+  syncActionButtons();
+});
 testButton.addEventListener("click",async()=>{
-  if(!requireChallenge())return;
+  if(!requireChallenge()||setupState.isBusy())return;
+  const testSignature=signature();
+  const payload=provisioningPayload();
+  const token=setupState.beginTest(testSignature);
+  if(!token)return;
+  syncActionButtons();
   result.className="result";result.textContent="در حال آزمون اتصال…";
-  saveButton.disabled=true;testedSignature="";
-  const {response,body}=await api("/api/development/database-setup/test",{
-    method:"POST",headers:guardHeaders(),body:JSON.stringify(provisioningPayload())
-  });
-  if(response.status===403){guardRefusal(body);return;}
-  result.textContent=body.message||"آزمون اتصال انجام نشد.";
-  result.className="result "+(response.ok?"success":"error");
-  if(response.ok){testedSignature=signature();saveButton.disabled=!canSave;}
+  try {
+    const {response,body}=await api("/api/development/database-setup/test",{
+      method:"POST",headers:guardHeaders(),body:JSON.stringify(payload)
+    });
+    const outcome=setupState.completeTest(token,signature(),response.ok&&body.success===true);
+    if(outcome==="stale")return;
+    if(response.status===403){guardRefusal(body);return;}
+    result.textContent=body.message||"آزمون اتصال انجام نشد.";
+    result.className="result "+(outcome==="passed"?"success":"error");
+  } catch {
+    const outcome=setupState.completeTest(token,signature(),false);
+    if(outcome!=="stale")showResult("آزمون اتصال ممکن نشد؛ اتصال صفحه به برنامه بررسی شود و دوباره تلاش کنید.",false);
+  } finally {
+    syncActionButtons();
+  }
 });
 form.addEventListener("submit",async event=>{
   event.preventDefault();
   if(!requireChallenge())return;
-  // Provisioning replaces the saved connection with the least-privilege Runtime identity;
-  // the earlier test/save approval must never survive it, or Save would overwrite the
-  // Runtime credential with the admin credentials afterwards.
-  testedSignature="";saveButton.disabled=true;
-  provisionButton.disabled=true;
+  const payload=provisioningPayload();
+  const challengeValue=challenge();
+  if(!setupState.beginProvisioning())return;
+  setFormBusy(true);
   result.className="result";result.textContent="راه‌اندازی هفت‌مرحله‌ای در حال اجرا است؛ این عملیات دیتابیس و هویت Runtime را می‌سازد…";
   stagesPanel.hidden=false;stageList.replaceChildren();
   runtimePanel.hidden=true;
@@ -136,8 +164,8 @@ form.addEventListener("submit",async event=>{
     if(!token.response.ok){showResult("دریافت نشست یک‌بارمصرف راه‌اندازی ممکن نشد؛ دوباره تلاش کنید.",false);return;}
     const {response,body}=await api("/api/development/database-setup/provision",{
       method:"POST",
-      headers:{...guardHeaders(),"X-Faranou-Setup-Token":token.body.token||""},
-      body:JSON.stringify(provisioningPayload())
+      headers:{...guardHeaders(challengeValue),"X-Faranou-Setup-Token":token.body.token||""},
+      body:JSON.stringify(payload)
     });
     if(response.status===403){guardRefusal(body);renderStages([]);return;}
     renderStages(body.stages);
@@ -158,21 +186,29 @@ form.addEventListener("submit",async event=>{
     // Transport failure: the outcome is genuinely unknown — some stages may have completed.
     showResult("نتیجهٔ راه‌اندازی نامشخص است؛ احتمالاً برخی مراحل روی سرور کامل شده‌اند. قبل از هر تلاش دوباره، با «بازرسی سرور و دیتابیس» وضعیت را بررسی کنید.",false);
   } finally {
-    provisionButton.disabled=false;
+    setupState.endProvisioning();
+    setFormBusy(false);
   }
 });
 inspectButton.addEventListener("click",async()=>{
-  if(!requireChallenge())return;
-  inspectButton.disabled=true;
+  if(!requireChallenge()||setupState.isBusy())return;
+  const inspectToken=setupState.beginInspection();
+  if(!inspectToken)return;
+  const payload=provisioningPayload();
+  syncActionButtons();
   result.className="result";result.textContent="در حال بازرسی سرور و دیتابیس…";
   inspectionPanel.hidden=true;runtimePanel.hidden=true;
   try {
     const {response,body}=await api("/api/development/database-setup/inspect",{
-      method:"POST",headers:guardHeaders(),body:JSON.stringify(provisioningPayload())
+      method:"POST",headers:guardHeaders(),body:JSON.stringify(payload)
     });
+    const outcome=setupState.completeInspection(inspectToken,response.ok&&body.success===true);
+    // A response for inputs the operator has already changed must not overwrite
+    // the panel or a newer inspection's state.
+    if(outcome==="stale")return;
     if(response.status===403){guardRefusal(body);return;}
     renderStages(body.stages);
-    if(response.ok&&body.success===true){
+    if(outcome==="passed"){
       renderInspection(body);
       result.textContent=body.message||"بازرسی کامل شد.";
       result.className="result success";
@@ -182,33 +218,58 @@ inspectButton.addEventListener("click",async()=>{
       result.className="result error";
     }
   } catch {
-    showResult("بازرسی ممکن نشد؛ اتصال صفحه به برنامه بررسی شود و دوباره تلاش کنید.",false);
+    const outcome=setupState.completeInspection(inspectToken,false);
+    if(outcome!=="stale")showResult("بازرسی ممکن نشد؛ اتصال صفحه به برنامه بررسی شود و دوباره تلاش کنید.",false);
   } finally {
-    inspectButton.disabled=false;
+    // Transport errors, exceptions and stale responses must never leave the
+    // inspection lock engaged; release it here so Inspect can run again.
+    setupState.endInspection();
+    syncActionButtons();
   }
 });
 saveButton.addEventListener("click",async()=>{
   if(!requireChallenge())return;
-  if(!testedSignature||testedSignature!==signature()||!canSave)return;
-  saveButton.disabled=true;
+  const saveSignature=signature();
+  if(!setupState.beginSave(saveSignature,canSave))return;
+  const payload=provisioningPayload();
+  setFormBusy(true);
   result.className="result";result.textContent="اتصال دوباره بررسی و ذخیره می‌شود…";
-  const {response,body}=await api("/api/development/database-setup/save",{
-    method:"POST",headers:guardHeaders(),body:JSON.stringify(provisioningPayload())
-  });
-  if(response.status===403){guardRefusal(body);return;}
-  result.textContent=body.message||"ذخیره انجام نشد.";
-  result.className="result "+(response.ok?"success":"error");
-  if(response.ok){testedSignature="";savedSection.hidden=false;}
+  try {
+    const {response,body}=await api("/api/development/database-setup/save",{
+      method:"POST",headers:guardHeaders(),body:JSON.stringify(payload)
+    });
+    if(response.status===403){guardRefusal(body);return;}
+    result.textContent=body.message||"ذخیره انجام نشد.";
+    result.className="result "+(response.ok?"success":"error");
+    if(response.ok)savedSection.hidden=false;
+  } catch {
+    showResult("ذخیرهٔ اتصال ممکن نشد؛ وضعیت Credential Manager را دوباره بررسی کنید.",false);
+  } finally {
+    setupState.endSave();
+    setFormBusy(false);
+  }
 });
 deleteButton.addEventListener("click",async()=>{
-  if(!requireChallenge())return;
-  if(!confirm("تنظیم اتصال ذخیره‌شده برای این کاربر ویندوز حذف شود؟"))return;
-  const {response,body}=await api("/api/development/database-setup/saved",{
-    method:"DELETE",headers:{"X-CSRF-TOKEN":requestToken,"X-Faranou-Setup-Challenge":challenge()}
-  });
-  if(response.status===403){guardRefusal(body);return;}
-  result.textContent=body.message||"حذف انجام نشد.";
-  result.className="result "+(response.ok?"success":"error");
-  if(response.ok)savedSection.hidden=true;
+  if(!requireChallenge()||!setupState.beginDelete())return;
+  setFormBusy(true);
+  if(!confirm("تنظیم اتصال ذخیره‌شده برای این کاربر ویندوز حذف شود؟")){
+    setupState.endDelete();
+    setFormBusy(false);
+    return;
+  }
+  try {
+    const {response,body}=await api("/api/development/database-setup/saved",{
+      method:"DELETE",headers:{"X-CSRF-TOKEN":requestToken,"X-Faranou-Setup-Challenge":challenge()}
+    });
+    if(response.status===403){guardRefusal(body);return;}
+    result.textContent=body.message||"حذف انجام نشد.";
+    result.className="result "+(response.ok?"success":"error");
+    if(response.ok)savedSection.hidden=true;
+  } catch {
+    showResult("حذف اتصال ذخیره‌شده ممکن نشد؛ وضعیت Credential Manager را دوباره بررسی کنید.",false);
+  } finally {
+    setupState.endDelete();
+    setFormBusy(false);
+  }
 });
 loadPageState();
