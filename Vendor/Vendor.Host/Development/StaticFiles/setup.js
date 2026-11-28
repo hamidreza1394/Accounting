@@ -213,7 +213,7 @@ inspectButton.addEventListener("click",async()=>{
   } catch {
     showResult("بازرسی ممکن نشد؛ اتصال صفحه به برنامه بررسی شود و دوباره تلاش کنید.",false);
   } finally {
-    inspectButton.disabled=false;
+    inspectButton.disabled=setupState.isBusy();
   }
 });
 saveButton.addEventListener("click",async()=>{
@@ -239,14 +239,26 @@ saveButton.addEventListener("click",async()=>{
   }
 });
 deleteButton.addEventListener("click",async()=>{
-  if(!requireChallenge()||setupState.isBusy())return;
-  if(!confirm("تنظیم اتصال ذخیره‌شده برای این کاربر ویندوز حذف شود؟"))return;
-  const {response,body}=await api("/api/development/database-setup/saved",{
-    method:"DELETE",headers:{"X-CSRF-TOKEN":requestToken,"X-Faranou-Setup-Challenge":challenge()}
-  });
-  if(response.status===403){guardRefusal(body);return;}
-  result.textContent=body.message||"حذف انجام نشد.";
-  result.className="result "+(response.ok?"success":"error");
-  if(response.ok)savedSection.hidden=true;
+  if(!requireChallenge()||!setupState.beginDelete())return;
+  setFormBusy(true);
+  if(!confirm("تنظیم اتصال ذخیره‌شده برای این کاربر ویندوز حذف شود؟")){
+    setupState.endDelete();
+    setFormBusy(false);
+    return;
+  }
+  try {
+    const {response,body}=await api("/api/development/database-setup/saved",{
+      method:"DELETE",headers:{"X-CSRF-TOKEN":requestToken,"X-Faranou-Setup-Challenge":challenge()}
+    });
+    if(response.status===403){guardRefusal(body);return;}
+    result.textContent=body.message||"حذف انجام نشد.";
+    result.className="result "+(response.ok?"success":"error");
+    if(response.ok)savedSection.hidden=true;
+  } catch {
+    showResult("حذف اتصال ذخیره‌شده ممکن نشد؛ وضعیت Credential Manager را دوباره بررسی کنید.",false);
+  } finally {
+    setupState.endDelete();
+    setFormBusy(false);
+  }
 });
 loadPageState();
