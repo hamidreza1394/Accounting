@@ -10,6 +10,7 @@
 - [x] بررسی مسیر شروع Vendor و علت بازشدن صفحه Setup پس از تنظیم دیتابیس.
 - [x] اصلاح launch profile تا هر دو حالت Setup-only و Host کامل از یک مقصد شروع صحیح استفاده کنند.
 - [x] روشن‌کردن ورودی Named Instance/Port در فرم SQL Server.
+- [x] شفاف‌کردن تفاوت «ذخیره اتصال به‌عنوان Runtime» با فیلدهای Runtime که فقط در Provisioning مصرف می‌شوند.
 - [x] مستندسازی انتخاب Solution، Startup Project، مسیر Setup/Login، پورت اشغال‌شده و 401 مورد انتظار.
 - [ ] اجرای عملی در Visual Studio روی Windows مالک.
 - [ ] اجرای کامل Vendor CI و SQL Server integration روی HEAD این PR.
@@ -21,6 +22,7 @@
 3. وقتی اتصال موجود است، Host کامل بالا می‌آید؛ صفحه ورود عمومی در `/` سرو می‌شود، اما endpointهای Setup در حالت کامل anonymous نیستند و زیر سیاست احراز هویت قرار دارند. بنابراین 401 روی صفحه Setup در این وضعیت، fail-closed است و نباید با تضعیف Authorization رفع شود.
 4. پورت HTTPS محلی 5001 ثابت است. اجرای هم‌زمان چند نمونه Host می‌تواند باعث خطای bind شود؛ PID باید در لحظه شناسایی شود و نباید در دستورالعمل ثابت نوشته شود.
 5. فرم Setup قبلاً فیلد Server را داشت، اما placeholder فقط «localhost یا نام سرور» بود و Named Instance/Port را توضیح نمی‌داد؛ این برای SQL Server نصب‌شده با Instance نام‌دار ابهام ایجاد می‌کرد.
+6. دکمه Save همان اعتبارنامه‌های روش ورود اصلی فرم را در Windows Credential Manager ذخیره می‌کند؛ فیلدهای runtimeUsername/runtimePassword در همان payload هستند اما endpoint ذخیره آن‌ها را مصرف نمی‌کند. این تفاوت برای جلوگیری از ذخیره تصادفی حساب مدیریتی به‌عنوان Runtime باید صریح باشد.
 
 ## خلاصه تغییرات
 
