@@ -84,6 +84,11 @@ type AmendmentRequestRow = {
   status: string;
   failureCode: string | null;
   rowVersion: string;
+  // Delivery/acknowledgement tracking (S-B); absent on responses served before the upgrade.
+  issuedSequence?: number | null;
+  deliveredAtUtc?: string | null;
+  acknowledgementResult?: string | null;
+  acknowledgedAtUtc?: string | null;
 };
 
 type AmendmentPreviewSummary = {
@@ -120,6 +125,8 @@ const amendmentStatusLabels: Record<string, string> = {
   Requested: 'ثبت‌شده (در انتظار ارسال برای تأیید)',
   PendingApproval: 'در انتظار تصمیم مدیر',
   Issued: 'صادر و امضا شد',
+  Delivered: 'تحویل‌شده (در انتظار رسید امضاشدهٔ مشتری)',
+  Applied: 'اعمال‌شده توسط مشتری',
   Rejected: 'ردشده',
   Failed: 'ناموفق',
 };
@@ -150,6 +157,11 @@ const amendmentErrorMessages: Record<string, string> = {
   amendment_envelope_invalid: 'پاکت ذخیره‌شده معتبر نیست؛ با پشتیبانی فنی تماس بگیرید.',
   amendment_signature_or_payload_invalid: 'اعتبارسنجی امضای لایسنس فعلی ناموفق بود؛ عملیات متوقف شد.',
   amendment_envelope_binding_invalid: 'پاکت امضاشده با این لایسنس هم‌خوانی ندارد.',
+  amendment_not_deliverable: 'این وضعیت قابل تحویل نیست؛ فقط Amendment صادرشده یا تحویل‌شده پاکت دارد.',
+  amendment_request_not_delivered: 'رسید فقط برای Amendment تحویل‌شده پذیرفته می‌شود.',
+  amendment_acknowledgement_conflict: 'برای این Amendment قبلاً رسید امضاشدهٔ متفاوتی ثبت شده است؛ نتیجهٔ اول تغییر نمی‌کند.',
+  amendment_delivery_metadata_invalid: 'متادیتای تحویل ناقص است؛ با پشتیبانی فنی تماس بگیرید.',
+  amendment_ack_rejected: 'مشتری این Amendment را رد کرده است؛ اصلاح و صدور جدید لازم است.',
 };
 
 function formatMoney(value: number, currency: string): string {
@@ -620,6 +632,47 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
     } finally { setBusyAmendment(false); }
   }
 
+  // Delivery of the exact issued envelope (S-B): the first call stamps the delivery and
+  // generates the per-delivery nonce; the server answers with the same bytes on every
+  // idempotent re-export, so re-download never creates a second delivery record.
+  async function deliverAmendment(row: AmendmentRequestRow) {
+    if (busyAmendment || !canAmendIssue || amendmentLoadIncomplete) return;
+    setError(''); setNotice('');
+    setBusyAmendment(true);
+    try {
+      const token = await mutationToken();
+      const response = await fetch(`/api/vendor/license-amendment-requests/${row.id}/delivery`, {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'X-CSRF-TOKEN': token },
+      });
+      if (!response.ok) throw new Error(await readError(response));
+      const delivery = await response.json() as {
+        status: string; repeated: boolean; nonce: string; payloadSha256: string; sequence: number;
+        formatVersion: number; keyId: string; algorithm: string; payloadJson: string; signatureBase64: string;
+      };
+      const envelopeBlob = new Blob([JSON.stringify({
+        formatVersion: delivery.formatVersion,
+        keyId: delivery.keyId,
+        algorithm: delivery.algorithm,
+        payloadJson: delivery.payloadJson,
+        signatureBase64: delivery.signatureBase64,
+      }, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(envelopeBlob);
+      link.download = `license-amendment-${row.licenseId}-seq${delivery.sequence}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+      setNotice(delivery.repeated
+        ? 'همان بایت‌های همان پاکت دوباره صادر شد؛ هیچ متادیتای تحویلی جدیدی ثبت نمی‌شود.'
+        : 'تحویل Amendment ثبت شد؛ پاکت امضاشده دانلود شد و رسید امضاشدهٔ مشتری پس از اعمال، در این صفحه دیده می‌شود.');
+      await openOrderDetail(row.orderId);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'تحویل Amendment ناموفق بود.');
+    } finally { setBusyAmendment(false); }
+  }
+
   async function requestPaymentDecision(payment: PaymentRow, action: 'verify' | 'reject') {
     if (!canManage) return;
     setError(''); setNotice('');
@@ -759,11 +812,12 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
                 </tr></thead><tbody>{openOrder.lines.filter(line => line.licenseId).map(line => {
                   const existing = orderAmendments.find(amendment => amendment.orderLineId === line.id);
                   const kinds = amendmentKindsForProductCode(line.productCode);
-                  const active = existing && ['Requested', 'PendingApproval', 'Issued'].includes(existing.status);
+                  // Mirrors the server's BlockingStatuses: a delivered amendment is still in flight.
+                  const active = existing && ['Requested', 'PendingApproval', 'Issued', 'Delivered'].includes(existing.status);
                   return <tr key={line.id} className="border-b last:border-0">
                     <td className="px-3 py-2 font-mono text-xs" dir="ltr">{line.productCode}</td>
                     <td className="px-3 py-2">{existing
-                      ? <span className={existing.status === 'Issued' ? 'text-green-700' : existing.status === 'Rejected' || existing.status === 'Failed' ? 'text-destructive' : ''}>
+                      ? <span className={existing.status === 'Issued' || existing.status === 'Delivered' || existing.status === 'Applied' ? 'text-green-700' : existing.status === 'Rejected' || existing.status === 'Failed' ? 'text-destructive' : ''}>
                           {amendmentKindLabels[existing.kind] ?? existing.kind} — {amendmentStatusLabels[existing.status] ?? existing.status}
                         </span>
                       : <span className="text-muted-foreground">بدون درخواست</span>}</td>
@@ -816,6 +870,17 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
             {orderAmendments.filter(amendment => amendment.status === 'Requested').map(amendment => <div key={amendment.id} className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-border p-2 text-sm">
               <span>{amendmentKindLabels[amendment.kind] ?? amendment.kind} — {amendmentStatusLabels[amendment.status]}</span>
               {canAmendIssue && <Button type="button" size="sm" disabled={busyAmendment || amendmentLoadIncomplete} onClick={() => void submitAmendmentForApproval(amendment)}>ارسال برای تأیید</Button>}
+            </div>)}
+            {orderAmendments.filter(amendment => amendment.status === 'Issued' || amendment.status === 'Delivered' || amendment.status === 'Applied').map(amendment => <div key={amendment.id} className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-border p-2 text-sm">
+              <span>
+                {amendmentKindLabels[amendment.kind] ?? amendment.kind} — {amendmentStatusLabels[amendment.status]}
+                {amendment.issuedSequence != null && <> — نسخهٔ {new Intl.NumberFormat('fa-IR').format(amendment.issuedSequence)}</>}
+                {amendment.deliveredAtUtc && <> — تحویل: {formatDate(amendment.deliveredAtUtc)}</>}
+                {amendment.acknowledgementResult && <> — رسید مشتری: {amendment.acknowledgementResult === 'AlreadyApplied' ? 'قبلاً اعمال‌شده' : amendment.acknowledgementResult === 'Applied' ? 'اعمال شد' : 'رد شد'}{amendment.acknowledgedAtUtc && ` در ${formatDate(amendment.acknowledgedAtUtc)}`}</>}
+              </span>
+              {canAmendIssue && <Button type="button" size="sm" variant="outline" disabled={busyAmendment || amendmentLoadIncomplete} onClick={() => void deliverAmendment(amendment)}>
+                {amendment.status === 'Issued' ? 'تحویل پاکت امضاشده' : 'دریافت مجدد پاکت'}
+              </Button>}
             </div>)}
             <p className="mt-2 text-xs text-muted-foreground">صدور Amendment همیشه از مسیر امضای رسمی لایسنس انجام می‌شود و تأیید پرداخت به‌تنهایی هیچ چیزی صادر نمی‌کند.</p>
           </div>

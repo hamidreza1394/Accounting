@@ -301,6 +301,57 @@ describe('Vendor sales and payments workspace', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('delivers an issued amendment envelope, shows the delivery state and keeps Applied visible', async () => {
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:amendment-envelope');
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    let delivered = false;
+    const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('/api/vendor/sales-orders/?')) return Promise.resolve(response(ordersPage([collectibleOrder])));
+      if (url.startsWith('/api/vendor/receivables/?')) return Promise.resolve(response(page([])));
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-delivery' }));
+      if (url === `/api/vendor/sales-orders/${collectibleOrder.id}`) return Promise.resolve(response(orderDetail));
+      if (url.includes('/api/vendor/license-amendment-requests/?orderId=')) {
+        return Promise.resolve(response(page([delivered ? {
+          id: 'amendment-1', orderId: collectibleOrder.id, orderLineId: 'line-1', licenseId: 'license-1',
+          kind: 'maxCompanies', requestedMaxCompanies: 8, requestedSupportUntilUtc: null,
+          requestedUpdatesUntilUtc: null, status: 'Delivered', failureCode: null, rowVersion: 'AQIDBAUGBwg=',
+          issuedSequence: 2, deliveredAtUtc: '2026-11-29T09:00:00Z',
+          acknowledgementResult: null, acknowledgedAtUtc: null,
+        } : {
+          id: 'amendment-1', orderId: collectibleOrder.id, orderLineId: 'line-1', licenseId: 'license-1',
+          kind: 'maxCompanies', requestedMaxCompanies: 8, requestedSupportUntilUtc: null,
+          requestedUpdatesUntilUtc: null, status: 'Issued', failureCode: null, rowVersion: 'AQIDBAUGBwg=',
+          issuedSequence: 2, deliveredAtUtc: null, acknowledgementResult: null, acknowledgedAtUtc: null,
+        }])));
+      }
+      if (url === '/api/vendor/license-amendment-requests/amendment-1/delivery') {
+        delivered = true;
+        const envelope = {
+          requestId: 'amendment-1', status: 'Delivered', repeated: false, nonce: 'a'.repeat(64),
+          payloadSha256: 'b'.repeat(64), sequence: 2, formatVersion: 1, keyId: 'test-license-kid',
+          algorithm: 'ES256', payloadJson: '{"sequence":2}', signatureBase64: 'c'.repeat(64),
+        };
+        return Promise.resolve({ ok: true, status: 200, json: async () => envelope });
+      }
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<VendorSales permissions={['vendor.payments.read', 'vendor.licenses.manage', 'vendor.licenses.issue']} />);
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'جزئیات' }))[0]!);
+    // The issued amendment offers delivery; the per-line row blocks a second active request.
+    fireEvent.click(await screen.findByRole('button', { name: 'تحویل پاکت امضاشده' }));
+    expect(await screen.findByText(/تحویل Amendment ثبت شد/)).toBeInTheDocument();
+    await waitFor(() => expect(createObjectUrl).toHaveBeenCalledWith(expect.any(Blob)));
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:amendment-envelope');
+    // After the refresh the delivered state and its sequence are shown with the re-export action.
+    // The delivered state shows in both the per-line row and the delivery panel.
+    expect((await screen.findAllByText(/در انتظار رسید امضاشده/)).length).toBeGreaterThan(0);
+    expect(screen.getByText(/نسخهٔ ۲/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'دریافت مجدد پاکت' })).toBeEnabled();
+  });
+
   it('keeps amendment actions enabled for a mutation operator when the list request is denied', async () => {
     // The list endpoint needs vendor.licenses.read; manage/issue are independent permissions.
     // A 403 on the list must not gate this operator's server-authorized mutation actions.
