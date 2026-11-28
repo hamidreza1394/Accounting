@@ -311,6 +311,406 @@ public sealed class VendorLicenseAmendmentAcknowledgementSqlServerTests
         await Assert.ThrowsAsync<DbUpdateException>(() => fixture.Db.SaveChangesAsync(ct));
     }
 
+    [Fact]
+    public async Task DeliveryFailsClosedForLegacyAmendmentWithoutResolvableSequence()
+    {
+        await using var fixture = await AckFixture.OpenAsync();
+        if (fixture is null) return;
+        var ct = TestContext.Current.CancellationToken;
+
+        // Simulate a legacy row issued before the migration: no IssuedSequence was ever stamped
+        // and the migration backfill could not resolve it (ambiguous or missing envelope).
+        await fixture.Db.Database.ExecuteSqlRawAsync(
+            "UPDATE VendorLicenseAmendmentRequests SET IssuedSequence = NULL", ct);
+
+        var result = await fixture.DeliverAsync();
+        Assert.False(result.Succeeded);
+        Assert.Equal("amendment_envelope_missing", result.ErrorCode);
+
+        fixture.Db.ChangeTracker.Clear();
+        var request = await fixture.Db.LicenseAmendmentRequests.AsNoTracking().SingleAsync(ct);
+        Assert.Equal(VendorLicenseAmendmentRequest.StatusIssued, request.Status);
+        Assert.Null(request.IssuedSequence);
+        Assert.Null(request.DeliveredAtUtc);
+        Assert.Null(request.DeliveredNonce);
+        Assert.Empty(await fixture.Db.AuditEvents.AsNoTracking()
+            .Where(item => item.ActionCode == "vendor.amendment.delivered").ToListAsync(ct));
+    }
+
+    [Fact]
+    public async Task AcknowledgementWithWrongPayloadHashIsRejectedWithoutStateChange()
+    {
+        await using var fixture = await AckFixture.OpenAsync();
+        if (fixture is null) return;
+        var ct = TestContext.Current.CancellationToken;
+        var delivery = await fixture.DeliverAsync();
+        Assert.True(delivery.Succeeded, delivery.ErrorCode);
+
+        // A correctly signed acknowledgement that binds to a different payload hash than the one
+        // delivered must never advance the amendment: the (LicenseId, IssuedSequence) → payload
+        // hash binding is the replay protection of the whole delivery cycle.
+        var wrongHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("not-the-delivered-payload")))
+            .ToLowerInvariant();
+        using (var response = await fixture.Client.PostAsJsonAsync(
+                   $"/api/vendor/license-amendment-requests/{fixture.AmendmentId:D}/acknowledgement",
+                   fixture.CreateAcknowledgement(delivery.Delivery!.Nonce, "Applied", fixture.ProcessedAtUtc,
+                       null, wrongHash), ct))
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        fixture.Db.ChangeTracker.Clear();
+        var request = await fixture.Db.LicenseAmendmentRequests.AsNoTracking().SingleAsync(ct);
+        Assert.Equal(VendorLicenseAmendmentRequest.StatusDelivered, request.Status);
+        Assert.Null(request.AcknowledgementSha256);
+        Assert.Null(request.AcknowledgementResult);
+        Assert.Null(request.FailureCode);
+        Assert.Empty(await fixture.Db.AuditEvents.AsNoTracking()
+            .Where(item => EF.Functions.Like(item.ActionCode, "vendor.amendment.acknowledgement-%"))
+            .ToListAsync(ct));
+    }
+
+    [Fact]
+    public async Task ConcurrentDuplicateAcknowledgementsAreAcceptedExactlyOnce()
+    {
+        await using var fixture = await AckFixture.OpenAsync();
+        if (fixture is null) return;
+        var ct = TestContext.Current.CancellationToken;
+        var delivery = await fixture.DeliverAsync();
+        Assert.True(delivery.Succeeded, delivery.ErrorCode);
+        var envelope = fixture.CreateAcknowledgement(
+            delivery.Delivery!.Nonce, "Applied", fixture.ProcessedAtUtc, null);
+        var route = $"/api/vendor/license-amendment-requests/{fixture.AmendmentId:D}/acknowledgement";
+
+        // Two callers posting the identical signed acknowledgement at the same time: the row
+        // version keeps exactly one acceptance. The loser either observes the committed first
+        // acknowledgement (idempotent retry) or loses the row-version race (conflict); in both
+        // cases the final state is Applied with a single confirmed audit event.
+        var firstTask = fixture.Client.PostAsJsonAsync(route, envelope, ct);
+        var secondTask = fixture.Client.PostAsJsonAsync(route, envelope, ct);
+        using var first = await firstTask;
+        using var second = await secondTask;
+
+        var bodies = new List<StatusBody>();
+        foreach (var response in new[] { first, second })
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadFromJsonAsync<StatusBody>(ct);
+                Assert.NotNull(body);
+                Assert.Equal(VendorLicenseAmendmentRequest.StatusApplied, body!.Status);
+                bodies.Add(body);
+            }
+            else
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+            }
+        }
+
+        Assert.Single(bodies.Where(item => !item.Repeated));
+
+        fixture.Db.ChangeTracker.Clear();
+        var request = await fixture.Db.LicenseAmendmentRequests.AsNoTracking().SingleAsync(ct);
+        Assert.Equal(VendorLicenseAmendmentRequest.StatusApplied, request.Status);
+        Assert.Equal("Applied", request.AcknowledgementResult);
+        Assert.NotNull(request.AcknowledgementSha256);
+        Assert.NotNull(request.AcknowledgedAtUtc);
+        Assert.Single(await fixture.Db.AuditEvents.AsNoTracking()
+            .Where(item => item.ActionCode == "vendor.amendment.acknowledgement-confirmed").ToListAsync(ct));
+    }
+
+    [Fact]
+    public async Task ConcurrentDuplicateDeliveriesStampDeliveryExactlyOnce()
+    {
+        await using var fixture = await AckFixture.OpenAsync();
+        if (fixture is null) return;
+        var ct = TestContext.Current.CancellationToken;
+
+        await using var scopeA = fixture.Factory.Services.CreateAsyncScope();
+        await using var scopeB = fixture.Factory.Services.CreateAsyncScope();
+
+        // Two operators exporting the same amendment at the same time, each in its own
+        // serializable transaction: exactly one stamps the delivery, the other either re-exports
+        // the committed packet (idempotent) or loses the row-version race (stale_row_version).
+        var firstTask = DeliverInScopeAsync(scopeA, fixture.AmendmentId, ct);
+        var secondTask = DeliverInScopeAsync(scopeB, fixture.AmendmentId, ct);
+        var results = await Task.WhenAll(firstTask, secondTask);
+
+        Assert.Single(results.Where(item => item.Succeeded && !item.Delivery!.Repeated));
+        Assert.All(
+            results.Where(item => item.Succeeded),
+            item =>
+            {
+                Assert.Equal(VendorLicenseAmendmentRequest.StatusDelivered, item.Delivery!.Status);
+                Assert.Equal(fixture.PayloadSha256, item.Delivery.PayloadSha256);
+            });
+        Assert.All(results.Where(item => !item.Succeeded),
+            item => Assert.Equal("stale_row_version", item.ErrorCode));
+        var nonces = results.Where(item => item.Succeeded)
+            .Select(item => item.Delivery!.Nonce).Distinct().ToList();
+        Assert.Single(nonces);
+
+        fixture.Db.ChangeTracker.Clear();
+        var request = await fixture.Db.LicenseAmendmentRequests.AsNoTracking().SingleAsync(ct);
+        Assert.Equal(VendorLicenseAmendmentRequest.StatusDelivered, request.Status);
+        Assert.Equal(nonces[0], request.DeliveredNonce);
+        Assert.Equal(fixture.PayloadSha256, request.DeliveredPayloadSha256);
+        Assert.Single(await fixture.Db.AuditEvents.AsNoTracking()
+            .Where(item => item.ActionCode == "vendor.amendment.delivered").ToListAsync(ct));
+    }
+
+    [Fact]
+    public async Task DownMigrationIsBlockedWhenDeliveredOrAppliedRowsExist()
+    {
+        await using var fixture = await AckFixture.OpenAsync();
+        if (fixture is null) return;
+        var ct = TestContext.Current.CancellationToken;
+        var delivery = await fixture.DeliverAsync();
+        Assert.True(delivery.Succeeded, delivery.ErrorCode);
+
+        // Rolling the migration back must fail closed instead of silently rewriting a delivered
+        // amendment back to Issued (or failing later with an opaque constraint violation).
+        var blocked = await Record.ExceptionAsync(() =>
+            fixture.Db.Database.MigrateAsync("20261120135809_VendorLicenseAmendmentRequests", ct));
+        Assert.NotNull(blocked);
+        var sqlException = FindSqlException(blocked!);
+        Assert.NotNull(sqlException);
+        Assert.Equal(51000, sqlException!.Number);
+
+        // The failed downgrade leaves the schema and the data untouched.
+        var applied = await fixture.Db.Database.GetAppliedMigrationsAsync(ct);
+        Assert.Contains("20261128161909_VendorLicenseAmendmentDeliveryAcknowledgement", applied);
+        fixture.Db.ChangeTracker.Clear();
+        var request = await fixture.Db.LicenseAmendmentRequests.AsNoTracking().SingleAsync(ct);
+        Assert.Equal(VendorLicenseAmendmentRequest.StatusDelivered, request.Status);
+        Assert.NotNull(request.DeliveredNonce);
+    }
+
+    [Fact]
+    public async Task MigrationBackfillsSingleLegacyIssuedAmendmentAndKeepsAmbiguousOnesNull()
+    {
+        var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
+        if (string.IsNullOrWhiteSpace(baseConnection))
+        {
+            const string message = "Set FARANO_VENDOR_TEST_SQLSERVER to a disposable local SQL Server.";
+            if (string.Equals(Environment.GetEnvironmentVariable("FARANO_REQUIRE_VENDOR_SQLSERVER"), "1",
+                    StringComparison.Ordinal))
+            {
+                Assert.Fail(message);
+            }
+            Assert.Skip(message);
+            return;
+        }
+
+        var ct = TestContext.Current.CancellationToken;
+        var databaseName = "FaranouVendorAmendMig_" + Guid.NewGuid().ToString("N");
+        var adminConnectionString = new SqlConnectionStringBuilder(baseConnection) { InitialCatalog = "master" }.ConnectionString;
+        var testConnectionString = new SqlConnectionStringBuilder(baseConnection) { InitialCatalog = databaseName }.ConnectionString;
+        await using (var adminConnection = new SqlConnection(adminConnectionString))
+        {
+            await adminConnection.OpenAsync(ct);
+            await using var createDatabase = adminConnection.CreateCommand();
+            createDatabase.CommandText = $"CREATE DATABASE [{databaseName}]";
+            await createDatabase.ExecuteNonQueryAsync(ct);
+        }
+
+        var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
+            webHost.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:VendorDb"] = testConnectionString
+                })));
+        var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+        try
+        {
+            await db.Database.MigrateAsync(ct);
+            var licenses = SeedLegacyAmendmentGraph(db);
+            await db.SaveChangesAsync(ct);
+            db.ChangeTracker.Clear();
+
+            // Downgrade to the pre-feature migration: the delivery/acknowledgement columns are
+            // dropped and the seeded rows become the exact legacy shape (no IssuedSequence).
+            await db.Database.MigrateAsync("20261120135809_VendorLicenseAmendmentRequests", ct);
+            // Upgrade again: the backfill now runs against real legacy rows.
+            await db.Database.MigrateAsync(ct);
+
+            var rows = await db.LicenseAmendmentRequests.AsNoTracking()
+                .Select(item => new { item.LicenseId, item.Status, item.IssuedSequence })
+                .ToListAsync(ct);
+
+            // License A: the single active amendment with a resolvable last-issued envelope is
+            // bound to that envelope.
+            Assert.Contains(rows, item => item.LicenseId == licenses.LicenseA &&
+                item.Status == VendorLicenseAmendmentRequest.StatusIssued && item.IssuedSequence == 2);
+            // License B: two active amendments on the same license are ambiguous; both stay NULL
+            // and will fail closed at delivery instead of exporting a possibly different envelope.
+            Assert.Equal(2, rows.Count(item => item.LicenseId == licenses.LicenseB && item.IssuedSequence is null));
+            // License C: no envelope at all, so nothing can be resolved safely.
+            Assert.Contains(rows, item => item.LicenseId == licenses.LicenseC &&
+                item.Status == VendorLicenseAmendmentRequest.StatusIssued && item.IssuedSequence is null);
+        }
+        finally
+        {
+            await db.DisposeAsync();
+            await scope.DisposeAsync();
+            await factory.DisposeAsync();
+            try
+            {
+                await using var adminConnection = new SqlConnection(adminConnectionString);
+                await adminConnection.OpenAsync(ct);
+                await using var drop = adminConnection.CreateCommand();
+                drop.CommandText = $"IF EXISTS (SELECT 1 FROM sys.databases WHERE name = N'{databaseName}') DROP DATABASE [{databaseName}]";
+                await drop.ExecuteNonQueryAsync(ct);
+            }
+            catch
+            {
+                // The disposable test database is best-effort cleanup; CI tears the container down.
+            }
+        }
+    }
+
+    private static async Task<VendorLicenseAmendmentDeliveryResult> DeliverInScopeAsync(
+        AsyncServiceScope scope, Guid amendmentId, CancellationToken ct)
+    {
+        var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+        var service = scope.ServiceProvider.GetRequiredService<VendorLicenseAmendmentDeliveryService>();
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        try
+        {
+            var request = await db.LicenseAmendmentRequests.SingleAsync(item => item.Id == amendmentId, ct);
+            var result = await service.DeliverAsync(request, Guid.NewGuid(), Guid.NewGuid().ToString("N"), ct);
+            if (result.Succeeded)
+            {
+                await tx.CommitAsync(ct);
+            }
+            else
+            {
+                await tx.RollbackAsync(ct);
+            }
+
+            return result;
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    private static SqlException? FindSqlException(Exception exception)
+    {
+        if (exception is SqlException sqlException) return sqlException;
+        return exception.InnerException is null ? null : FindSqlException(exception.InnerException);
+    }
+
+    /// <summary>
+    /// Seeds three legacy-shaped issuance scenarios through the current model: license A holds the
+    /// single active amendment of its license with an envelope, license B holds two active
+    /// amendments on the same license, and license C holds one amendment without any envelope.
+    /// All amendments are Issued with no IssuedSequence, exactly like rows issued before the
+    /// delivery/acknowledgement feature existed.
+    /// </summary>
+    private static (Guid LicenseA, Guid LicenseB, Guid LicenseC) SeedLegacyAmendmentGraph(VendorDbContext db)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var customer = new VendorCustomer
+        {
+            Id = Guid.NewGuid(), CustomerNumber = "CUSTOMER-MIG-TEST",
+            LegalName = "Migration backfill test", DisplayName = "Migration backfill test",
+            Status = "Active", CreatedAtUtc = now, UpdatedAtUtc = now
+        };
+        var installation = new VendorInstallation
+        {
+            Id = Guid.NewGuid(), CustomerId = customer.Id, Customer = customer,
+            InstallationCode = "INSTALL-MIG-TEST", Name = "Migration test installation",
+            Environment = "Test", Status = "Active", CreatedAtUtc = now
+        };
+
+        var licenseA = NewMigrationTestLicense(customer, installation, "L-MIG-A", lastIssuedSequence: 2);
+        var licenseB = NewMigrationTestLicense(customer, installation, "L-MIG-B", lastIssuedSequence: 2);
+        var licenseC = NewMigrationTestLicense(customer, installation, "L-MIG-C", lastIssuedSequence: 0);
+
+        var orderA = NewMigrationTestOrder(customer, "O-MIG-A");
+        var lineA = NewMigrationTestOrderLine(orderA, licenseA);
+        var orderB = NewMigrationTestOrder(customer, "O-MIG-B");
+        var lineB1 = NewMigrationTestOrderLine(orderB, licenseB);
+        var lineB2 = NewMigrationTestOrderLine(orderB, licenseB);
+        var orderC = NewMigrationTestOrder(customer, "O-MIG-C");
+        var lineC = NewMigrationTestOrderLine(orderC, licenseC);
+
+        var amendmentA = NewMigrationTestAmendment(orderA, lineA, licenseA, customer);
+        var amendmentB1 = NewMigrationTestAmendment(orderB, lineB1, licenseB, customer);
+        var amendmentB2 = NewMigrationTestAmendment(orderB, lineB2, licenseB, customer);
+        var amendmentC = NewMigrationTestAmendment(orderC, lineC, licenseC, customer);
+
+        db.AddRange(customer, installation, licenseA, licenseB, licenseC, orderA, orderB, orderC);
+        db.SignedLicenseEnvelopes.AddRange(
+            NewMigrationTestEnvelope(licenseA, sequence: 2, now),
+            NewMigrationTestEnvelope(licenseB, sequence: 2, now));
+        db.LicenseAmendmentRequests.AddRange(amendmentA, amendmentB1, amendmentB2, amendmentC);
+        return (licenseA.Id, licenseB.Id, licenseC.Id);
+    }
+
+    private static VendorLicense NewMigrationTestLicense(
+        VendorCustomer customer, VendorInstallation installation, string licenseNumber, int lastIssuedSequence)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new VendorLicense
+        {
+            Id = Guid.NewGuid(), CustomerId = customer.Id, Customer = customer,
+            InstallationId = installation.Id, Installation = installation,
+            LicenseNumber = licenseNumber, ProductCode = "addon.company.seat",
+            Status = "Issued", LicenseKind = LicensePayload.KindPerpetual, MaxCompanies = 5,
+            SubsystemsJson = "[\"finance\"]", GraceDays = 30, LastIssuedSequence = lastIssuedSequence,
+            ValidFromUtc = now.AddMinutes(-1), CreatedAtUtc = now
+        };
+    }
+
+    private static VendorSalesOrder NewMigrationTestOrder(VendorCustomer customer, string orderNumber) =>
+        new()
+        {
+            Id = Guid.NewGuid(), CustomerId = customer.Id, Customer = customer,
+            OrderNumber = orderNumber, TotalAmount = 100m, CurrencyCode = "EUR", CreatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+    private static VendorSalesOrderLine NewMigrationTestOrderLine(VendorSalesOrder order, VendorLicense license) =>
+        new()
+        {
+            Id = Guid.NewGuid(), OrderId = order.Id, Order = order,
+            ProductCode = "addon.company.seat", Description = "additional companies",
+            Quantity = 1, UnitAmount = 100m, LineAmount = 100m, LicenseId = license.Id,
+            CreatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+    private static VendorLicenseAmendmentRequest NewMigrationTestAmendment(
+        VendorSalesOrder order, VendorSalesOrderLine line, VendorLicense license, VendorCustomer customer) =>
+        new()
+        {
+            Id = Guid.NewGuid(), OrderId = order.Id, Order = order,
+            OrderLineId = line.Id, OrderLine = line,
+            CustomerId = customer.Id, Customer = customer,
+            LicenseId = license.Id, License = license,
+            Kind = VendorLicenseAmendmentRequest.KindMaxCompanies, RequestedMaxCompanies = 8,
+            Status = VendorLicenseAmendmentRequest.StatusIssued,
+            RequestedByUserId = Guid.NewGuid(), CreatedAtUtc = DateTimeOffset.UtcNow, UpdatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+    private static VendorSignedLicenseEnvelope NewMigrationTestEnvelope(
+        VendorLicense license, int sequence, DateTimeOffset createdAtUtc) =>
+        new()
+        {
+            Id = Guid.NewGuid(), LicenseId = license.Id, Sequence = sequence,
+            KeyId = LicenseKeyId, Algorithm = LicenseAlgorithms.EcdsaP256Sha256,
+            EnvelopeJson = JsonSerializer.Serialize(
+                new LicenseEnvelope(
+                    LicenseAlgorithms.CurrentFormatVersion, LicenseKeyId,
+                    LicenseAlgorithms.EcdsaP256Sha256, "{}",
+                    Convert.ToBase64String(new byte[64])),
+                WebJson),
+            PayloadSha256 = new string('a', 64), CreatedAtUtc = createdAtUtc
+        };
+
     private sealed record StatusBody(string Status, bool Repeated);
 
     /// <summary>Self-contained disposable database fixture seeded directly through VendorDbContext.</summary>
@@ -318,7 +718,7 @@ public sealed class VendorLicenseAmendmentAcknowledgementSqlServerTests
     {
         public WebApplicationFactory<Program> Factory { get; private set; } = null!;
         public HttpClient Client { get; private set; } = null!;
-        public IServiceScope Scope { get; private set; } = null!;
+        public AsyncServiceScope Scope { get; private set; }
         public VendorDbContext Db { get; private set; } = null!;
         public Guid CustomerId { get; private set; }
         public Guid InstallationId { get; private set; }
@@ -354,10 +754,11 @@ public sealed class VendorLicenseAmendmentAcknowledgementSqlServerTests
         }
 
         public CustomerProvisioningAcknowledgementEnvelope CreateAcknowledgement(
-            string nonce, string result, DateTimeOffset processedAtUtc, string? errorCode)
+            string nonce, string result, DateTimeOffset processedAtUtc, string? errorCode,
+            string? payloadSha256Override = null)
         {
             var acknowledgement = new CustomerProvisioningAcknowledgement(
-                1, AmendmentId.ToString("D"), nonce, PayloadSha256, CustomerReference,
+                1, AmendmentId.ToString("D"), nonce, payloadSha256Override ?? PayloadSha256, CustomerReference,
                 InstallationCode, result, processedAtUtc, errorCode);
             var json = CustomerProvisioningAcknowledgementValidator.Serialize(acknowledgement);
             var signature = SigningKey.SignData(
@@ -376,7 +777,9 @@ public sealed class VendorLicenseAmendmentAcknowledgementSqlServerTests
                 const string message = "Set FARANO_VENDOR_TEST_SQLSERVER to a disposable local SQL Server.";
                 if (string.Equals(Environment.GetEnvironmentVariable("FARANO_REQUIRE_VENDOR_SQLSERVER"), "1",
                         StringComparison.Ordinal))
+                {
                     Assert.Fail(message);
+                }
                 Assert.Skip(message);
                 return null;
             }

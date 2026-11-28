@@ -54,4 +54,21 @@ public sealed class VendorLicenseAmendmentAcknowledgementEndpointTests
             TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.BadRequest, missingBody.StatusCode);
     }
+
+    [Fact]
+    public async Task DeliveryEndpointRejectsAnonymousCallersBeforeAnyDatabaseAccess()
+    {
+        await using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+
+        // The operator delivery endpoint sits behind LicensesIssue authorization: an anonymous
+        // caller is rejected by the authorization middleware before any endpoint parameter
+        // (including the vendor DbContext) is ever resolved.
+        using var response = await client.PostAsync(
+            "/api/vendor/license-amendment-requests/9b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8/delivery",
+            new ByteArrayContent([]),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }

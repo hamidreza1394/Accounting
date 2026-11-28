@@ -3913,3 +3913,14 @@
 - **اعتبارسنجی محلی:** `dotnet test` کامل Vendor.Host.Tests با محیط CI-معادل (ASPNETCORE_ENVIRONMENT=Development + FARANO_VENDOR_DataProtection__KeysDirectory + FARANO_VENDOR_ConnectionStrings__VendorDb): **۶۶۹ تست، ۵۵۱ موفق، ۰ شکست، ۱۱۸ Skip گیت‌دار (SQL/SoftHSM/CNG)**. یک باگ واقعی در حین توسعه با تست کشف و رفع شد (`RandomNumberGenerator.GetHexString(32)` فقط ۳۲ کاراکتر می‌ساخت؛ nonce اکنون ۶۴ کاراکتر است). CI و بازبینی روی SHA نهایی هنوز در انتظارند و پیش از سبز شدن ادعا نمی‌شوند.
 - **مستندات:** handoff جدید `docs/handoffs/ISSUE-393-amendment-delivery-ack.md`، به‌روزرسانی وضعیت `docs/AMENDMENT_ACK_CONTRACT_ANALYSIS.md`، INDEX و Snapshot وضعیت.
 - **مرز:** فقط Vendor.Persistence/Vendor.Host/تست‌های Vendor/مستندات؛ بدون `Server/**`، Customer DB، transport مشتری (#235/#394)، Key Ceremony یا تغییر `Licensing:RuntimeGate:Enabled`.
+
+
+## 2026-11-29 — تکمیل چرخهٔ Amendment: Backfill دادهٔ قدیمی، گارد Rollback و تست‌های هم‌زمانی (Issue #393)
+
+- **مبنای:** ادامهٔ کار روی شاخهٔ `feat/vendor-amendment-delivery-ack` (PR #811، هنوز ادغام‌نشده) با شاخهٔ مستقل `fix/vendor-amendment-lifecycle` و Base همان شاخه؛ Migration `20261128161909` هنوز منتشر نشده است و اصلاح آن با تصمیم مستند در handoff انجام شد.
+- **Backfill دادهٔ قدیمی:** `Up` اکنون ردیف `Issued` بدون `IssuedSequence` را فقط در حالت بدون ابهام («تنها amendment فعالِ لایسنس» + وجود پاکت `(LicenseId, LastIssuedSequence)`) به آخرین پاکت صدور همان لایسنس bind می‌کند؛ هر حالت ابهام‌دار عمداً NULL می‌ماند و در تحویل fail-closed با `amendment_envelope_missing` می‌شود (نیاز به صدور مجدد). هیچ دادهٔ تاریخی حذف یا بازنویسی نمی‌شود.
+- **گارد Rollback:** `Down` پیش از هر تخریبی، وجود ردیف `Delivered`/`Applied` را با `THROW 51000` بلاک می‌کند تا تاریخ امضاشدهٔ تحویل/ACK هرگز به‌صورت غیرواقعی به `Issued` بازنوشته نشود یا Migration با خطای نامفهوم Constraint نیمه‌کاره نماند.
+- **تست‌های جدید (۶ تست SQL گیت‌دار + ۱ تست Endpoint بدون دیتابیس):** backfill سه سناریو با downgrade/upgrade واقعی، بلاک شدن Down با ردیف Delivered، fail-closed تحویل بدون sequence، ACK با payload hash نادرست، دو ACK هم‌زمان یکسان، دو تحویل هم‌زمان و 401 ناشناس Endpoint تحویل. دو Warning معرفی‌شدهٔ خود PR (IDE0011/CA1859) نیز رفع شد.
+- **اعتبارسنجی محلی:** Build کامل Vendor.sln با ۰ خطا؛ `dotnet test` کامل Vendor.Host.Tests: **۶۷۶ تست، ۵۵۲ موفق، ۰ شکست، ۱۲۴ Skip گیت‌دار**؛ چک differ snapshot EF سبز. تست‌های SQL Server در این محیط (بدون Docker) اجرا نشده‌اند و فقط در CI با `FARANO_REQUIRE_VENDOR_SQLSERVER=1` اجرا می‌شوند؛ پیش از سبز شدن چک‌های واقعی هیچ ادعایی ثبت نمی‌شود.
+- **مستندات:** handoff `ISSUE-393-amendment-delivery-ack.md` با بخش «سیاست Backfill و Rollback» و شواهد به‌روز شد؛ Snapshot وضعیت هم‌زمان به‌روزرسانی می‌شود.
+- **مرز:** فقط Migration، تست‌های Vendor و مستندات؛ بدون تغییر کد runtime، بدون `Server/**` و بدون Customer DB.
