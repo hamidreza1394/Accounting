@@ -30,7 +30,8 @@
     <form id="connection-form" autocomplete="off">
       <div class="grid">
         <label>آدرس SQL Server
-          <input name="server" required maxlength="256" placeholder="localhost یا نام سرور" autocomplete="off">
+          <input name="server" required maxlength="256" placeholder="localhost\SQLEXPRESS یا SERVER\INSTANCE" autocomplete="off">
+          <span class="field-hint">برای نمونهٔ نام‌دار، نام را به شکل SERVER\INSTANCE وارد کنید؛ برای پورت ثابت، از SERVER,PORT استفاده کنید. این آدرس باید به SQL Server میزبان دیتابیس Vendor اشاره کند.</span>
         </label>
         <label>نام دیتابیس Vendor
           <input name="database" required maxlength="128" placeholder="VendorDb" autocomplete="off">
@@ -62,11 +63,12 @@
         </label>
       </div>
       <p class="hint">هویت Runtime کم‌اختیار است: فقط خواندن/نوشتن روی همین دیتابیس و هیچ نقش یا مجوز سطح سرور ندارد. اگر Login موجودی را با گذرواژهٔ خودش معرفی کنید، گذرواژه هرگز تغییر داده نمی‌شود.</p>
+      <p class="hint">توجه: دکمهٔ «ذخیره به‌عنوان اتصال Runtime» اطلاعات روش ورود بالا (Windows یا SQL) را در Windows Credential Manager ذخیره می‌کند؛ فقط اتصال از پیش آماده‌شده با دسترسی کم‌اختیار را ذخیره کنید. هرگز اتصال sa، sysadmin یا db_owner را به‌عنوان Runtime ذخیره نکنید. فیلدهای «نام/گذرواژه Runtime» فقط در «راه‌اندازی کامل» برای ساخت/معرفی هویت Runtime استفاده می‌شوند.</p>
       <div class="actions">
         <button type="button" class="secondary" id="test-button">آزمون اتصال</button>
         <button type="button" class="secondary" id="inspect-button">بازرسی سرور و دیتابیس</button>
         <button type="submit" id="provision-button">راه‌اندازی کامل</button>
-        <button type="button" class="secondary" id="save-button" disabled>ذخیرهٔ اتصال موفق</button>
+        <button type="button" class="secondary" id="save-button" disabled>ذخیره به‌عنوان اتصال Runtime</button>
       </div>
     </form>
 
