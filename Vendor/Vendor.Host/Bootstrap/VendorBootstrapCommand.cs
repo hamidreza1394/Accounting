@@ -207,7 +207,7 @@ public static class VendorBootstrapCommand
             prompt.WriteLine("Add this URI only to a trusted authenticator app. Do not put it in logs or tickets:");
             prompt.WriteSensitiveLine(authenticatorUri);
             prompt.WriteLine("Enter the current six-digit code to verify TOTP enrollment.");
-            var code = NormalizeCode(prompt.ReadLine("کد TOTP: "));
+            var code = NormalizeCode(prompt.ReadLine("TOTP code: "));
 
             var validCode = code.Length == 6 &&
                 await users.VerifyTwoFactorTokenAsync(
