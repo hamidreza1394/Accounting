@@ -32,3 +32,9 @@
 ## شناسه‌های Git
 - Branch: `feat/vendor-provisioning-rtl-ui` (stacked روی `fix/vendor-provisioning-endpoint-security`؛ پس از Merge PR-4 به main retarget می‌شود)
 - مستندات: handoff حاضر، WORK_LOG، INDEX
+
+## تکمیل بازبینی CodeRabbit (2026-11-28)
+- [x] **پاک‌سازی تأیید ذخیره هنگام راه‌اندازی:** بعد از Provisioning، تأیید قبلی «ذخیرهٔ اتصال» پاک می‌شود تا Save فعال نماند و Credential Manager با Credentialهای ادمین بازنویسی نشود.
+- [x] **نگاشت نتیجهٔ Provisioning به وضعیت HTTP:** شکست pipeline اکنون 422 برمی‌گرداند (نه 200)؛ صفحه هم `body.success` را ملاک قرار می‌دهد و پنل Runtime فقط روی موفقیت واقعی نشان داده می‌شود.
+- [x] **مدیریت خطای انتقال در بازرسی/راه‌اندازی:** شکست fetch پیام بازیابی نشان می‌دهد؛ برای Provisioning صراحتاً گفته می‌شود نتیجه نامشخص است و قبل از تلاش مجدد باید «بازرسی» اجرا شود (بدون retry خودکار).
+- [x] **بازرسی ناموفق به‌عنوان خطا:** ماتریس HTTP با قرارداد 422 هم‌تراز شد (دو آزمون provision).

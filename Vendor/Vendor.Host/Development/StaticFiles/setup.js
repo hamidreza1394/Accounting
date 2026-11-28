@@ -123,6 +123,10 @@ testButton.addEventListener("click",async()=>{
 form.addEventListener("submit",async event=>{
   event.preventDefault();
   if(!requireChallenge())return;
+  // Provisioning replaces the saved connection with the least-privilege Runtime identity;
+  // the earlier test/save approval must never survive it, or Save would overwrite the
+  // Runtime credential with the admin credentials afterwards.
+  testedSignature="";saveButton.disabled=true;
   provisionButton.disabled=true;
   result.className="result";result.textContent="راه‌اندازی هفت‌مرحله‌ای در حال اجرا است؛ این عملیات دیتابیس و هویت Runtime را می‌سازد…";
   stagesPanel.hidden=false;stageList.replaceChildren();
@@ -137,9 +141,10 @@ form.addEventListener("submit",async event=>{
     });
     if(response.status===403){guardRefusal(body);renderStages([]);return;}
     renderStages(body.stages);
-    result.textContent=body.message||"راه‌اندازی انجام نشد.";
-    result.className="result "+(response.ok?"success":"error");
-    if(response.ok&&body.runtimeUsername){
+    const ok=response.ok&&body.success===true;
+    result.textContent=body.message||(ok?"راه‌اندازی کامل شد.":"راه‌اندازی ناموفق بود؛ مراحل بالا را بررسی کنید.");
+    result.className="result "+(ok?"success":"error");
+    if(ok&&body.runtimeUsername){
       runtimePanel.hidden=false;
       document.querySelector("#runtime-username").textContent="نام کاربری Runtime: "+body.runtimeUsername;
       const passwordWrap=document.querySelector("#runtime-password-wrap");
@@ -149,6 +154,9 @@ form.addEventListener("submit",async event=>{
         ?"اتصال Runtime برای کاربر فعلی در Windows Credential Manager ذخیره شد؛ برای اعمال، Vendor را دوباره اجرا کنید."
         :"اتصال Runtime ذخیره نشد؛ در حالت پیکربندی محیطی، اتصال Runtime باید در همان منبع تنظیم شود.";
     }
+  } catch {
+    // Transport failure: the outcome is genuinely unknown — some stages may have completed.
+    showResult("نتیجهٔ راه‌اندازی نامشخص است؛ احتمالاً برخی مراحل روی سرور کامل شده‌اند. قبل از هر تلاش دوباره، با «بازرسی سرور و دیتابیس» وضعیت را بررسی کنید.",false);
   } finally {
     provisionButton.disabled=false;
   }
@@ -164,9 +172,17 @@ inspectButton.addEventListener("click",async()=>{
     });
     if(response.status===403){guardRefusal(body);return;}
     renderStages(body.stages);
-    renderInspection(body);
-    result.textContent=body.message||"بازرسی انجام نشد.";
-    result.className="result "+(response.ok?"success":"error");
+    if(response.ok&&body.success===true){
+      renderInspection(body);
+      result.textContent=body.message||"بازرسی کامل شد.";
+      result.className="result success";
+    } else {
+      // A failed inspection must not present its stage values as database facts.
+      result.textContent=body.message||"بازرسی ناموفق بود؛ اتصال و دسترسی هویت پیکربندی بررسی شود.";
+      result.className="result error";
+    }
+  } catch {
+    showResult("بازرسی ممکن نشد؛ اتصال صفحه به برنامه بررسی شود و دوباره تلاش کنید.",false);
   } finally {
     inspectButton.disabled=false;
   }
