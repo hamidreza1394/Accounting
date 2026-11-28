@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
@@ -37,6 +39,23 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
 
     private sealed record TokenPayload(string Token);
 
+    /// <summary>Presents the loopback peer for every request of the factory (see
+    /// CreateSetupHost); registered as an IStartupFilter so it wraps the app pipeline from
+    /// outside and runs before the setup guard middleware.</summary>
+    private sealed class LoopbackPeerStartupFilter : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) =>
+            app =>
+            {
+                app.Use(nextContext => async requestContext =>
+                {
+                    requestContext.Connection.RemoteIpAddress = IPAddress.Loopback;
+                    await nextContext(requestContext);
+                });
+                next(app);
+            };
+    }
+
     private static (WebApplicationFactory<Program> Factory, HttpClient Client, string Challenge) CreateSetupHost()
     {
         if (!OperatingSystem.IsWindows())
@@ -51,12 +70,11 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
             // TestServer requests carry no loopback RemoteIpAddress, so the setup guard
             // middleware would 404 every request (that behaviour is the dedicated exposure
             // test). The matrix drives the real local-operator flow, so it presents the
-            // loopback peer explicitly; the loopback HOST name still comes from the request.
-            webHost.Configure(appBuilder => appBuilder.Use(next => async context =>
-            {
-                context.Connection.RemoteIpAddress = IPAddress.Loopback;
-                await next(context);
-            }));
+            // loopback peer through an IStartupFilter — the outermost pipeline layer, which
+            // runs BEFORE the app's own guard middleware; the loopback HOST name still comes
+            // from the request itself.
+            webHost.ConfigureTestServices(services =>
+                services.AddTransient<IStartupFilter>(_ => new LoopbackPeerStartupFilter()));
         });
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
