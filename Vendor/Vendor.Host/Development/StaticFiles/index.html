@@ -23,7 +23,7 @@
     <section class="guide" aria-labelledby="connection-guide-title">
       <h2 id="connection-guide-title">قبل از اتصال</h2>
       <ul>
-        <li>نام سرور را دقیقاً مطابق SQL Server instance وارد کنید؛ نمونه: <code dir="ltr">localhost\\SQLEXPRESS</code> یا <code dir="ltr">.\\SQL2022</code>.</li>
+        <li>نام سرور را دقیقاً مطابق SQL Server instance وارد کنید؛ نمونه: <code dir="ltr">localhost\SQLEXPRESS</code> یا <code dir="ltr">.\SQL2022</code>.</li>
         <li>نام دیتابیس Vendor را وارد کنید؛ مقدار معمول <code dir="ltr">VendorDb</code> است.</li>
         <li>برای ساخت دیتابیس و Login کم‌اختیار، روش احراز هویت انتخابی باید مجوز مدیریتی لازم را داشته باشد. این حساب فقط برای Provisioning است و برنامه با هویت Runtime جداگانه اجرا می‌شود.</li>
       </ul>
@@ -39,8 +39,8 @@
     <form id="connection-form" autocomplete="off">
       <div class="grid">
         <label>آدرس SQL Server
-          <input name="server" dir="ltr" required maxlength="256" placeholder="localhost\\SQLEXPRESS" autocomplete="off" aria-describedby="server-help">
-          <small id="server-help">نام instance را هم وارد کنید؛ مثلاً localhost\\SQL2022.</small>
+          <input name="server" dir="ltr" required maxlength="256" placeholder="localhost\SQLEXPRESS" autocomplete="off" aria-describedby="server-help">
+          <small id="server-help">نام instance را هم وارد کنید؛ مثلاً localhost\SQL2022.</small>
         </label>
         <label>نام دیتابیس Vendor
           <input name="database" dir="ltr" required maxlength="128" placeholder="VendorDb" autocomplete="off">
@@ -103,7 +103,7 @@
         <li>نام کاربری، ایمیل، گذرواژه و تکرار آن را در ترمینال وارد کنید؛ سپس URI را در Authenticator ثبت و کد TOTP را تأیید کنید.</li>
       </ol>
       <pre dir="ltr"><code>$env:FARANO_VENDOR_Bootstrap__Secret = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
-try { dotnet run --project .\\Vendor\\Vendor.Host\\Vendor.Host.csproj -- bootstrap-admin } finally { Remove-Item Env:FARANO_VENDOR_Bootstrap__Secret -ErrorAction SilentlyContinue }</code></pre>
+try { dotnet run --project .\Vendor\Vendor.Host\Vendor.Host.csproj -- bootstrap-admin } finally { Remove-Item Env:FARANO_VENDOR_Bootstrap__Secret -ErrorAction SilentlyContinue }</code></pre>
       <p class="hint">این راز فقط برای یک‌بار bootstrap است. آن را چاپ، ذخیره یا ارسال نکنید. ابتدا Vendor را Restart کنید؛ سپس به <a href="/">صفحه ورود Vendor</a> بروید.</p>
     </section>
     <section class="saved" id="saved-section" hidden>
