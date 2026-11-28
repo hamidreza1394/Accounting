@@ -465,23 +465,27 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         await RunPipelineAsync(fixture.CreateRequest(runtimePassword: runtimePassword));
 
         // VIEW ANY DATABASE is granted to PUBLIC by default, so the enumeration rule is only
-        // reachable through an explicit DENY: an explicitly denied setup identity cannot list
-        // every database and therefore cannot prove the absence of cross-database mappings.
+        // reachable through an explicit DENY. With the DENY, database metadata visibility
+        // shrinks to databases the setup identity OWNS (a mere user mapping is not enough),
+        // so this test makes the limited identity the target database owner: an explicitly
+        // denied owner-operator that cannot list every database and therefore cannot prove
+        // the absence of cross-database mappings.
         var setupPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
         await fixture.CreateLimitedSetupLoginAsync(setupPassword);
         await fixture.GrantViewAnyDefinitionToLimitedSetupLoginAsync();
         await fixture.DenyViewAnyDatabaseToLimitedSetupLoginAsync();
-        await fixture.MapLimitedSetupUserIntoTargetAsDbOwnerAsync();
+        await fixture.TransferTargetOwnershipToLimitedSetupLoginAsync();
 
         var (rerun, diagnostics) = await RunPipelineExpectingFailureAsync(fixture.CreateRequest(
             runtimePassword: runtimePassword,
             setupUsername: fixture.LimitedSetupLoginName,
             setupPassword: setupPassword));
         var rerunStates = States(rerun);
-        var identityMessage = rerun.StageResults.First(stage => stage.Key == "runtimeIdentity").Message;
 
         Assert.False(rerun.Success);
-        Assert.Equal("failed", rerunStates["runtimeIdentity"]);
+        Assert.True(rerunStates.TryGetValue("runtimeIdentity", out var identityState) && identityState == "failed",
+            diagnostics);
+        var identityMessage = rerun.StageResults.First(stage => stage.Key == "runtimeIdentity").Message;
         Assert.Contains("VIEW ANY DATABASE", identityMessage, StringComparison.Ordinal);
         // The refusal never touched the login or its password.
         Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword));
@@ -882,6 +886,10 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
 
         public async Task DenyViewAnyDatabaseToLimitedSetupLoginAsync() =>
             await ExecuteAsync("master", $"DENY VIEW ANY DATABASE TO [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+
+        public async Task TransferTargetOwnershipToLimitedSetupLoginAsync() =>
+            await ExecuteAsync("master",
+                $"ALTER AUTHORIZATION ON DATABASE::[{DatabaseName.Replace("]", "]]", StringComparison.Ordinal)}] TO [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
 
         public async Task MapLimitedSetupUserIntoTargetAsDbOwnerAsync()
         {
