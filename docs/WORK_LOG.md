@@ -3900,3 +3900,14 @@
 - **Regression:** دو تست Node جدید (مجموع ۱۶) در `tests/vendor-ui/setup-state.test.mjs`: پایداری قفل Test با تغییر فرم تا settle شدن پاسخ و رد Inspection/Test جدید در همان بازه؛ و ناتوانی پاسخ توکن مافوق در آزادکردن قفل آزمون جدیدتر پس از takeover با Delete.
 - **اعتبارسنجی محلی:** Node v24.22.3 — ۱۶/۱۶ موفق، صفر شکست/Skip؛ syntax check هر دو فایل موفق. CI روی SHA جدید پس از push بررسی می‌شود؛ پیش از سبز شدن هیچ ادعایی ثبت نمی‌شود.
 - **مستندات:** handoff `ISSUE-809-vendor-setup-test-race.md` با بخش «اصلاح دوم» به‌روز شد. مرز تغییر: فقط `setup-state.mjs`، `setup.js`، تست‌های Node و مستندات.
+
+
+## 2026-11-28 — اصلاح شروع اجرای محلی Vendor و راهنمای فرم SQL Server (Issue #768)
+
+- **یافته:** پروفایل Visual Studio در Vendor/Vendor.Host/Properties/launchSettings.json همیشه /development/database-setup را باز می‌کرد. پس از ذخیره/بارگذاری اتصال، Host کامل اجرا می‌شود و همان endpoint setup زیر سیاست احراز هویت است؛ در نتیجه مرورگر 401 می‌دید، در حالی که صفحه ورود عمومی در / قرار دارد. در حالت بدون اتصال، Host setup-only خودش / را به Setup هدایت می‌کند.
+- **اصلاح:** launchUrl به / تغییر کرد تا مقصد واحد در هر دو وضعیت درست resolve شود؛ Authorization صفحه Setup در حالت Host کامل دست‌نخورده ماند.
+- **UX فرم:** فیلد SQL Server اکنون نمونه و قالب Named Instance یعنی SERVER\\INSTANCE و پورت ثابت SERVER,PORT را توضیح می‌دهد؛ این ابهام در اتصال به SQL Server دارای Instance نام‌دار را کاهش می‌دهد.
+- **Runbook:** docs/VENDOR_DEVELOPMENT_SETUP_RUNBOOK.md انتخاب Vendor.sln و Startup Project، رفتار setup-only/full-host، علت 401، راه‌اندازی، خطاهای SQL و تشخیص/توقف PID اشغال‌کننده پورت 5001 را مستند می‌کند.
+- **امنیت/داده:** هیچ Endpoint یا مجوزی تضعیف نشد؛ هیچ Connection String/credential، SQL role، دیتابیس یا Migration واقعی تغییر نکرد. Runtime همچنان باید کم‌اختیار باشد و نه sa/db_owner.
+- **اعتبارسنجی:** بازبینی ایستای launchSettings.json، Program.cs، VendorDevelopmentDatabaseSetup.cs و HTML/CSS انجام شد. Build/Test محلی و اجرای Visual Studio/SQL Server روی Windows مالک در این محیط اجرا نشد؛ نتیجهٔ Vendor CI روی HEAD PR باید جداگانه بررسی شود و هیچ اجرای موفقی ادعا نمی‌شود.
+- **Git:** Branch fix/vendor-development-first-run-navigation. تغییرات در PR مستقل برای بخشی از Issue #768 ارائه می‌شوند؛ PR #810/#809 برای raceهای جداگانه فرم دست‌نخورده ماند.
