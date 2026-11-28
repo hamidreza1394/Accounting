@@ -14,6 +14,7 @@ internal static class VendorDevelopmentDatabaseSetup
     private const string HtmlResource = "Faranou.Vendor.Host.Development.StaticFiles.index.html";
     private const string CssResource = "Faranou.Vendor.Host.Development.StaticFiles.setup.css";
     private const string JsResource = "Faranou.Vendor.Host.Development.StaticFiles.setup.js";
+    private const string SetupStateJsResource = "Faranou.Vendor.Host.Development.StaticFiles.setup-state.mjs";
     private static bool _loadedFromCredentialManager;
     private static bool _explicitConfiguration;
 
@@ -81,6 +82,7 @@ internal static class VendorDevelopmentDatabaseSetup
         Access(app.MapGet("/development/database-setup", () => EmbeddedFile(HtmlResource, "text/html; charset=utf-8")));
         Access(app.MapGet("/development/database-setup.css", () => EmbeddedFile(CssResource, "text/css; charset=utf-8")));
         Access(app.MapGet("/development/database-setup.js", () => EmbeddedFile(JsResource, "text/javascript; charset=utf-8")));
+        Access(app.MapGet("/development/database-setup-state.mjs", () => EmbeddedFile(SetupStateJsResource, "text/javascript; charset=utf-8")));
 
         Access(app.MapGet("/api/development/database-setup/antiforgery",
             (IAntiforgery antiforgery, HttpContext context) =>
