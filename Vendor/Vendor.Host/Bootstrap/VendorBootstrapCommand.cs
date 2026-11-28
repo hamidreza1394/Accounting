@@ -69,22 +69,22 @@ public static class VendorBootstrapCommand
         if (string.IsNullOrWhiteSpace(expectedSecret) || Encoding.UTF8.GetByteCount(expectedSecret) < 32)
         {
             await TryAuditFailureAsync(services, "vendor.bootstrap.secret-missing", cancellationToken);
-            prompt.WriteLine("راه‌اندازی امن متوقف شد: متغیر FARANO_VENDOR_Bootstrap__Secret باید حداقل ۳۲ بایت راز تصادفی داشته باشد.");
+            prompt.WriteLine("Secure bootstrap stopped: FARANO_VENDOR_Bootstrap__Secret must contain at least 32 bytes of random data.");
             return 2;
         }
 
-        var suppliedSecret = prompt.ReadPassword("راز یک‌بارهٔ bootstrap را وارد کنید: ");
+        var suppliedSecret = prompt.ReadPassword("Enter the one-time bootstrap secret: ");
         if (!MatchesSecret(expectedSecret, suppliedSecret))
         {
             await TryAuditFailureAsync(services, "vendor.bootstrap.secret-rejected", cancellationToken);
-            prompt.WriteLine("راز bootstrap معتبر نیست. هیچ حسابی ایجاد یا فعال نشد.");
+            prompt.WriteLine("The bootstrap secret is invalid. No account was created or enabled.");
             return 3;
         }
 
-        var userName = prompt.ReadLine("نام کاربری مدیر: ")?.Trim();
-        var email = prompt.ReadLine("ایمیل مدیر: ")?.Trim();
-        var password = prompt.ReadPassword("گذرواژهٔ قوی مدیر: ");
-        var passwordConfirmation = prompt.ReadPassword("تکرار گذرواژه: ");
+        var userName = prompt.ReadLine("Administrator username: ")?.Trim();
+        var email = prompt.ReadLine("Administrator email: ")?.Trim();
+        var password = prompt.ReadPassword("Administrator password: ");
+        var passwordConfirmation = prompt.ReadPassword("Confirm administrator password: ");
 
         if (string.IsNullOrWhiteSpace(userName) || userName.Length > 256 ||
             string.IsNullOrWhiteSpace(email) || email.Length > 256 ||
@@ -92,7 +92,7 @@ public static class VendorBootstrapCommand
             !string.Equals(password, passwordConfirmation, StringComparison.Ordinal))
         {
             await TryAuditFailureAsync(services, "vendor.bootstrap.input-rejected", cancellationToken);
-            prompt.WriteLine("ورودی مدیر معتبر نیست یا دو گذرواژه یکسان نیستند. هیچ حسابی فعال نشد.");
+            prompt.WriteLine("Administrator input is invalid or the passwords do not match. No account was enabled.");
             return 4;
         }
 
@@ -108,7 +108,7 @@ public static class VendorBootstrapCommand
 
         if (!db.Database.IsSqlServer())
         {
-            prompt.WriteLine("راه‌اندازی امن فقط روی SQL Server پشتیبانی می‌شود.");
+            prompt.WriteLine("Secure bootstrap is supported only with SQL Server.");
             return 5;
         }
 
@@ -144,7 +144,7 @@ public static class VendorBootstrapCommand
                         await audit.AppendAsync(new VendorAuditWriteRequest(
                             null, "vendor.bootstrap.account-create-rejected"), cancellationToken);
                         await transaction.CommitAsync(cancellationToken);
-                        prompt.WriteLine("ساخت حساب موقت انجام نشد. سیاست گذرواژه و یکتایی ایمیل را بررسی کنید؛ جزئیات محرمانه نمایش داده نمی‌شود.");
+                        prompt.WriteLine("The pending administrator account could not be created. Check the password policy and email uniqueness. Sensitive details are not displayed.");
                         return 6;
                     }
 
@@ -162,7 +162,7 @@ public static class VendorBootstrapCommand
                     await audit.AppendAsync(new VendorAuditWriteRequest(
                         null, "vendor.bootstrap.rejected"), cancellationToken);
                     await transaction.CommitAsync(cancellationToken);
-                    prompt.WriteLine("Bootstrap قبلاً شروع شده یا مدیر دیگری وجود دارد؛ عملیات جدید رد شد.");
+                    prompt.WriteLine("Bootstrap has already started or an administrator already exists. The new attempt was rejected.");
                     return 7;
                 }
 
@@ -185,7 +185,7 @@ public static class VendorBootstrapCommand
                 await audit.AppendAsync(new VendorAuditWriteRequest(
                     null, "vendor.bootstrap.rejected"), cancellationToken);
                 await enrollmentTransaction.CommitAsync(cancellationToken);
-                prompt.WriteLine("وضعیت حساب موقت تغییر کرده است؛ bootstrap به‌صورت امن متوقف شد.");
+                prompt.WriteLine("The pending account state changed. Bootstrap stopped safely.");
                 return 8;
             }
 
@@ -204,10 +204,10 @@ public static class VendorBootstrapCommand
             var label = Uri.EscapeDataString(string.IsNullOrWhiteSpace(email) ? userName : email);
             var issuer = Uri.EscapeDataString(Issuer);
             var authenticatorUri = $"otpauth://totp/{issuer}:{label}?secret={Uri.EscapeDataString(authenticatorKey)}&issuer={issuer}&digits=6&period=30";
-            prompt.WriteLine("این URI را فقط در برنامهٔ authenticator مورد اعتماد ثبت کنید؛ آن را در log یا تیکت قرار ندهید:");
+            prompt.WriteLine("Add this URI only to a trusted authenticator app. Do not put it in logs or tickets:");
             prompt.WriteSensitiveLine(authenticatorUri);
-            prompt.WriteLine("کد شش‌رقمی جاری را برای تأیید واقعی TOTP وارد کنید.");
-            var code = NormalizeCode(prompt.ReadLine("کد TOTP: "));
+            prompt.WriteLine("Enter the current six-digit code to verify TOTP enrollment.");
+            var code = NormalizeCode(prompt.ReadLine("TOTP code: "));
 
             var validCode = code.Length == 6 &&
                 await users.VerifyTwoFactorTokenAsync(
@@ -220,7 +220,7 @@ public static class VendorBootstrapCommand
                 await audit.AppendAsync(new VendorAuditWriteRequest(
                     null, "vendor.bootstrap.totp-rejected", "VendorAdminUser", user.Id.ToString("N")), cancellationToken);
                 await enrollmentTransaction.CommitAsync(cancellationToken);
-                prompt.WriteLine("کد TOTP معتبر نیست. حساب همچنان غیرفعال است؛ اجرای مجدد می‌تواند enrollment را بازیابی کند.");
+                prompt.WriteLine("The TOTP code is invalid. The account remains disabled; rerun the command to resume enrollment.");
                 return 9;
             }
 
@@ -286,13 +286,13 @@ public static class VendorBootstrapCommand
                 null, "vendor.bootstrap.completed", "VendorAdminUser", user.Id.ToString("N")), cancellationToken);
             await enrollmentTransaction.CommitAsync(cancellationToken);
 
-            prompt.WriteLine("Bootstrap با موفقیت تکمیل شد. مدیر فعال است و ورود همچنان به MFA نیاز دارد.");
+            prompt.WriteLine("Bootstrap completed successfully. The administrator is enabled and sign-in still requires MFA.");
             return 0;
         }
         catch (OperationCanceledException)
         {
             await TryAuditFailureAsync(services, "vendor.bootstrap.cancelled", CancellationToken.None);
-            prompt.WriteLine("Bootstrap لغو شد؛ حساب موقت، در صورت ایجاد، غیرفعال باقی می‌ماند.");
+            prompt.WriteLine("Bootstrap was cancelled. Any pending account remains disabled.");
             return 10;
         }
         catch (Exception exception)
@@ -300,7 +300,7 @@ public static class VendorBootstrapCommand
             await TryAuditFailureAsync(services, "vendor.bootstrap.failed", CancellationToken.None);
             // Do not log exception messages or objects: provider exceptions may contain connection data.
             LogBootstrapFailure(logger, exception.GetType().Name, null);
-            prompt.WriteLine("Bootstrap ناموفق بود؛ جزئیات حساس ثبت یا نمایش داده نشدند. حساب موقت، در صورت وجود، باید غیرفعال بماند.");
+            prompt.WriteLine("Bootstrap failed. Sensitive details were not logged or displayed. Any pending account remains disabled.");
             return 11;
         }
     }

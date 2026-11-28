@@ -82,13 +82,28 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - متغیر محیطی: `FARANO_VENDOR_ConnectionStrings__VendorDb` (به یک دیتابیس مستقل Vendor). `AddVendorPersistence` در مرحلهٔ Issue #117، DbContext و storeهای Identity را از همین اتصال ثبت می‌کند؛ هیچ fallback به تنظیم اتصال برنامهٔ مشتری مجاز نیست.
 - هیچ connection string پیش‌فرض، seed مدیر، ثبت‌نام عمومی یا endpoint مدیریتی ناشناس وجود ندارد.
 
-### فرم محلی Development (Issue #797)
-- پروفایل Visual Studio پروژه `Vendor.Host` در Development، صفحهٔ `https://localhost:5001/development/database-setup` را باز می‌کند؛ اگر اتصال پیکربندی نشده باشد، Host فقط همین صفحه و endpointهای setup را بالا می‌آورد و سرویس‌های Persistence/Identity را نمی‌سازد.
-- فرم Windows Integrated یا SQL Login را می‌پذیرد، اتصال را قبل از ذخیره آزمایش می‌کند و مقدار موفق را در Windows Credential Manager کاربر جاری نگه می‌دارد. اجرای بعدی Development آن را می‌خواند.
-- اگر Environment یا Configuration Provider مقدار اتصال داشته باشد، همان مقدار اولویت دارد؛ صفحه منبع را اعلام می‌کند و ذخیره/حذف را غیرفعال می‌کند تا کاربر مقدار بلااثر ثبت نکند.
-- endpointهای setup فقط در Development با پروفایل صریح و روی Windows فعال می‌شوند، به peer و نام میزبان loopback (`localhost`/`127.0.0.1`/`[::1]`) محدودند و درخواست‌های تغییردهنده به Origin و antiforgery token معتبر نیاز دارند. از HTTPS محلی استفاده می‌شود.
-- در حالت setup-only (هنوز اتصالی نیست) صفحه بدون ورود باز می‌شود، چون هنوز هویتی برای Vendor وجود ندارد. وقتی اتصال تنظیم شده و برنامهٔ کامل بالا آمده، همهٔ endpointهای setup پشت سیاست پیش‌فرض Vendor (مدیر با MFA) هستند؛ برای تغییر یا حذف اتصال ذخیره‌شده باید وارد پنل شوید.
-- این ابزار DB نمی‌سازد و Migration اجرا نمی‌کند. Production و اتصال دیتابیس Customer از آن استفاده نمی‌کنند.
+### فرم محلی Development و اجرای Visual Studio (Issues #797, #802, #814)
+- پروفایل Visual Studio پروژه `Vendor.Host` مرورگر را به `https://localhost:5001/` می‌فرستد. اگر اتصال ذخیره‌شده یا پیکربندی‌شده موجود نباشد، Host در setup-only mode ریشه را به `/development/database-setup` هدایت می‌کند؛ اگر اتصال موجود باشد، UI عادی Vendor از ریشه سرو می‌شود. بنابراین یک launch URL برای هر دو وضعیت کافی است و نباید پروفایل را دستی بین دو مسیر تغییر داد.
+- فرم setup فقط در Windows + Development + پرچم صریح launch profile فعال است. صفحه/APIها loopback-only هستند. عملیات تغییردهنده همچنان به console challenge همان پردازه، Origin، antiforgery و rate limit نیاز دارند.
+- فرم Windows Integrated یا SQL Login را می‌پذیرد، ورودی سرور/instance و دیتابیس را اعتبارسنجی می‌کند، ابتدا اتصال را می‌آزماید و با Provisioning هفت‌مرحله‌ای دیتابیس Vendor را ایجاد/بررسی، Migrationهای Vendor را اعمال و هویت Runtime کم‌اختیار را ایجاد و تأیید می‌کند. این عملیات فقط Vendor DB را هدف می‌گیرد؛ Customer DB را لمس نمی‌کند.
+- اتصال Runtime پس از Provisioning در Windows Credential Manager همان کاربر ذخیره می‌شود. تنظیم صریح Environment/Configuration بر مقدار ذخیره‌شده اولویت دارد و UI این منبع را نشان می‌دهد؛ Save/Delete در صورت وجود منبع صریح غیرفعال است.
+- در صورت اشغال پورت 5001، ابتدا اجرای قبلی Vendor را از همان Visual Studio با Stop ببندید. اگر پردازه از ترمینال دیگری باقی مانده است، PID و نام پردازه را با `Get-NetTCPConnection -LocalPort 5001 -State Listen` و `Get-Process -Id <PID>` بررسی کنید؛ فقط پس از شناسایی، همان پردازه را متوقف کنید. از بستن تصادفی پردازه‌ها خودداری کنید.
+- خطای 401 روی مسیر setup پس از آماده‌شدن دیتابیس به معنی خرابی دیتابیس نیست: در full-host mode مسیر setup پشت سیاست احراز هویت مدیر قرار دارد. از ریشه `/` وارد UI عادی شوید؛ launch profile نیز اکنون همین مسیر را باز می‌کند.
+- اگر صفحه setup با 401 باز شد، پروفایل قدیمی یا URL دستی هنوز روی مسیر setup است. آدرس ریشه را باز کنید و پروفایل جدید را پس از دریافت این تغییرات Build/Reload کنید.
+- فرم از دارایی‌های محلی embedded استفاده می‌کند؛ UI اصلی Vendor در `Vendor/Vendor.Web` با React/TypeScript/Tailwind و bundle محلی ساخته می‌شود. هیچ CDN یا وابستگی runtime خارجی مجاز نیست.
+
+### ایجاد اولین مدیر Vendor (one-time bootstrap)
+- هیچ نام کاربری/ایمیل یا گذرواژه seed/default وجود ندارد. دیتابیس آماده‌شده به‌تنهایی حساب مدیر ایجاد نمی‌کند.
+- پس از Provisioning، در ترمینال تعاملی PowerShell از ریشه مخزن اجرا کنید:
+  ```powershell
+  $env:FARANO_VENDOR_Bootstrap__Secret = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+  try { dotnet run --project .\Vendor\Vendor.Host\Vendor.Host.csproj -- bootstrap-admin } finally { Remove-Item Env:FARANO_VENDOR_Bootstrap__Secret -ErrorAction SilentlyContinue }
+  ```
+- فرمان به‌صورت خودکار اتصال موجود در Windows Credential Manager کاربر جاری را می‌خواند، مگر آنکه Environment/Configuration اتصال صریح‌تری ارائه کند. در غیر این صورت `FARANO_VENDOR_ConnectionStrings__VendorDb` را از محیط امن تنظیم کنید.
+- راز bootstrap حداقل ۳۲ بایت است، به‌صورت آرگومان command دریافت نمی‌شود و باید فقط در Environment/Secret Store باشد. نام کاربری، ایمیل و گذرواژه (با تکرار) به‌صورت تعاملی گرفته می‌شوند؛ گذرواژه مخفی است. URI TOTP فقط در کنسول تعاملی نمایش داده می‌شود و باید در authenticator مورد اعتماد ثبت و با کد جاری تأیید شود.
+- پس از تأیید TOTP، حساب فعال و نقش اولیه `Vendor.SuperAdmin` با مجوزهای کاتالوگ به آن اختصاص داده می‌شود؛ `MustChangePassword=true` است و نخستین ورود باید گذرواژه را تغییر دهد. هیچ endpoint ثبت‌نام عمومی وجود ندارد.
+- فرمان فقط با SQL Server و ترمینال تعاملی کار می‌کند. پنجره Output ویژوال استودیو یا ورودی/خروجی redirect‌شده مناسب نیست؛ از Visual Studio Terminal یا PowerShell استفاده کنید.
+- اگر اجرای bootstrap در مرحلهٔ MFA قطع شود، حساب pending غیرفعال می‌ماند و اجرای مجدد با همان نام کاربری و گذرواژه می‌تواند enrollment را بازیابی کند. پس از تکمیل موفق، اجرای مجدد fail-closed است.
 
 ## احراز هویت Vendor — Issue #103 (شاخهٔ در حال بازبینی)
 - APIهای پایهٔ password→TOTP، passkey sign-in/enrollment، TOTP setup/confirmation، session/me و logout با ASP.NET Core Identity 10 در شاخه پیاده‌سازی شده‌اند؛ تا CI سبز و ادغام، Production-verified نیستند.
@@ -96,7 +111,7 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - Passkey assertion قبل از صدور نشست بررسی می‌شود؛ مدیر باید فعال باشد و شمارندهٔ credential به‌روزشده ذخیره شود.
 - کوکی‌ها host-only با پیشوند __Host-، Secure، HttpOnly، SameSite=Strict و عمر کوتاه‌اند. همهٔ POSTهای auth ضدجعل درخواست دارند و تلاش‌های credential بر اساس IP محدود می‌شوند.
 - Production به مسیر پایدار و مستقل Data Protection و دامنهٔ صریح passkey نیاز دارد؛ AllowedHosts wildcard ممنوع است.
-- bootstrap نخستین مدیر، UI پنل، RBAC ریزدانه، maker-checker و سرویس checkpoint ممیزی هنوز باقی‌اند.
+- bootstrap نخستین مدیر به‌صورت فرمان تعاملی یک‌بارمصرف `bootstrap-admin` پیاده‌سازی شده است؛ UI ورود و MFA نیز در Vendor.Web موجود است. RBAC ریزدانه، maker-checker برای جریان‌های مشخص و سرویس checkpoint ممیزی همچنان مسیرهای تکمیلی مستقل دارند.
 
 
 ## Migration ثبت‌شده برای Passkey

@@ -14,6 +14,7 @@ const stagesPanel=document.querySelector("#stages-panel");
 const stageList=document.querySelector("#stage-list");
 const inspectionPanel=document.querySelector("#inspection-panel");
 const runtimePanel=document.querySelector("#runtime-panel");
+const nextStepPanel=document.querySelector("#next-step-panel");
 let requestToken="";
 const setupState=createSetupState();
 let canSave=false;
@@ -159,6 +160,7 @@ form.addEventListener("submit",async event=>{
   result.className="result";result.textContent="راه‌اندازی هفت‌مرحله‌ای در حال اجرا است؛ این عملیات دیتابیس و هویت Runtime را می‌سازد…";
   stagesPanel.hidden=false;stageList.replaceChildren();
   runtimePanel.hidden=true;
+  nextStepPanel.hidden=true;
   try {
     const token=await api("/api/development/database-setup/provision-token");
     if(!token.response.ok){showResult("دریافت نشست یک‌بارمصرف راه‌اندازی ممکن نشد؛ دوباره تلاش کنید.",false);return;}
@@ -174,6 +176,7 @@ form.addEventListener("submit",async event=>{
     result.className="result "+(ok?"success":"error");
     if(ok&&body.runtimeUsername){
       runtimePanel.hidden=false;
+      nextStepPanel.hidden=false;
       document.querySelector("#runtime-username").textContent="نام کاربری Runtime: "+body.runtimeUsername;
       const passwordWrap=document.querySelector("#runtime-password-wrap");
       passwordWrap.hidden=!body.generatedPassword;

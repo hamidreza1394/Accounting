@@ -51,7 +51,14 @@ public static class VendorAuthenticationEndpoints
                 return Results.Unauthorized();
             }
 
-            var user = await users.FindByNameAsync(request.UserName);
+            var user = await users.FindByNameAsync(request.UserName.Trim());
+            if (user is null && request.UserName.Contains('@'))
+            {
+                // The sign-in UI explicitly accepts either username or email. Resolve email
+                // through Identity's normalized, unique-email lookup; never query raw columns.
+                user = await users.FindByEmailAsync(request.UserName.Trim());
+            }
+
             if (user is null)
             {
                 return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);

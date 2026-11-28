@@ -19,6 +19,16 @@ describe('Vendor control plane shell', () => {
     expect(screen.getByLabelText('رمز عبور')).toHaveAttribute('dir', 'ltr');
   });
 
+  it('explains the secure one-time first-admin bootstrap without exposing a public registration flow', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({}, 401)));
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'به پنل مرکزی وارد شوید' })).toBeInTheDocument();
+    expect(screen.getByText('اولین بار است؟ ساخت مدیر مرکزی')).toBeInTheDocument();
+    expect(screen.getByText(/هیچ نام کاربری یا گذرواژه پیش‌فرضی وجود ندارد/)).toBeInTheDocument();
+    expect(screen.getByText(/bootstrap-admin/)).toBeInTheDocument();
+    expect(screen.getByText(/Windows Credential Manager/)).toBeInTheDocument();
+  });
+
   it('moves to TOTP only after the real password endpoint requests a second factor', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({}, 401))

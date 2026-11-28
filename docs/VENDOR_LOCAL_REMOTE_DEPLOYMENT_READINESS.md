@@ -54,11 +54,14 @@ Vendor یک Control Plane مستقل باقی می‌ماند و Customer Instal
 - برای EF Core نیز همان FARANO_VENDOR_ConnectionStrings__VendorDb باید فقط به Vendor DB اشاره کند. Migrationهای Vendor را با ابزار EF و پس از بازبینی فقط روی دیتابیس توسعه‌ای Vendor اجرا کنید؛ Migration مشتری Issue/مسیر مستقل خودش را دارد.
 - در این مرحله از کلید و داده Production استفاده نشود.
 
-- پروفایل Visual Studio `Vendor.Host` صفحهٔ setup محلی را در `https://localhost:5001/development/database-setup` باز می‌کند. این مسیر تنها با `Development` و پرچم صریح launch profile فعال است.
-- در نبود اتصال، Host سبکِ setup بدون Persistence/Identity بالا می‌آید؛ پس از آزمون موفق، اتصال در Windows Credential Manager همان کاربر ذخیره و در اجرای بعدی Development بارگذاری می‌شود. تنظیم صریح Environment/Configuration بر مقدار ذخیره‌شده اولویت دارد.
-- صفحه و APIهای setup loopback-only هستند. در setup-only mode، Host صریحاً روی `https://localhost:5001` bind می‌شود؛ در full-host mode، endpointها از FallbackPolicy و cookieهای auth/antiforgery با `SecurePolicy.Always` استفاده می‌کنند، ولی route-specific HTTPS redirect ندارند؛ مرورگر باید از HTTPS endpoint پیکربندی‌شده استفاده کند. POST/DELETE با antiforgery و Origin check محافظت می‌شوند. صفحه رمز را بازنمایی یا در storage مرورگر پایدار نمی‌کند.
-- ابزار فقط به Vendor DB وصل می‌شود؛ دیتابیس را ایجاد یا Migration را اعمال نمی‌کند. برای SQL محلی با گواهی توسعه‌ای می‌توان گزینه TrustServerCertificate را آگاهانه انتخاب کرد.
-- PR #800 (Issue #797) در main ادغام شده و CI پس از Merge روی `110d797` برابر ۱۶/۱۶ Check Run موفق است؛ این نتیجه فقط کد/CI را تأیید می‌کند. اجرای واقعی Visual Studio، گواهی HTTPS توسعه، Windows Credential Manager و اتصال SQL روی دستگاه مالک همچنان NotVerified است.
+- پروفایل Visual Studio `Vendor.Host` مرورگر را به `https://localhost:5001/` می‌فرستد. در نبود اتصال، setup-only mode ریشه را به `/development/database-setup` هدایت می‌کند؛ با اتصال ذخیره‌شده یا پیکربندی‌شده، UI عادی از ریشه باز می‌شود. نیازی به تغییر دستی launch URL بین دو حالت نیست.
+- در نبود اتصال، Host سبک setup بدون Persistence/Identity بالا می‌آید. فرم Development پس از آزمون، Provisioning هفت‌مرحله‌ای Vendor DB و ایجاد هویت Runtime کم‌اختیار را اجرا می‌کند و اتصال Runtime را در Windows Credential Manager همان کاربر ذخیره می‌کند. Environment/Configuration صریح بر Credential Manager اولویت دارد.
+- صفحه و APIهای setup loopback-only هستند. در setup-only mode، Host صریحاً روی `https://localhost:5001` bind می‌شود؛ در full-host mode، endpointها پشت FallbackPolicy و cookieهای auth/antiforgery با `SecurePolicy.Always` هستند. POST/DELETE و عملیات Provisioning با console challenge، Origin، antiforgery و rate limit محافظت می‌شوند. صفحه رمز را در browser storage پایدار نمی‌کند.
+- پس از Provisioning دیتابیس، حساب مدیر Vendor هنوز وجود ندارد. اولین مدیر با فرمان تعاملی یک‌بارمصرف `bootstrap-admin` ساخته می‌شود؛ این فرمان اتصال ذخیره‌شده Credential Manager را می‌خواند، مگر آنکه تنظیم صریح وجود داشته باشد. Username، email، password و TOTP enrollment در کنسول تعاملی انجام می‌شوند؛ هیچ مدیر seed یا endpoint ثبت‌نام عمومی وجود ندارد.
+- فرمان bootstrap باید در Visual Studio Terminal یا PowerShell تعاملی اجرا شود؛ پنجره Output یا ورودی/خروجی redirect‌شده پشتیبانی نمی‌شود. نمونهٔ فرمان و پاک‌سازی راز در Vendor README و فرم setup آمده است.
+- در full-host mode، درخواست دستی `/development/database-setup` پیش از ورود مدیر می‌تواند HTTP 401 بدهد؛ این رفتار امنیتی است، نه نشانهٔ خرابی دیتابیس. آدرس عادی `/` صفحه ورود را نشان می‌دهد.
+- صفحه setup از assetهای embedded محلی و UI اصلی از Vendor.Web React/TypeScript/Tailwind با bundle محلی استفاده می‌کند؛ CDN و منابع runtime خارجی اضافه نمی‌شوند.
+- PR #800 (Issue #797) در main ادغام شده است؛ PR جاری Issue #814 این تجربه و runbook را تکمیل می‌کند. اجرای عملیاتی روی Windows Credential Manager و SQL Server دستگاه مالک همچنان فقط با اجرای واقعی همان محیط قابل تأیید است.
 
 ### B. Staging روی Windows Server
 
