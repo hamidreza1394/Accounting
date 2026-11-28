@@ -3900,3 +3900,14 @@
 - **Regression:** دو تست Node جدید (مجموع ۱۶) در `tests/vendor-ui/setup-state.test.mjs`: پایداری قفل Test با تغییر فرم تا settle شدن پاسخ و رد Inspection/Test جدید در همان بازه؛ و ناتوانی پاسخ توکن مافوق در آزادکردن قفل آزمون جدیدتر پس از takeover با Delete.
 - **اعتبارسنجی محلی:** Node v24.22.3 — ۱۶/۱۶ موفق، صفر شکست/Skip؛ syntax check هر دو فایل موفق. CI روی SHA جدید پس از push بررسی می‌شود؛ پیش از سبز شدن هیچ ادعایی ثبت نمی‌شود.
 - **مستندات:** handoff `ISSUE-809-vendor-setup-test-race.md` با بخش «اصلاح دوم» به‌روز شد. مرز تغییر: فقط `setup-state.mjs`، `setup.js`، تست‌های Node و مستندات.
+
+
+## 2026-11-28 — Issue #814: راه‌اندازی محلی Vendor و اولین مدیر
+
+- **علت ریشه‌ای:** launch profile همیشه `/development/database-setup` را باز می‌کرد؛ پس از ذخیره اتصال، Host به full-app mode می‌رفت و Setup پشت FallbackPolicy احراز هویت بود، در نتیجه شروع خودکار مرورگر HTTP 401 می‌گرفت. مسیر ریشه در setup-only از قبل به Setup redirect می‌شد؛ بنابراین launch URL به `/` تغییر کرد تا هر دو وضعیت را درست پوشش دهد.
+- **اولین مدیر:** هیچ حساب seed/default وجود ندارد. فرمان تعاملی `bootstrap-admin` از قبل موجود بود اما برای کاربری که اتصال را فقط در Windows Credential Manager ذخیره کرده بود، اتصال را نمی‌خواند. فرمان اکنون در نبود Environment/Configuration صریح، همان اتصال ذخیره‌شده را مصرف می‌کند و در نبود اتصال با پیام انگلیسی روشن متوقف می‌شود. UI ورود و فرم Setup اکنون مسیر امن ساخت مدیر را با PowerShell تعاملی توضیح می‌دهند؛ هیچ endpoint ثبت‌نام عمومی افزوده نشد.
+- **فرم و تجربه:** راهنمای SQL Server instance، دیتابیس، مجوز Provisioning و تفکیک credential موقت از Runtime به فرم افزوده شد. پس از Provisioning، گام ساخت مدیر و فرمان پاک‌سازی راز Environment نمایش داده می‌شود. صفحه ورود از utilityهای Tailwind محلی موجود استفاده می‌کند؛ هیچ CDN یا package جدیدی اضافه نشد.
+- **کنسول:** promptها و پیام‌های تغییرکرده در `Program.cs` و `VendorBootstrapCommand.cs` ASCII/English شدند. تست رگرسیون برای launch URL و خطوط console افزوده شد.
+- **مستندات:** Vendor README، راهنمای local/remote readiness، INDEX و handoff Issue #814 به‌روزرسانی شدند.
+- **مرز:** هیچ Schema/Migration، Customer DB، سیاست loopback/challenge/Origin/antiforgery/rate limit یا سطح دسترسی Runtime تغییر نکرد.
+- **اعتبارسنجی:** در این محیط Build/Test/Node/browser/Windows SQL عملیاتی اجرا نشد؛ CI PR و اجرای واقعی دستگاه مالک برای تأیید باقی است. این تغییرات تا آن زمان Implemented / Not Verified هستند.
