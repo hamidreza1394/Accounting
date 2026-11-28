@@ -271,6 +271,9 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
         using var _client = client;
         var antiforgeryToken = await GetAntiforgeryTokenAsync(client);
 
+        // The guard is one shared call site, so each path only needs its no-challenge refusal;
+        // the request budget stays under the 10-per-minute setup rate limit (the provision
+        // window has its own dedicated test).
         foreach (var (method, path) in new[]
                  {
                      (HttpMethod.Post, "/api/development/database-setup/test"),
@@ -281,14 +284,21 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
         {
             var noChallenge = await SendGuardedAsync(client, method, path, ProvisionBody, antiforgeryToken, challenge: null);
             Assert.Equal(HttpStatusCode.Forbidden, noChallenge.StatusCode);
-
-            var wrongChallenge = await SendGuardedAsync(client, method, path, ProvisionBody, antiforgeryToken, challenge: "wrong-code");
-            Assert.Equal(HttpStatusCode.Forbidden, wrongChallenge.StatusCode);
-
-            var wrongOrigin = await SendGuardedAsync(
-                client, method, path, ProvisionBody, antiforgeryToken, challenge, origin: "https://attacker.example");
-            Assert.Equal(HttpStatusCode.Forbidden, wrongOrigin.StatusCode);
         }
+
+        var wrongChallenge = await SendGuardedAsync(
+            client, HttpMethod.Post, "/api/development/database-setup/test", ProvisionBody, antiforgeryToken, challenge: "wrong-code");
+        Assert.Equal(HttpStatusCode.Forbidden, wrongChallenge.StatusCode);
+
+        var wrongOrigin = await SendGuardedAsync(
+            client, HttpMethod.Post, "/api/development/database-setup/test", ProvisionBody, antiforgeryToken, challenge,
+            origin: "https://attacker.example");
+        Assert.Equal(HttpStatusCode.Forbidden, wrongOrigin.StatusCode);
+
+        var wrongOriginSaved = await SendGuardedAsync(
+            client, HttpMethod.Delete, "/api/development/database-setup/saved", ProvisionBody, antiforgeryToken, challenge,
+            origin: "https://attacker.example");
+        Assert.Equal(HttpStatusCode.Forbidden, wrongOriginSaved.StatusCode);
     }
 
     [Fact]
