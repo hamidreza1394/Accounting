@@ -111,7 +111,7 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - Passkey assertion قبل از صدور نشست بررسی می‌شود؛ مدیر باید فعال باشد و شمارندهٔ credential به‌روزشده ذخیره شود.
 - کوکی‌ها host-only با پیشوند __Host-، Secure، HttpOnly، SameSite=Strict و عمر کوتاه‌اند. همهٔ POSTهای auth ضدجعل درخواست دارند و تلاش‌های credential بر اساس IP محدود می‌شوند.
 - Production به مسیر پایدار و مستقل Data Protection و دامنهٔ صریح passkey نیاز دارد؛ AllowedHosts wildcard ممنوع است.
-- bootstrap نخستین مدیر، UI پنل، RBAC ریزدانه، maker-checker و سرویس checkpoint ممیزی هنوز باقی‌اند.
+- bootstrap نخستین مدیر به‌صورت فرمان تعاملی یک‌بارمصرف `bootstrap-admin` پیاده‌سازی شده است؛ UI ورود و MFA نیز در Vendor.Web موجود است. RBAC ریزدانه، maker-checker برای جریان‌های مشخص و سرویس checkpoint ممیزی همچنان مسیرهای تکمیلی مستقل دارند.
 
 
 ## Migration ثبت‌شده برای Passkey
