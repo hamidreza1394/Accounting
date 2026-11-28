@@ -421,7 +421,7 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
     }
 
     [Fact]
-    public async Task PipelineRefusesAnExistingRuntimeLoginWhenTheSetupIdentityCannotEnumerateAllDatabases()
+    public async Task PipelineRefusesAnExistingRuntimeLoginWhenTheCrossDatabaseAuditIsIncomplete()
     {
         var fixture = await ProvisioningFixture.OpenAsync();
         if (fixture is null) return;
@@ -429,10 +429,11 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         var runtimePassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
         await RunPipelineAsync(fixture.CreateRequest(runtimePassword: runtimePassword));
 
-        // A setup identity that cannot enumerate every database cannot prove the absence of
-        // cross-database mappings: reuse of the existing login must fail closed instead of
-        // trusting an incomplete sys.databases listing. VIEW ANY DEFINITION makes the
-        // principal catalog readable so the dedicated enumeration rule is what fires.
+        // A setup identity that is not sysadmin cannot open every non-target database
+        // (model/msdb keep guest disabled, and transient databases have no mapping), so the
+        // cross-database audit is never complete and reuse must fail closed. VIEW ANY
+        // DEFINITION makes the principal catalog readable (and implies database enumeration),
+        // so it is the unauditable-database rule — not principal readiness — that fires.
         var setupPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
         await fixture.CreateLimitedSetupLoginAsync(setupPassword);
         await fixture.GrantViewAnyDefinitionToLimitedSetupLoginAsync();
@@ -447,7 +448,8 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
 
         Assert.False(rerun.Success);
         Assert.Equal("failed", rerunStates["runtimeIdentity"]);
-        Assert.Contains("VIEW ANY DATABASE", identityMessage, StringComparison.Ordinal);
+        Assert.Contains("ممیزی", identityMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain("VIEW ANY DATABASE", identityMessage, StringComparison.Ordinal);
         // The refusal never touched the login or its password.
         Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword));
         GC.KeepAlive(diagnostics);
