@@ -1,15 +1,18 @@
 export function createSetupState() {
   let generation = 0;
   let testInFlight = false;
+  let testFlightGeneration = 0;
   let inspectionInFlight = false;
   let provisioning = false;
   let saving = false;
   let testedSignature = "";
 
   return {
+    // Editing the form invalidates the pending approval (generation) but must
+    // never release an in-flight request's lock: until the response settles,
+    // no new test or inspection may start.
     invalidateTest() {
       generation += 1;
-      testInFlight = false;
       testedSignature = "";
     },
 
@@ -17,13 +20,20 @@ export function createSetupState() {
       if (provisioning || saving || testInFlight || inspectionInFlight) return null;
       generation += 1;
       testInFlight = true;
+      testFlightGeneration = generation;
       testedSignature = "";
       return Object.freeze({ generation, signature });
     },
 
     completeTest(token, currentSignature, succeeded) {
-      if (!token || token.generation !== generation || !testInFlight) return "stale";
+      // Only the token of the currently in-flight request may release the lock;
+      // a response from a superseded request must never free a newer test's lock.
+      if (!token || token.generation !== testFlightGeneration || !testInFlight) return "stale";
+      const resultIsStale = token.generation !== generation;
       testInFlight = false;
+      // The request has settled, but a result captured before form edits no
+      // longer belongs to the current inputs and is discarded, not rendered.
+      if (resultIsStale) return "stale";
       if (provisioning || saving || !succeeded || token.signature !== currentSignature) return "failed";
       testedSignature = token.signature;
       return "passed";

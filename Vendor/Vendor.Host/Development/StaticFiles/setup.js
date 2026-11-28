@@ -98,7 +98,7 @@ function signature() {
 function syncActionButtons() {
   const busy=setupState.isBusy();
   testButton.disabled=busy||setupState.isTestInFlight();
-  inspectButton.disabled=busy||setupState.isInspectionInFlight();
+  inspectButton.disabled=busy||setupState.isTestInFlight()||setupState.isInspectionInFlight();
   provisionButton.disabled=busy;
   saveButton.disabled=busy||!setupState.canSave(signature(),canSave);
   deleteButton.disabled=busy||!canSave;

@@ -3891,3 +3891,12 @@
 - **اعتبارسنجی محلی:** Node v24.22.3 — `node --input-type=module --check` برای setup.js، `node --check` برای setup-state.mjs و `node --test` با ۱۴/۱۴ موفق، صفر شکست/Skip. تست‌های Exposure روی Linux (شبیه‌سازی CI با Connection String آزمایشی و ASPNETCORE_ENVIRONMENT=Development): ۲/۲ موفق؛ ۹ تست HTTP ماتریس روی Linux مطابق طراحی Skip می‌شوند و فقط روی job ویندوزی اجرا می‌شوند. Build `Vendor.Host` با صفر خطا کامل شد.
 - **مستندات:** handoff `ISSUE-809-vendor-setup-test-race.md` با بخش «اصلاح تکمیلی» به‌روز شد.
 - **مرز:** فقط `setup-state.mjs`، `setup.js`، تست‌های Node مربوط، تست Exposure و handoff؛ بدون `Server/**`، Customer، تغییر رفتار Endpoint یا secret. CI نهایی روی SHA جدید باید تأیید شود؛ هیچ موفقیت CI پیش از آن ادعا نمی‌شود.
+
+
+## 2026-11-28 — اصلاح دوم PR #810: پایداری قفل Test در برابر تغییر فرم
+
+- **یافتهٔ دوم CodeRabbit:** `invalidateTest()` هنگام تغییر فرم `testInFlight` را صفر می‌کرد؛ پس از آن `beginInspection()` یا یک `beginTest()` جدید می‌توانستند در حالی که درخواست آزمون قبلی هنوز در جریان بود شروع شوند. بررسی کد یافته را تأیید کرد: با این حالت، قرارداد «حداکثر یک عملیات در هر لحظه» که در اصلاح اول ادعا شده بود برای جهت Test→Inspect/Test کامل نبود.
+- **اصلاح:** `invalidateTest()` فقط generation و تأیید Save را باطل می‌کند و قفل درخواست را نگه می‌دارد؛ `beginTest()` نسل درخواست در جریان را در `testFlightGeneration` جدا ثبت می‌کند و `completeTest()` فقط توکن همان درخواست را مجاز به آزادکردن قفل می‌داند — پاسخ توکن مافوق «stale» است و هرگز قفل آزمون جدیدتر را نمی‌شکند. اگر ورودی حین پرواز تغییر کرده باشد، پاسخ با «stale» دور ریخته می‌شود اما درخواست رسماً settle می‌شود و دکمه‌ها آزاد می‌شوند. دکمهٔ Inspect نیز در طول Test در جریان غیرفعال می‌شود تا UI با قرارداد State Machine هم‌خوان باشد.
+- **Regression:** دو تست Node جدید (مجموع ۱۶) در `tests/vendor-ui/setup-state.test.mjs`: پایداری قفل Test با تغییر فرم تا settle شدن پاسخ و رد Inspection/Test جدید در همان بازه؛ و ناتوانی پاسخ توکن مافوق در آزادکردن قفل آزمون جدیدتر پس از takeover با Delete.
+- **اعتبارسنجی محلی:** Node v24.22.3 — ۱۶/۱۶ موفق، صفر شکست/Skip؛ syntax check هر دو فایل موفق. CI روی SHA جدید پس از push بررسی می‌شود؛ پیش از سبز شدن هیچ ادعایی ثبت نمی‌شود.
+- **مستندات:** handoff `ISSUE-809-vendor-setup-test-race.md` با بخش «اصلاح دوم» به‌روز شد. مرز تغییر: فقط `setup-state.mjs`، `setup.js`، تست‌های Node و مستندات.

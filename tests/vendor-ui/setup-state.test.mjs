@@ -247,3 +247,53 @@ test("Test and Inspection are mutually exclusive under the state machine contrac
   assert.ok(nextInspect);
   assert.equal(inspectFirstState.completeInspection(nextInspect, true), "passed");
 });
+
+test("editing the form during an in-flight test keeps the test lock until the request settles", () => {
+  const state = createSetupState();
+  const testToken = state.beginTest("connection-a");
+  assert.ok(testToken);
+
+  // The operator edits the form while the test request is running: the approval
+  // is invalidated, but the in-flight request keeps holding the lock.
+  state.invalidateTest();
+  assert.equal(state.isTestInFlight(), true);
+  assert.equal(state.beginTest("connection-b"), null);
+  assert.equal(state.beginInspection(), null);
+
+  // The late response belongs to the edited-away inputs: the request settles
+  // (lock released) but its result is discarded as stale, never rendered.
+  assert.equal(state.completeTest(testToken, "connection-b", true), "stale");
+  assert.equal(state.isTestInFlight(), false);
+
+  const retry = state.beginTest("connection-b");
+  assert.ok(retry);
+  assert.equal(state.completeTest(retry, "connection-b", true), "passed");
+});
+
+test("a response from a superseded test cannot release a newer test's lock", () => {
+  const state = createSetupState();
+  const firstTest = state.beginTest("connection-a");
+  assert.ok(firstTest);
+
+  // A credential mutation takes over the in-flight test request, then a newer
+  // test starts once the mutation has ended.
+  assert.equal(state.beginDelete(), true);
+  state.endDelete();
+  const secondTest = state.beginTest("connection-b");
+  assert.ok(secondTest);
+  assert.equal(state.isTestInFlight(), true);
+
+  // The first request's late response arrives now: it is stale and must not
+  // free the lock held by the newer in-flight test.
+  assert.equal(state.completeTest(firstTest, "connection-a", true), "stale");
+  assert.equal(state.isTestInFlight(), true);
+  assert.equal(state.beginTest("connection-c"), null);
+  assert.equal(state.beginInspection(), null);
+
+  // The current request's own response settles the lock normally.
+  assert.equal(state.completeTest(secondTest, "connection-b", true), "passed");
+  assert.equal(state.isTestInFlight(), false);
+  const thirdTest = state.beginTest("connection-c");
+  assert.ok(thirdTest);
+  assert.equal(state.completeTest(thirdTest, "connection-c", true), "passed");
+});
