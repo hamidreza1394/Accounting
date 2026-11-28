@@ -104,7 +104,7 @@
       </ol>
       <pre dir="ltr"><code>$env:FARANO_VENDOR_Bootstrap__Secret = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
 try { dotnet run --project .\\Vendor\\Vendor.Host\\Vendor.Host.csproj -- bootstrap-admin } finally { Remove-Item Env:FARANO_VENDOR_Bootstrap__Secret -ErrorAction SilentlyContinue }</code></pre>
-      <p class="hint">این راز فقط برای یک‌بار bootstrap است. آن را چاپ، ذخیره یا ارسال نکنید. بعد از موفقیت، به <a href="/">صفحه ورود Vendor</a> بروید.</p>
+      <p class="hint">این راز فقط برای یک‌بار bootstrap است. آن را چاپ، ذخیره یا ارسال نکنید. ابتدا Vendor را Restart کنید؛ سپس به <a href="/">صفحه ورود Vendor</a> بروید.</p>
     </section>
     <section class="saved" id="saved-section" hidden>
       <div>
@@ -113,7 +113,7 @@ try { dotnet run --project .\\Vendor\\Vendor.Host\\Vendor.Host.csproj -- bootstr
       </div>
       <button type="button" class="danger" id="delete-button">حذف تنظیم ذخیره‌شده</button>
     </section>
-    <footer>«راه‌اندازی کامل» دیتابیس Vendor را می‌سازد، Migrationهای موجود را اعمال می‌کند، هویت Runtime کم‌اختیار را برمی‌سازد و اتصال Runtime را ذخیره می‌کند. هیچ چیز دیگری روی سرور تغییر نمی‌کند و هیچ Credential پیکربندی ذخیره نمی‌شود.</footer>
+    <footer>«راه‌اندازی کامل» فقط Vendor DB انتخاب‌شده را ایجاد یا بررسی می‌کند، Migrationهای Vendor را اعمال می‌کند، Login و User کم‌اختیار Runtime را می‌سازد و اتصال Runtime را در Windows Credential Manager کاربر جاری ذخیره می‌کند. از حساب Provisioning برای اجرای عادی برنامه استفاده نمی‌شود؛ هیچ رمز یا Connection String در مخزن یا appsettings نوشته نمی‌شود.</footer>
   </main>
 </body>
 </html>
