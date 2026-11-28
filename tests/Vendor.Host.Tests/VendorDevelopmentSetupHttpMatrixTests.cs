@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -43,7 +45,7 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
 
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
         {
-            webHost.UseEnvironment("Development");
+            webHost.UseSetting("environment", "Development");
             webHost.UseSetting("DevelopmentSetup:Enabled", "true");
         });
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions
