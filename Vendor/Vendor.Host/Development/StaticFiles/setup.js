@@ -98,7 +98,7 @@ function signature() {
 function syncActionButtons() {
   const busy=setupState.isBusy();
   testButton.disabled=busy||setupState.isTestInFlight();
-  inspectButton.disabled=busy;
+  inspectButton.disabled=busy||setupState.isInspectionInFlight();
   provisionButton.disabled=busy;
   saveButton.disabled=busy||!setupState.canSave(signature(),canSave);
   deleteButton.disabled=busy||!canSave;
@@ -192,16 +192,23 @@ form.addEventListener("submit",async event=>{
 });
 inspectButton.addEventListener("click",async()=>{
   if(!requireChallenge()||setupState.isBusy())return;
-  inspectButton.disabled=true;
+  const inspectToken=setupState.beginInspection();
+  if(!inspectToken)return;
+  const payload=provisioningPayload();
+  syncActionButtons();
   result.className="result";result.textContent="در حال بازرسی سرور و دیتابیس…";
   inspectionPanel.hidden=true;runtimePanel.hidden=true;
   try {
     const {response,body}=await api("/api/development/database-setup/inspect",{
-      method:"POST",headers:guardHeaders(),body:JSON.stringify(provisioningPayload())
+      method:"POST",headers:guardHeaders(),body:JSON.stringify(payload)
     });
+    const outcome=setupState.completeInspection(inspectToken,response.ok&&body.success===true);
+    // A response for inputs the operator has already changed must not overwrite
+    // the panel or a newer inspection's state.
+    if(outcome==="stale")return;
     if(response.status===403){guardRefusal(body);return;}
     renderStages(body.stages);
-    if(response.ok&&body.success===true){
+    if(outcome==="passed"){
       renderInspection(body);
       result.textContent=body.message||"بازرسی کامل شد.";
       result.className="result success";
@@ -211,9 +218,13 @@ inspectButton.addEventListener("click",async()=>{
       result.className="result error";
     }
   } catch {
-    showResult("بازرسی ممکن نشد؛ اتصال صفحه به برنامه بررسی شود و دوباره تلاش کنید.",false);
+    const outcome=setupState.completeInspection(inspectToken,false);
+    if(outcome!=="stale")showResult("بازرسی ممکن نشد؛ اتصال صفحه به برنامه بررسی شود و دوباره تلاش کنید.",false);
   } finally {
-    inspectButton.disabled=setupState.isBusy();
+    // Transport errors, exceptions and stale responses must never leave the
+    // inspection lock engaged; release it here so Inspect can run again.
+    setupState.endInspection();
+    syncActionButtons();
   }
 });
 saveButton.addEventListener("click",async()=>{

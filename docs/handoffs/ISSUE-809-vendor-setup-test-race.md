@@ -38,6 +38,18 @@
 
 Vendor CI باید روی Node 24 syntax check فایل‌های ماژول و شش تست state را اجرا کند. ماتریس HTTP ویندوزی نیز route جدید Embedded را بررسی می‌کند.
 
+## اصلاح تکمیلی — قفل Inspect و نتیجهٔ بازرسی کهنه (رفع یافتهٔ CodeRabbit، 2026-11-28)
+
+بازبینی CodeRabbit در PR #810 یک نقص هم‌زمانی واقعی را گزارش کرد و بررسی کد آن را تأیید کرد:
+
+- **علت:** `isBusy()` فقط Mutation ها را می‌دید و هیچ وضعیتی برای Inspection وجود نداشت. در نتیجه تغییر فرم در زمان اجرای `POST /inspect` دکمهٔ Inspect را دوباره فعال می‌کرد و Handler دوم بدون Guard شروع می‌شد؛ پاسخ دیررس درخواست اول می‌توانست نتیجهٔ بازرسی دوم را بازنویسی کند و پاسخ متعلق به ورودی‌های قدیمی نیز بدون کنترل نسخه رندر می‌شد. همچنین `beginSave/beginDelete/beginProvisioning` از Inspection بی‌خبر بودند و Mutation می‌توانست هم‌زمان با یک بازرسی در جریان آغاز شود.
+- **اصلاح:** وضعیت `inspectionInFlight` با الگوی موجود token/generation به State Machine اضافه شد: `beginInspection()` فقط وقتی هیچ Test/Mutation/Inspection دیگری در جریان نباشد توکن frozen صادر می‌کند؛ `completeInspection(token, succeeded)` پاسخ کهنه را `stale` می‌کند و قفل را آزاد می‌کند؛ `endInspection()` در `finally` هر مسیر خطا/قطع ارتباط قفل را بدون شرط آزاد می‌کند. `isBusy()` حالا Inspection را هم می‌بیند تا در `syncActionButtons()` دکمهٔ Inspect در تمام مدت درخواست غیرفعال بماند و هیچ Mutation/Test هم‌زمان با بازرسی آغاز نشود؛ Guard خود Handler هم مستقلاً درخواست هم‌زمان را رد می‌کند. تغییر فرم در طول Inspection فقط اعتبار نتیجه (generation) را باطل می‌کند و قفل درخواست را نمی‌شکند.
+- **رفع خطای CI:** تست Exposure مسیرهای asset را با انتظار 404 نوشته بود؛ اما مسیرهای فایل‌گونه وقتی Setup surface map نشده باشد هیچ Endpoint ای match نمی‌کنند (`MapFallback` فقط `nonfile` را می‌گیرد) و FallbackPolicy کلی با چالش 401 رد می‌کند. انتظار تست به «401 یا 404 = fail-closed، هرگز ناشناس» اصلاح شد؛ رفتار برنامه تغییر نکرد و این رفتار از قبل روی main هم وجود داشت.
+
+هشت تست Node جدید برای قفل Inspection اضافه شدند (مجموع ۱۴ تست): شروع موفق، رد درخواست دوم، بی‌اثر بودن تغییر فرم روی قفل، عدم شروع Inspection حین Save/Delete/Provisioning و برعکس، امکان Inspect مجدد پس از موفقیت، آزادسازی قفل پس از خطا/Exception و در `finally`، بی‌اثر شدن پاسخ کهنه روی نتیجهٔ جدید و انحصار متقابل Test/Inspection.
+
+اجرای محلی ثبت‌شده پس از اصلاح: Node v24.22.3، چهارده تست، چهارده موفق، صفر شکست و صفر Skip. تست‌های Exposure روی Linux با Connection String آزمایشی: ۲/۲ موفق.
+
 ## وضعیت تأییدنشده
 
 در زمان ایجاد این handoff، PR #810 باز است. Build .NET، Vendor CI، ماتریس HTTP ویندوزی، SQL Integration و بررسی نهایی PR هنوز روی HEAD نهایی موفق اعلام نشده‌اند. اجرای مرورگر واقعی و اجرای عملیاتی روی Windows Credential Manager/SQL Server سیستم مالک انجام نشده است.

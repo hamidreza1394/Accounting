@@ -1,6 +1,7 @@
 export function createSetupState() {
   let generation = 0;
   let testInFlight = false;
+  let inspectionInFlight = false;
   let provisioning = false;
   let saving = false;
   let testedSignature = "";
@@ -13,7 +14,7 @@ export function createSetupState() {
     },
 
     beginTest(signature) {
-      if (provisioning || saving || testInFlight) return null;
+      if (provisioning || saving || testInFlight || inspectionInFlight) return null;
       generation += 1;
       testInFlight = true;
       testedSignature = "";
@@ -28,8 +29,26 @@ export function createSetupState() {
       return "passed";
     },
 
+    beginInspection() {
+      if (provisioning || saving || testInFlight || inspectionInFlight) return null;
+      generation += 1;
+      inspectionInFlight = true;
+      return Object.freeze({ generation });
+    },
+
+    completeInspection(token, succeeded) {
+      if (!token || token.generation !== generation || !inspectionInFlight) return "stale";
+      inspectionInFlight = false;
+      if (provisioning || saving || !succeeded) return "failed";
+      return "passed";
+    },
+
+    endInspection() {
+      inspectionInFlight = false;
+    },
+
     beginSave(signature, canSave) {
-      if (provisioning || saving || testInFlight || !canSave || testedSignature === "" || testedSignature !== signature) {
+      if (provisioning || saving || testInFlight || inspectionInFlight || !canSave || testedSignature === "" || testedSignature !== signature) {
         return false;
       }
 
@@ -44,7 +63,7 @@ export function createSetupState() {
     },
 
     beginDelete() {
-      if (provisioning || saving) return false;
+      if (provisioning || saving || inspectionInFlight) return false;
       saving = true;
       generation += 1;
       testInFlight = false;
@@ -57,7 +76,7 @@ export function createSetupState() {
     },
 
     beginProvisioning() {
-      if (provisioning || saving) return false;
+      if (provisioning || saving || inspectionInFlight) return false;
       provisioning = true;
       generation += 1;
       testInFlight = false;
@@ -70,16 +89,20 @@ export function createSetupState() {
     },
 
     canSave(signature, canSave) {
-      return !provisioning && !saving && !testInFlight &&
+      return !provisioning && !saving && !testInFlight && !inspectionInFlight &&
         canSave && testedSignature !== "" && testedSignature === signature;
     },
 
     isBusy() {
-      return provisioning || saving;
+      return provisioning || saving || inspectionInFlight;
     },
 
     isTestInFlight() {
       return testInFlight;
+    },
+
+    isInspectionInFlight() {
+      return inspectionInFlight;
     }
   };
 }
