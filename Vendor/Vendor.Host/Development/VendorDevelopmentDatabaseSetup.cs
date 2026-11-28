@@ -103,11 +103,18 @@ internal static class VendorDevelopmentDatabaseSetup
         Access(app.MapPost("/api/development/database-setup/test", async (
             HttpContext context,
             IAntiforgery antiforgery,
+            IConfiguration configuration,
             SetupRequest request) =>
         {
-            if (!await IsAuthorizedMutationAsync(context, antiforgery))
+            if (!await IsAuthorizedMutationAsync(context, antiforgery, setupOnly))
             {
                 return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            if (!VendorDevelopmentDatabaseSafety.VendorSqlServerTarget.IsAllowed(
+                    request.Server, GetAllowedSqlHosts(configuration), out var targetError))
+            {
+                return Results.BadRequest(new { success = false, message = targetError });
             }
 
             var result = await TestConnectionAsync(request, context.RequestAborted);
@@ -123,7 +130,7 @@ internal static class VendorDevelopmentDatabaseSetup
             ILoggerFactory loggerFactory,
             SetupRequest request) =>
         {
-            if (!await IsAuthorizedMutationAsync(context, antiforgery))
+            if (!await IsAuthorizedMutationAsync(context, antiforgery, setupOnly))
             {
                 return Results.StatusCode(StatusCodes.Status403Forbidden);
             }
@@ -131,6 +138,12 @@ internal static class VendorDevelopmentDatabaseSetup
             if (GetSource(configuration) is not ("none" or "windowsCredentialManager"))
             {
                 return Results.Conflict(new { message = "تنظیم از پیکربندی محیط می‌آید؛ ابتدا همان منبع را تغییر دهید." });
+            }
+
+            if (!VendorDevelopmentDatabaseSafety.VendorSqlServerTarget.IsAllowed(
+                    request.Server, GetAllowedSqlHosts(configuration), out var saveTargetError))
+            {
+                return Results.BadRequest(new { success = false, message = saveTargetError });
             }
 
             var result = await TestConnectionAsync(request, context.RequestAborted);
@@ -165,7 +178,7 @@ internal static class VendorDevelopmentDatabaseSetup
             IConfiguration configuration,
             ILoggerFactory loggerFactory) =>
         {
-            if (!await IsAuthorizedMutationAsync(context, antiforgery))
+            if (!await IsAuthorizedMutationAsync(context, antiforgery, setupOnly))
             {
                 return Results.StatusCode(StatusCodes.Status403Forbidden);
             }
@@ -190,6 +203,106 @@ internal static class VendorDevelopmentDatabaseSetup
             return Results.Json(new { success = true, message = "تنظیم ذخیره‌شده حذف شد. برای اعمال، Vendor را دوباره اجرا کنید." });
         }).RequireRateLimiting("vendor-development-setup"));
 
+        // One-time bootstrap token for the provisioning mutation. Issuing it grants nothing
+        // by itself: the token is only consumed when the request ALSO carries the process
+        // console challenge, the loopback/origin/antiforgery guards and the rate limit.
+        Access(app.MapGet("/api/development/database-setup/provision-token", (HttpContext context) =>
+        {
+            var issued = context.RequestServices.GetRequiredService<VendorDevelopmentSetupBootstrapToken>()
+                .Issue();
+            context.Response.Cookies.Append(VendorDevelopmentSetupBootstrapToken.CookieName, issued.CookieValue, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                IsEssential = true,
+                MaxAge = TimeSpan.FromMinutes(15)
+            });
+            return Results.Json(new { token = issued.Token });
+        }).RequireRateLimiting("vendor-development-setup"));
+
+        // Read-only server/database inspection for the full provisioning flow (stages 1-3).
+        Access(app.MapPost("/api/development/database-setup/inspect", async (
+            HttpContext context,
+            IAntiforgery antiforgery,
+            IConfiguration configuration,
+            ILoggerFactory loggerFactory,
+            ProvisionRequest request) =>
+        {
+            if (!await IsAuthorizedMutationAsync(context, antiforgery, setupOnly))
+            {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            var outcome = await VendorDevelopmentDatabaseProvisioning.InspectAsync(
+                request,
+                loggerFactory.CreateLogger("Faranou.Vendor.Host.DevelopmentDatabaseProvisioning"),
+                GetAllowedSqlHosts(configuration),
+                context.RequestAborted);
+            return Results.Json(new
+            {
+                success = outcome.Success,
+                stages = outcome.StageResults.Select(stage => new { key = stage.Key, state = stage.State, message = stage.Message }),
+                serverVersion = outcome.ServerVersion,
+                databaseExists = outcome.DatabaseExists,
+                userTableCount = outcome.UserTableCount,
+                historyTableExists = outcome.HistoryTableExists,
+                ownershipMarkerValid = outcome.OwnershipMarkerValid,
+                runtimeLoginExists = outcome.RuntimeLoginExists,
+                appliedMigrationsCount = outcome.AppliedMigrationsCount,
+                pendingMigrationsCount = outcome.PendingMigrationsCount,
+                message = outcome.Message
+            });
+        }).RequireRateLimiting("vendor-development-setup"));
+
+        // Full seven-stage provisioning: create, migrate, runtime identity, verify, save.
+        // The bootstrap token is single-use and paired with its strict cookie; replays and
+        // reuse fail closed, and neither it nor the console challenge alone is sufficient.
+        Access(app.MapPost("/api/development/database-setup/provision", async (
+            HttpContext context,
+            IAntiforgery antiforgery,
+            IConfiguration configuration,
+            ILoggerFactory loggerFactory,
+            ProvisionRequest request) =>
+        {
+            if (!await IsAuthorizedMutationAsync(context, antiforgery, setupOnly))
+            {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            var bootstrapToken = context.Request.Headers[VendorDevelopmentSetupBootstrapToken.HeaderName].ToString();
+            var bootstrapCookie = context.Request.Cookies[VendorDevelopmentSetupBootstrapToken.CookieName];
+            if (!context.RequestServices.GetRequiredService<VendorDevelopmentSetupBootstrapToken>()
+                .TryConsume(
+                    string.IsNullOrWhiteSpace(bootstrapToken) ? null : bootstrapToken,
+                    string.IsNullOrWhiteSpace(bootstrapCookie) ? null : bootstrapCookie))
+            {
+                return Results.Json(
+                    new { success = false, message = "نشست راه‌اندازی معتبر نیست؛ صفحه را دوباره باز کنید و یک‌بار دیگر تلاش کنید." },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            // Persisting the runtime connection stays under the same source guard as the
+            // plain save endpoint; with an explicit environment/configuration source nothing
+            // is saved and the operator is told so.
+            var canSaveConnection = GetSource(configuration) is "none" or "windowsCredentialManager";
+            var outcome = await VendorDevelopmentDatabaseProvisioning.RunAsync(
+                request,
+                loggerFactory.CreateLogger("Faranou.Vendor.Host.DevelopmentDatabaseProvisioning"),
+                canSaveConnection,
+                GetAllowedSqlHosts(configuration),
+                context.RequestAborted);
+            return Results.Json(new
+            {
+                success = outcome.Success,
+                stages = outcome.StageResults.Select(stage => new { key = stage.Key, state = stage.State, message = stage.Message }),
+                runtimeUsername = outcome.RuntimeUsername,
+                generatedPassword = outcome.GeneratedPassword,
+                savedToCredentialManager = outcome.SavedToCredentialManager,
+                message = outcome.Message
+            });
+        }).RequireRateLimiting("vendor-development-setup-provision"));
+
         if (setupOnly)
         {
             app.MapFallback(() => Results.Redirect("/development/database-setup"));
@@ -198,6 +311,24 @@ internal static class VendorDevelopmentDatabaseSetup
 
     private static ILogger CreateLogger(ILoggerFactory loggerFactory) =>
         loggerFactory.CreateLogger("Faranou.Vendor.Host.DevelopmentDatabaseSetup");
+
+    /// <summary>
+    /// Owner-controlled extension of the local SQL target allow-list: FARANO_VENDOR_Development__Provisioning__AllowedSqlHosts
+    /// (environment) or Faranou:Development:Provisioning:AllowedSqlHosts (configuration) lists
+    /// additional host names the Development setup page may target, e.g. an approved remote
+    /// staging host. Nothing is hardcoded for a specific machine; wildcard entries never match.
+    /// </summary>
+    private static string[] GetAllowedSqlHosts(IConfiguration configuration)
+    {
+        var raw = Environment.GetEnvironmentVariable("FARANO_VENDOR_Development__Provisioning__AllowedSqlHosts")
+            ?? configuration["Faranou:Development:Provisioning:AllowedSqlHosts"];
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        return raw.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
 
     private static string GetSource(IConfiguration configuration)
     {
@@ -228,6 +359,22 @@ internal static class VendorDevelopmentDatabaseSetup
         path.Value?.StartsWith("/development/database-setup", StringComparison.OrdinalIgnoreCase) == true ||
         path.StartsWithSegments("/api/development/database-setup");
 
+    /// <summary>
+    /// Setup-only operator binding: the Host process prints a per-process challenge code on
+    /// its own console at startup; every mutating call must present it. In full-app mode the
+    /// endpoints already sit behind the Vendor admin policy, so the challenge is skipped.
+    /// </summary>
+    private static bool IsOperatorChallengeValid(HttpContext context, bool setupOnly)
+    {
+        if (!setupOnly)
+        {
+            return true;
+        }
+
+        var challenge = context.RequestServices.GetRequiredService<VendorDevelopmentSetupChallenge>();
+        return challenge.TryValidate(context.Request.Headers[VendorDevelopmentSetupChallenge.HeaderName].ToString());
+    }
+
     private static bool IsLoopbackHostName(string host) =>
         string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
         (IPAddress.TryParse(host.Trim('[', ']'), out var address) && IPAddress.IsLoopback(address));
@@ -237,9 +384,10 @@ internal static class VendorDevelopmentDatabaseSetup
 
     private static async Task<bool> IsAuthorizedMutationAsync(
         HttpContext context,
-        IAntiforgery antiforgery)
+        IAntiforgery antiforgery,
+        bool setupOnly = false)
     {
-        if (!IsLoopback(context) ||
+        if (!IsOperatorChallengeValid(context, setupOnly) || !IsLoopback(context) ||
             !context.Request.Headers.TryGetValue("Origin", out var originValues) ||
             !Uri.TryCreate(originValues.ToString(), UriKind.Absolute, out var origin) ||
             !string.Equals(origin.Scheme, context.Request.Scheme, StringComparison.OrdinalIgnoreCase) ||
