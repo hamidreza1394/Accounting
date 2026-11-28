@@ -20,7 +20,7 @@
 - launch profile اکنون `/` را باز می‌کند؛ setup-only mode خودش ریشه را به فرم setup هدایت می‌کند و full-host mode صفحه اصلی Vendor را می‌دهد.
 - فرمان `bootstrap-admin` در نبود تنظیم صریح اتصال، اتصال Runtime را از Windows Credential Manager کاربر جاری می‌خواند. اگر هیچ اتصالی موجود نباشد، پیام روشن ASCII چاپ و فرمان با exit code 2 متوقف می‌شود.
 - promptها و پیام‌های console در Program و bootstrap به انگلیسی ASCII تغییر کرده‌اند.
-- صفحه ورود Vendor یک بخش بازشونده برای راهنمای ایجاد اولین مدیر دارد. این راهنما نام کاربری، ایمیل، گذرواژه و TOTP را در ترمینال تعاملی می‌گیرد و هیچ API ثبت‌نام عمومی اضافه نمی‌کند.
+- صفحه ورود Vendor یک بخش بازشونده برای راهنمای ایجاد اولین مدیر دارد؛ همچنین چون API قبلاً فقط `FindByNameAsync` می‌کرد در حالی که UI «نام کاربری یا ایمیل» می‌گفت، fallback امن `FindByEmailAsync` با Normalized Email اضافه و تست HTTP آن با ایمیل واقعی حساب پوشش داده شد. این راهنما نام کاربری، ایمیل، گذرواژه و TOTP را در ترمینال تعاملی می‌گیرد و هیچ API ثبت‌نام عمومی اضافه نمی‌کند.
 - فرم Database Setup راهنمای SQL Server instance، انتخاب دیتابیس، مجوز Provisioning و تفاوت حساب موقت Provisioning با Runtime را واضح‌تر می‌کند. بعد از موفقیت Provisioning، دستور ساخت اولین مدیر را نمایش می‌دهد.
 - CSS فرم setup با قواعد محلی و واکنش‌گرا بهبود یافته است؛ UI ورود در Vendor.Web از Tailwind محلی موجود استفاده می‌کند و هیچ CDN/dependency جدیدی اضافه نشده است.
 - تست‌های رگرسیون برای launch URL و ASCII-only بودن خطوط کنسولی اضافه شده‌اند؛ تست UI برای نمایش راهنمای bootstrap اضافه شده است.
@@ -28,6 +28,7 @@
 ## فایل‌های مهم تغییرکرده
 - `Vendor/Vendor.Host/Properties/launchSettings.json`
 - `Vendor/Vendor.Host/Program.cs`
+- `Vendor/Vendor.Host/Authentication/VendorAuthenticationEndpoints.cs` — پشتیبانی واقعی از ورود با ایمیل مطابق برچسب UI.
 - `Vendor/Vendor.Host/Bootstrap/VendorBootstrapCommand.cs`
 - `Vendor/Vendor.Host/Development/StaticFiles/index.html`
 - `Vendor/Vendor.Host/Development/StaticFiles/setup.js`
