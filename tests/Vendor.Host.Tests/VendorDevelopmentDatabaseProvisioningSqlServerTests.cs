@@ -76,7 +76,7 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
     {
         var logger = new RecordingLogger();
         var outcome = await VendorDevelopmentDatabaseProvisioning.RunAsync(
-            request, logger, [], TestContext.Current.CancellationToken);
+            request, logger, canSaveConnection: false, [], TestContext.Current.CancellationToken);
         Assert.True(outcome.Success, DescribeOutcome(outcome, logger));
         return outcome;
     }
@@ -87,7 +87,7 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
     {
         var logger = new RecordingLogger();
         var outcome = await VendorDevelopmentDatabaseProvisioning.RunAsync(
-            request, logger, [], TestContext.Current.CancellationToken);
+            request, logger, canSaveConnection: false, [], TestContext.Current.CancellationToken);
         var stages = string.Join(" | ", outcome.StageResults.Select(stage => $"{stage.Key}={stage.State}: {stage.Message}"));
         return (outcome, $"{outcome.Message}{Environment.NewLine}stages: {stages}{Environment.NewLine}log:{Environment.NewLine}{logger.Diagnostics}");
     }
@@ -287,6 +287,81 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
     }
 
     [Fact]
+    public async Task RuntimeIdentityIsLeastPrivilegedOnTheRealServer()
+    {
+        var fixture = await ProvisioningFixture.OpenAsync();
+        if (fixture is null) return;
+        await using var _ = fixture;
+        var runtimePassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        var outcome = await RunPipelineAsync(fixture.CreateRequest(runtimePassword: runtimePassword));
+
+        // No server role of any kind, no server grant beyond CONNECT SQL, visibility deny.
+        Assert.False(await fixture.IsServerRoleMemberAsync(fixture.RuntimeLoginName, "sysadmin"));
+        Assert.False(await fixture.IsServerRoleMemberAsync(fixture.RuntimeLoginName, "dbcreator"));
+        Assert.False(await fixture.IsServerRoleMemberAsync(fixture.RuntimeLoginName, "securityadmin"));
+        Assert.Equal(["CONNECT SQL"], await fixture.ServerGrantedPermissionsAsync(fixture.RuntimeLoginName));
+        Assert.True(await fixture.HasViewAnyDatabaseDenyAsync(fixture.RuntimeLoginName));
+
+        // The runtime identity cannot read another database, cannot create a database or a
+        // login, cannot run migrations (no DDL), and cannot read other users' catalogs —
+        // while the normal data path stays usable.
+        await fixture.CreateForeignDatabaseAsync();
+        Assert.False(await fixture.RuntimeCanSelectFromOtherDatabaseAsync(fixture.RuntimeLoginName, runtimePassword, fixture.ForeignDatabaseName));
+        Assert.False(await fixture.RuntimeCanCreateDatabaseAsync(fixture.RuntimeLoginName, runtimePassword));
+        Assert.False(await fixture.RuntimeCanCreateLoginAsync(fixture.RuntimeLoginName, runtimePassword));
+        Assert.False(await fixture.RuntimeCanRunDdlAsync(fixture.RuntimeLoginName, runtimePassword));
+        Assert.True(await fixture.RuntimeCanDeleteZeroRowsAsync(fixture.RuntimeLoginName, runtimePassword));
+    }
+
+    [Fact]
+    public async Task PipelineRefusesADisabledRuntimeLoginWithoutEnablingIt()
+    {
+        var fixture = await ProvisioningFixture.OpenAsync();
+        if (fixture is null) return;
+        await using var _ = fixture;
+        var originalPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await RunPipelineAsync(fixture.CreateRequest(runtimePassword: originalPassword));
+
+        await fixture.DisableRuntimeLoginAsync();
+
+        var (rerun, _) = await RunPipelineExpectingFailureAsync(
+            fixture.CreateRequest(runtimePassword: originalPassword));
+        var rerunStates = States(rerun);
+
+        Assert.False(rerun.Success);
+        Assert.Equal("failed", rerunStates["runtimeIdentity"]);
+        var identityMessage = rerun.StageResults.First(stage => stage.Key == "runtimeIdentity").Message;
+        Assert.Contains("غیرفعال", identityMessage, StringComparison.Ordinal);
+        Assert.True(await fixture.IsRuntimeLoginDisabledAsync());
+    }
+
+    [Fact]
+    public async Task PipelineRefusesARuntimeLoginMappedIntoAnotherDatabase()
+    {
+        var fixture = await ProvisioningFixture.OpenAsync();
+        if (fixture is null) return;
+        await using var _ = fixture;
+        var originalPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await RunPipelineAsync(fixture.CreateRequest(runtimePassword: originalPassword));
+
+        // Simulate cross-database drift: a user mapping in a database this flow never owns.
+        await fixture.CreateForeignDatabaseAsync();
+        await fixture.MapRuntimeLoginIntoForeignDatabaseAsync();
+
+        var (rerun, diagnostics) = await RunPipelineExpectingFailureAsync(
+            fixture.CreateRequest(runtimePassword: originalPassword));
+        var rerunStates = States(rerun);
+
+        Assert.False(rerun.Success);
+        Assert.Equal("failed", rerunStates["runtimeIdentity"]);
+        var identityMessage = rerun.StageResults.First(stage => stage.Key == "runtimeIdentity").Message;
+        Assert.Contains("دیتابیس‌های دیگری", identityMessage, StringComparison.Ordinal);
+        // The password was never touched by the refused run.
+        Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, originalPassword));
+        GC.KeepAlive(diagnostics);
+    }
+
+    [Fact]
     public async Task PipelineRefusesAnOverPrivilegedExistingRuntimeLogin()
     {
         var fixture = await ProvisioningFixture.OpenAsync();
@@ -309,6 +384,147 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         Assert.Contains("سطح سرور", identityMessage, StringComparison.Ordinal);
         // The privileged login's password must not have been reset by the refused run.
         Assert.False(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, rerunPassword));
+        Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword));
+        GC.KeepAlive(diagnostics);
+    }
+
+    [Fact]
+    public async Task PipelineRefusesProvisioningWhenTheSetupIdentityCannotReadServerPrincipals()
+    {
+        var fixture = await ProvisioningFixture.OpenAsync();
+        if (fixture is null) return;
+        await using var _ = fixture;
+        var runtimePassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await RunPipelineAsync(fixture.CreateRequest(runtimePassword: runtimePassword));
+
+        // A setup identity that sees only itself in sys.server_principals cannot tell an
+        // existing login from a missing one: the whole provisioning must fail closed
+        // instead of silently misrouting into CREATE LOGIN.
+        var setupPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await fixture.CreateLimitedSetupLoginAsync(setupPassword);
+        await fixture.MapLimitedSetupUserIntoTargetAsDbOwnerAsync();
+
+        var (rerun, diagnostics) = await RunPipelineExpectingFailureAsync(fixture.CreateRequest(
+            runtimePassword: runtimePassword,
+            setupUsername: fixture.LimitedSetupLoginName,
+            setupPassword: setupPassword));
+        var rerunStates = States(rerun);
+        var identityMessage = rerun.StageResults.First(stage => stage.Key == "runtimeIdentity").Message;
+
+        Assert.False(rerun.Success);
+        Assert.Equal("failed", rerunStates["runtimeIdentity"]);
+        Assert.Contains("VIEW ANY DEFINITION", identityMessage, StringComparison.Ordinal);
+        // The refused run neither created nor altered the runtime login.
+        Assert.True(await fixture.LoginExistsAsync(fixture.RuntimeLoginName));
+        Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword));
+        GC.KeepAlive(diagnostics);
+    }
+
+    [Fact]
+    public async Task PipelineRefusesAnExistingRuntimeLoginWhenTheCrossDatabaseAuditIsIncomplete()
+    {
+        var fixture = await ProvisioningFixture.OpenAsync();
+        if (fixture is null) return;
+        await using var _ = fixture;
+        var runtimePassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await RunPipelineAsync(fixture.CreateRequest(runtimePassword: runtimePassword));
+
+        // A setup identity that is not sysadmin cannot open every non-target database
+        // (model/msdb keep guest disabled, and transient databases have no mapping), so the
+        // cross-database audit is never complete and reuse must fail closed. VIEW ANY
+        // DEFINITION makes the principal catalog readable (and implies database enumeration),
+        // so it is the unauditable-database rule — not principal readiness — that fires.
+        var setupPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await fixture.CreateLimitedSetupLoginAsync(setupPassword);
+        await fixture.GrantViewAnyDefinitionToLimitedSetupLoginAsync();
+        await fixture.MapLimitedSetupUserIntoTargetAsDbOwnerAsync();
+
+        var (rerun, diagnostics) = await RunPipelineExpectingFailureAsync(fixture.CreateRequest(
+            runtimePassword: runtimePassword,
+            setupUsername: fixture.LimitedSetupLoginName,
+            setupPassword: setupPassword));
+        var rerunStates = States(rerun);
+        var identityMessage = rerun.StageResults.First(stage => stage.Key == "runtimeIdentity").Message;
+
+        Assert.False(rerun.Success);
+        Assert.Equal("failed", rerunStates["runtimeIdentity"]);
+        Assert.Contains("ممیزی", identityMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain("VIEW ANY DATABASE", identityMessage, StringComparison.Ordinal);
+        // The refusal never touched the login or its password.
+        Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword));
+        GC.KeepAlive(diagnostics);
+    }
+
+    [Fact]
+    public async Task PipelineRefusesAnExistingRuntimeLoginWhenDatabaseEnumerationIsDenied()
+    {
+        var fixture = await ProvisioningFixture.OpenAsync();
+        if (fixture is null) return;
+        await using var _ = fixture;
+        var runtimePassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await RunPipelineAsync(fixture.CreateRequest(runtimePassword: runtimePassword));
+
+        // VIEW ANY DATABASE is granted to PUBLIC by default, so the enumeration rule is only
+        // reachable through an explicit DENY. With the DENY, database metadata visibility
+        // shrinks to databases the setup identity OWNS (a mere user mapping is not enough),
+        // so this test makes the limited identity the target database owner: an explicitly
+        // denied owner-operator that cannot list every database and therefore cannot prove
+        // the absence of cross-database mappings.
+        var setupPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await fixture.CreateLimitedSetupLoginAsync(setupPassword);
+        await fixture.GrantViewAnyDefinitionToLimitedSetupLoginAsync();
+        await fixture.DenyViewAnyDatabaseToLimitedSetupLoginAsync();
+        await fixture.TransferTargetOwnershipToLimitedSetupLoginAsync();
+
+        var (rerun, diagnostics) = await RunPipelineExpectingFailureAsync(fixture.CreateRequest(
+            runtimePassword: runtimePassword,
+            setupUsername: fixture.LimitedSetupLoginName,
+            setupPassword: setupPassword));
+        var rerunStates = States(rerun);
+
+        Assert.False(rerun.Success);
+        Assert.True(rerunStates.TryGetValue("runtimeIdentity", out var identityState) && identityState == "failed",
+            diagnostics);
+        var identityMessage = rerun.StageResults.First(stage => stage.Key == "runtimeIdentity").Message;
+        Assert.Contains("VIEW ANY DATABASE", identityMessage, StringComparison.Ordinal);
+        // The refusal never touched the login or its password.
+        Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword));
+        GC.KeepAlive(diagnostics);
+    }
+
+    [Fact]
+    public async Task PipelineRefusesAnExistingRuntimeLoginWhenANonTargetDatabaseCannotBeAudited()
+    {
+        var fixture = await ProvisioningFixture.OpenAsync();
+        if (fixture is null) return;
+        await using var _ = fixture;
+        var runtimePassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await RunPipelineAsync(fixture.CreateRequest(runtimePassword: runtimePassword));
+
+        // The runtime login drifted into a database the setup identity cannot open. A
+        // HAS_DBACCESS = 0 result describes the setup identity, not the absence of a runtime
+        // mapping, so the reuse must fail closed while that database is un-auditable.
+        await fixture.CreateForeignDatabaseAsync();
+        await fixture.MapRuntimeLoginIntoForeignDatabaseAsync();
+
+        var setupPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await fixture.CreateLimitedSetupLoginAsync(setupPassword);
+        await fixture.GrantViewAnyDatabaseToLimitedSetupLoginAsync();
+        await fixture.GrantViewAnyDefinitionToLimitedSetupLoginAsync();
+        await fixture.MapLimitedSetupUserIntoTargetAsDbOwnerAsync();
+
+        var (rerun, diagnostics) = await RunPipelineExpectingFailureAsync(fixture.CreateRequest(
+            runtimePassword: runtimePassword,
+            setupUsername: fixture.LimitedSetupLoginName,
+            setupPassword: setupPassword));
+        var rerunStates = States(rerun);
+        var identityMessage = rerun.StageResults.First(stage => stage.Key == "runtimeIdentity").Message;
+
+        Assert.False(rerun.Success);
+        Assert.Equal("failed", rerunStates["runtimeIdentity"]);
+        Assert.Contains("ممیزی", identityMessage, StringComparison.Ordinal);
+        Assert.Contains(fixture.ForeignDatabaseName, identityMessage, StringComparison.Ordinal);
+        // The hidden foreign mapping survived the refused run untouched.
         Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword));
         GC.KeepAlive(diagnostics);
     }
@@ -340,6 +556,7 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         public string DatabaseName { get; } = $"FaranouVendorDevSetup_{Guid.NewGuid():N}"[..44];
         public string ForeignDatabaseName { get; } = $"FaranouVendorDevSetup_{Guid.NewGuid():N}"[..44];
         public string RuntimeLoginName { get; } = $"FaranouVendorRuntime_{Guid.NewGuid():N}"[..40];
+        public string LimitedSetupLoginName { get; } = $"FaranouVendorSetupLimited_{Guid.NewGuid():N}"[..44];
 
         private ProvisioningFixture(string baseConnection) => _baseConnection = baseConnection;
 
@@ -364,15 +581,19 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         public ProvisionRequest CreateRequest(
             string? databaseName = null,
             string? runtimePassword = null,
-            string? runtimeUsername = null)
+            string? runtimeUsername = null,
+            string? setupUsername = null,
+            string? setupPassword = null)
         {
             var builder = new SqlConnectionStringBuilder(_baseConnection);
+            var username = setupUsername ?? builder.UserID;
+            var password = setupPassword ?? builder.Password;
             return new ProvisionRequest(
                 Server: builder.DataSource,
                 Database: databaseName ?? DatabaseName,
-                Authentication: string.IsNullOrWhiteSpace(builder.UserID) ? "windows" : "sql",
-                Username: builder.UserID,
-                Password: builder.Password,
+                Authentication: string.IsNullOrWhiteSpace(username) ? "windows" : "sql",
+                Username: username,
+                Password: password,
                 TrustServerCertificate: builder.TrustServerCertificate,
                 RuntimeUsername: runtimeUsername ?? RuntimeLoginName,
                 RuntimePassword: runtimePassword);
@@ -450,8 +671,234 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
             await ExecuteAsync(databaseName ?? DatabaseName,
                 "IF EXISTS (SELECT 1 FROM sys.extended_properties WHERE class = 0 AND major_id = 0 AND minor_id = 0 AND name = 'FaranouVendorOwnership') EXEC sys.sp_dropextendedproperty @name = 'FaranouVendorOwnership';");
 
+        public async Task<bool> IsServerRoleMemberAsync(string loginName, string role)
+        {
+            // IS_SRVROLEMEMBER returns int (1 = member, 0 = not a member, NULL = invalid
+            // argument). Read the integer and treat NULL or any unexpected value as
+            // inconclusive: the negative assertions must fail loudly instead of passing
+            // because a cast turned both 0 and 1 into null.
+            var membership = await ScalarAsync("master", "SELECT IS_SRVROLEMEMBER(@role, @login)",
+                new SqlParameter("@role", SqlDbType.NVarChar, 128) { Value = role },
+                new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName });
+            return membership switch
+            {
+                1 => true,
+                0 => false,
+                _ => throw new InvalidOperationException($"IS_SRVROLEMEMBER('{role}', '{loginName}') returned an inconclusive result: {membership?.ToString() ?? "NULL"}"),
+            };
+        }
+
+        public async Task<List<string>> ServerGrantedPermissionsAsync(string loginName)
+        {
+            var grants = new List<string>();
+            await using var connection = new SqlConnection(TargetBuilder("master").ConnectionString);
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT pe.permission_name
+                FROM sys.server_permissions pe
+                JOIN sys.server_principals g ON g.principal_id = pe.grantee_principal_id
+                WHERE g.name = @login AND pe.state IN ('G', 'W')
+                ORDER BY pe.permission_name
+                """;
+            command.Parameters.Add(new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName });
+            await using var reader = await command.ExecuteReaderAsync(TestContext.Current.CancellationToken);
+            while (await reader.ReadAsync(TestContext.Current.CancellationToken))
+            {
+                grants.Add(reader.GetString(0));
+            }
+
+            return grants;
+        }
+
+        public async Task<bool> HasViewAnyDatabaseDenyAsync(string loginName) =>
+            await ScalarAsync("master", """
+                SELECT COUNT(*)
+                FROM sys.server_permissions pe
+                JOIN sys.server_principals g ON g.principal_id = pe.grantee_principal_id
+                WHERE g.name = @login AND pe.state = 'D' AND pe.permission_name = 'VIEW ANY DATABASE'
+                """,
+                new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = loginName }) is > 0;
+
+        public async Task<bool> RuntimeCanSelectFromOtherDatabaseAsync(string loginName, string password, string otherDatabase)
+        {
+            var builder = new SqlConnectionStringBuilder(TargetBuilder(otherDatabase).ConnectionString)
+            {
+                // Explicit SQL authentication: UserID/Password are ignored when the fixture
+                // string carries Integrated Security=true, and the probe would then run as the
+                // setup administrator instead of the runtime identity.
+                UserID = loginName,
+                Password = password,
+                IntegratedSecurity = false,
+                Pooling = false
+            };
+            try
+            {
+                await using var connection = new SqlConnection(builder.ConnectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var command = connection.CreateCommand();
+                command.CommandText = "SELECT COUNT(*) FROM dbo.ForeignMarker";
+                await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
+                return true;
+            }
+            catch (SqlException)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> RuntimeCanCreateDatabaseAsync(string loginName, string password)
+        {
+            var builder = new SqlConnectionStringBuilder(TargetBuilder("master").ConnectionString)
+            {
+                // Explicit SQL authentication: UserID/Password are ignored when the fixture
+                // string carries Integrated Security=true, and the probe would then run as the
+                // setup administrator instead of the runtime identity.
+                UserID = loginName,
+                Password = password,
+                IntegratedSecurity = false,
+                Pooling = false
+            };
+            try
+            {
+                await using var connection = new SqlConnection(builder.ConnectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var command = connection.CreateCommand();
+                command.CommandText = $"CREATE DATABASE [FaranouMustNotBeCreatable_{Guid.NewGuid():N}]";
+                await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+                return true;
+            }
+            catch (SqlException)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> RuntimeCanCreateLoginAsync(string loginName, string password)
+        {
+            var builder = new SqlConnectionStringBuilder(TargetBuilder("master").ConnectionString)
+            {
+                // Explicit SQL authentication: UserID/Password are ignored when the fixture
+                // string carries Integrated Security=true, and the probe would then run as the
+                // setup administrator instead of the runtime identity.
+                UserID = loginName,
+                Password = password,
+                IntegratedSecurity = false,
+                Pooling = false
+            };
+            try
+            {
+                await using var connection = new SqlConnection(builder.ConnectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var command = connection.CreateCommand();
+                command.CommandText = $"CREATE LOGIN [FaranouMustNotBeCreatable_{Guid.NewGuid():N}] WITH PASSWORD = N'Xy9!aaaa'";
+                await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+                return true;
+            }
+            catch (SqlException)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> RuntimeCanRunDdlAsync(string loginName, string password)
+        {
+            var builder = new SqlConnectionStringBuilder(TargetBuilder(DatabaseName).ConnectionString)
+            {
+                // Explicit SQL authentication: UserID/Password are ignored when the fixture
+                // string carries Integrated Security=true, and the probe would then run as the
+                // setup administrator instead of the runtime identity.
+                UserID = loginName,
+                Password = password,
+                IntegratedSecurity = false,
+                Pooling = false
+            };
+            try
+            {
+                await using var connection = new SqlConnection(builder.ConnectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var command = connection.CreateCommand();
+                command.CommandText = "CREATE TABLE dbo.FaranouRuntimeMustNotCreateTables (Id int NOT NULL PRIMARY KEY)";
+                await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+                return true;
+            }
+            catch (SqlException)
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> RuntimeCanDeleteZeroRowsAsync(string loginName, string password)
+        {
+            var builder = new SqlConnectionStringBuilder(TargetBuilder(DatabaseName).ConnectionString)
+            {
+                // Explicit SQL authentication: UserID/Password are ignored when the fixture
+                // string carries Integrated Security=true, and the probe would then run as the
+                // setup administrator instead of the runtime identity.
+                UserID = loginName,
+                Password = password,
+                IntegratedSecurity = false,
+                Pooling = false
+            };
+            try
+            {
+                await using var connection = new SqlConnection(builder.ConnectionString);
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var command = connection.CreateCommand();
+                command.CommandText = "DELETE FROM VendorAdminUsers WHERE 1 = 0";
+                await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+                return true;
+            }
+            catch (SqlException)
+            {
+                return false;
+            }
+        }
+
+        public async Task DisableRuntimeLoginAsync() =>
+            await ExecuteAsync("master", $"ALTER LOGIN [{RuntimeLoginName.Replace("]", "]]", StringComparison.Ordinal)}] DISABLE");
+
+        public async Task<bool> IsRuntimeLoginDisabledAsync() =>
+            await ScalarAsync("master", "SELECT is_disabled FROM sys.sql_logins WHERE name = @login",
+                new SqlParameter("@login", SqlDbType.NVarChar, 128) { Value = RuntimeLoginName }) is true;
+
+        public async Task MapRuntimeLoginIntoForeignDatabaseAsync()
+        {
+            var quotedLogin = $"[{RuntimeLoginName.Replace("]", "]]", StringComparison.Ordinal)}]";
+            await ExecuteAsync(ForeignDatabaseName, $"CREATE USER {quotedLogin} FOR LOGIN {quotedLogin}");
+        }
+
         public async Task GrantViewAnyDatabaseAsync() =>
             await ExecuteAsync("master", $"GRANT VIEW ANY DATABASE TO [{RuntimeLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+
+        // A deliberately limited setup identity for the fail-closed audit-coverage tests: it
+        // owns the target database through db_owner but has no server-level enumeration power
+        // unless the test explicitly grants VIEW ANY DATABASE.
+        public async Task CreateLimitedSetupLoginAsync(string password) =>
+            await ExecuteAsync("master",
+                $"CREATE LOGIN [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}] WITH PASSWORD = N'{password.Replace("'", "''", StringComparison.Ordinal)}', CHECK_POLICY = ON");
+
+        public async Task GrantViewAnyDatabaseToLimitedSetupLoginAsync() =>
+            await ExecuteAsync("master", $"GRANT VIEW ANY DATABASE TO [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+
+        public async Task GrantViewAnyDefinitionToLimitedSetupLoginAsync() =>
+            await ExecuteAsync("master", $"GRANT VIEW ANY DEFINITION TO [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+
+        public async Task DenyViewAnyDatabaseToLimitedSetupLoginAsync() =>
+            await ExecuteAsync("master", $"DENY VIEW ANY DATABASE TO [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+
+        public async Task TransferTargetOwnershipToLimitedSetupLoginAsync() =>
+            await ExecuteAsync("master",
+                $"ALTER AUTHORIZATION ON DATABASE::[{DatabaseName.Replace("]", "]]", StringComparison.Ordinal)}] TO [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+
+        public async Task MapLimitedSetupUserIntoTargetAsDbOwnerAsync()
+        {
+            var quoted = $"[{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]";
+            await ExecuteAsync(DatabaseName, $"CREATE USER {quoted} FOR LOGIN {quoted}");
+            await ExecuteAsync(DatabaseName,
+                "EXEC sp_addrolemember @rolename = 'db_owner', @membername = @member",
+                new SqlParameter("@member", SqlDbType.NVarChar, 128) { Value = LimitedSetupLoginName });
+        }
 
         public async Task CreateEmptyForeignDatabaseAsync() =>
             await ExecuteAsync("master", $"CREATE DATABASE [{ForeignDatabaseName.Replace("]", "]]", StringComparison.Ordinal)}]");
@@ -519,6 +966,7 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
                 InitialCatalog = DatabaseName,
                 UserID = loginName,
                 Password = runtimePassword,
+                IntegratedSecurity = false,
                 Encrypt = true,
                 TrustServerCertificate = new SqlConnectionStringBuilder(_baseConnection).TrustServerCertificate,
                 ConnectTimeout = 15,
@@ -582,6 +1030,20 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
             await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
         }
 
+        private static async Task ExecuteAsync(string database, string commandText, params SqlParameter[] parameters)
+        {
+            await using var connection = new SqlConnection(TargetBuilder(database).ConnectionString);
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = commandText;
+            foreach (var parameter in parameters)
+            {
+                command.Parameters.Add(parameter);
+            }
+
+            await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        }
+
         public async ValueTask DisposeAsync()
         {
             // Each cleanup step runs independently (one failure never skips the rest) and
@@ -609,20 +1071,23 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
                 }
             }
 
-            try
+            foreach (var loginName in new[] { RuntimeLoginName, LimitedSetupLoginName })
             {
-                // DROP LOGIN has no IF EXISTS form: guard through the catalog, then drop.
-                var loginExists = await ScalarAsync("master",
-                    "SELECT COUNT(*) FROM sys.server_principals WHERE name = @name AND type = 'S'",
-                    new SqlParameter("@name", SqlDbType.NVarChar, 128) { Value = RuntimeLoginName }) is > 0;
-                if (loginExists)
+                try
                 {
-                    await ExecuteAsync("master", $"DROP LOGIN [{RuntimeLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+                    // DROP LOGIN has no IF EXISTS form: guard through the catalog, then drop.
+                    var loginExists = await ScalarAsync("master",
+                        "SELECT COUNT(*) FROM sys.server_principals WHERE name = @name AND type = 'S'",
+                        new SqlParameter("@name", SqlDbType.NVarChar, 128) { Value = loginName }) is > 0;
+                    if (loginExists)
+                    {
+                        await ExecuteAsync("master", $"DROP LOGIN [{loginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+                    }
                 }
-            }
-            catch (SqlException)
-            {
-                // Best effort.
+                catch (SqlException)
+                {
+                    // Best effort.
+                }
             }
 
             try
