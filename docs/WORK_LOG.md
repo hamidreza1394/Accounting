@@ -3872,3 +3872,11 @@
 - **محدوده:** فقط Vendor Development Setup، تست‌های اختصاصی و Vendor CI workflow؛ بدون `Server/**`، Customer code، Customer schema/Migration یا secret.
 - **وضعیت اعتبارسنجی:** در زمان ثبت، PR #810 باز است؛ CI Node 24، Build .NET، Windows HTTP matrix و SQL Integration هنوز باید روی HEAD نهایی PR تکمیل شوند. هیچ Build/CI/HTTP/SQL موفقی برای این PR ادعا نمی‌شود. اجرای عملیاتی روی سیستم مالک نیز انجام نشده است.
 
+
+
+## 2026-11-28 — تصمیم پذیرفته‌شده S-B برای Issue #393
+
+- مالک در کامنت Issue #393 مورخ 2026-11-24 گزینه A را پذیرفته است؛ قرارداد دیگر Proposed نیست.
+- پیاده‌سازی Vendor-only delivery/ACK اکنون مجاز است: metadata روی همان `VendorLicenseAmendmentRequest`، reuse پاکت/validator/trust store provisioning، binding به request/nonce/payload hash/CustomerReference/InstallationId، retry دقیق idempotent، conflict برای ACK متفاوت و ثبت state+Audit در یک transaction.
+- Applied فقط با ACK امضاشدهٔ Applied/AlreadyApplied و Rejected فقط با ACK امضاشدهٔ معتبر terminal می‌شود. هیچ ACK نامعتبر یا untrusted وضعیت را جلو نمی‌برد.
+- تولید/انتقال ACK سمت Customer و trust distribution/rotation در #235/#394 باقی است؛ Company-scoped entitlement تا #392 fail-closed می‌ماند. این تصمیم به معنی وجود پیاده‌سازی یا آزمون دو میزبان نیست.
