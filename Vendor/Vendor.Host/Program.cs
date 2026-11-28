@@ -134,6 +134,18 @@ if (developmentSetupEnabled &&
                     QueueLimit = 0,
                     Window = TimeSpan.FromMinutes(1)
                 }));
+        // Full provisioning mutates the server (create/migrate/identity): a stricter
+        // per-address window so a stuck client cannot hammer the seven-stage pipeline.
+        options.AddPolicy("vendor-development-setup-provision", context =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 3,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1)
+                }));
     });
     builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
     builder.Services.AddSingleton<VendorDevelopmentSetupBootstrapToken>();
@@ -366,6 +378,16 @@ builder.Services.AddRateLimiter(options =>
                 {
                     AutoReplenishment = true,
                     PermitLimit = 10,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1)
+                }));
+        options.AddPolicy("vendor-development-setup-provision", context =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 3,
                     QueueLimit = 0,
                     Window = TimeSpan.FromMinutes(1)
                 }));

@@ -30,3 +30,8 @@
 ## شناسه‌های Git
 - Branch: `fix/vendor-provisioning-endpoint-security`
 - Pull Request: پس از push ثبت می‌شود
+
+## تکمیل بازبینی نهایی (2026-11-28)
+- [x] **رفع اشکال بحرانی سیاست Rate Limit:** endpoint `provision` به سیاست `vendor-development-setup-provision` نیاز داشت اما این سیاست در هیچ‌یک از دو شاخهٔ setup-only و full-app ثبت نشده بود؛ هر فراخوانی provision در زمان اجرا با `InvalidOperationException` (HTTP 500) شکست می‌خورد. سیاست با سقف ۳/دقیقه (Fixed Window، کلید IP) در هر دو شاخهٔ `Program.cs` ثبت شد.
+- [x] **ماتریس کامل تست HTTP واقعی:** `VendorDevelopmentSetupHttpMatrixTests` با `WebApplicationFactory` روی سطح setup-only واقعی — پوشش: هدرهای no-store، Cookie سخت‌گیرانهٔ Bootstrap، رد بدون Challenge بدون مصرف جفت توکن، مصرف یگانه (replay رد می‌شود)، سوختن جفت در عدم تطابق Cookie، رد مقصد SQL غیرمجاز روی test/save، رد همهٔ Endpointهای تغییردهنده بدون Challenge/با Challenge اشتباه/با Origin بیگانه، اجرای inspect از مسیر گاردها، و سقف ۳/دقیقهٔ provision (پاسخ 429). سطح Windows-only است؛ در سایر سیستم‌ها Skip و job سیسکو «Windows signer and setup HTTP matrix tests» با نام کلاس اجرا می‌کند.
+- [x] فیلتر job ویندوزی vendor-ci.yml به‌روزرسانی شد تا ماتریس HTTP واقعاً در CI اجرا شود.

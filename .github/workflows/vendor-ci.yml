@@ -56,7 +56,7 @@ jobs:
         run: dotnet test tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AppendAcrossIndependentProcessesRejectsDuplicateSequenceWithoutCorruptingJournal" --verbosity minimal
 
   windows-cng-signer:
-    name: Windows CNG certificate-store signer tests
+    name: Windows signer and setup HTTP matrix tests
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
@@ -69,7 +69,7 @@ jobs:
       - name: Restore Vendor tests
         run: dotnet restore tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj
       - name: Run Windows CNG signer tests
-        run: dotnet test tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~WindowsCng" --verbosity minimal
+        run: dotnet test tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~WindowsCng|FullyQualifiedName~VendorDevelopmentSetupHttp" --verbosity minimal
   build-test-package:
     runs-on: ubuntu-latest
     env:
