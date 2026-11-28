@@ -23,7 +23,7 @@
 
 | فیلد | راهنما |
 |---|---|
-| آدرس SQL Server | برای نمونه محلی از `localhost`؛ برای Named Instance از `SERVER\\INSTANCE` مانند `localhost\\SQLEXPRESS`؛ برای پورت مشخص از `SERVER,PORT` استفاده کنید. |
+| آدرس SQL Server | برای نمونه محلی از `localhost`؛ برای Named Instance از `SERVER\INSTANCE` مانند `localhost\SQLEXPRESS`؛ برای پورت مشخص از `SERVER,PORT` استفاده کنید. |
 | نام دیتابیس Vendor | نام دیتابیس مستقل Vendor، معمولاً `VendorDb`. دیتابیس Customer را انتخاب نکنید. |
 | روش ورود Windows | از هویت Windows پردازشی که Host را اجرا می‌کند استفاده می‌کند؛ همان هویت باید روی SQL Server مجوز لازم داشته باشد. |
 | روش ورود SQL | فقط وقتی انتخاب کنید که SQL Server authentication فعال و Login مجاز دارید. رمز را در چت، Git یا log قرار ندهید. |
