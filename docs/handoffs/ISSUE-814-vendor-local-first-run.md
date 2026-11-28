@@ -76,4 +76,4 @@
 - Branch: `fix/issue-814-vendor-local-first-run`
 - Commit: ثبت‌شده در تاریخچه شاخه
 - Pull Request: [#815](https://github.com/hamidreza1394/Accounting/pull/815) (Draft)
-- Head SHA هنگام ایجاد PR: `9e35a1521c33c14f2d925ce2e30ecc1f09a05345`; آخرین commit کد پس از اصلاح ورود با ایمیل: `1994da6e9b74527d7783089d451a2387c68f222e`
+- Head SHA هنگام ایجاد PR: `9e35a1521c33c14f2d925ce2e30ecc1f09a05345`; آخرین commit کد پس از اصلاح نمایش مسیرهای SQL/PowerShell: `adc3c4286bc11d6f4bea1d4e0aafe4161291fa05`
