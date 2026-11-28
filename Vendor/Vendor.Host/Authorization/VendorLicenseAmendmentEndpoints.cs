@@ -1,3 +1,4 @@
+using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Signing;
 using Microsoft.AspNetCore.Authorization;
@@ -7,6 +8,7 @@ using Faranou.Vendor.Persistence.Domain;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace Faranou.Vendor.Host.Authorization;
@@ -224,6 +226,157 @@ public static class VendorLicenseAmendmentEndpoints
             return Results.Accepted($"/api/vendor/approvals/{approval.Id:D}", new { approval.Id });
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.LicensesIssue));
 
+        group.MapPost("/{id:guid}/delivery", async (
+            Guid id, HttpContext context,
+            IAntiforgery antiforgery, IAuthorizationService authorization, VendorDbContext db,
+            UserManager<VendorAdminUser> users,
+            VendorLicenseAmendmentDeliveryService delivery, CancellationToken ct) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context))
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+
+            var access = await authorization.AuthorizeAsync(
+                context.User,
+                VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.LicensesIssue));
+            if (!access.Succeeded) return Results.Forbid();
+
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+
+            var request = await db.LicenseAmendmentRequests.SingleOrDefaultAsync(item => item.Id == id, ct);
+            if (request is null) return Results.NotFound();
+
+            await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+            var result = await delivery.DeliverAsync(
+                request, actor.Id, CorrelationId(context), ct);
+            if (!result.Succeeded || result.Delivery is null)
+                return Results.Conflict(new { error = result.ErrorCode });
+
+            await tx.CommitAsync(ct);
+            context.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(result.Delivery);
+        }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.LicensesIssue));
+
+        // Machine-to-machine endpoint: authenticate the signed acknowledgement using a
+        // deployment-configured trust key, not the browser session or an envelope-supplied key.
+        // The canonical envelope/validator/trust store are the provisioning ones (S-B decision:
+        // no second signature protocol); bindings are the amendment request ID, the per-delivery
+        // nonce, the delivered signed payload hash, the CustomerReference and the InstallationCode.
+        group.MapPost("/{id:guid}/acknowledgement", async (
+            Guid id, CustomerProvisioningAcknowledgementEnvelope? envelope,
+            VendorDbContext db,
+            ProvisioningAcknowledgementTrustStore trustStore,
+            TimeProvider timeProvider,
+            IVendorAuditWriter audit,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            if (envelope is null ||
+                string.IsNullOrWhiteSpace(envelope.AcknowledgementJson) ||
+                envelope.AcknowledgementJson.Length > CustomerProvisioningAcknowledgementValidator.MaxAcknowledgementJsonChars)
+                return Results.BadRequest(new { error = "amendment_acknowledgement_envelope_invalid" });
+
+            if (!trustStore.TryGetTrustedPublicKey(envelope.KeyId, out var trustedPublicKey))
+                return Results.Unauthorized();
+
+            await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+            var request = await db.LicenseAmendmentRequests
+                .SingleOrDefaultAsync(item => item.Id == id, ct);
+            if (request is null) return Results.NotFound();
+
+            var licence = await db.Licenses.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == request.LicenseId, ct);
+            if (licence is null || licence.CustomerId != request.CustomerId)
+                return Results.NotFound();
+            var customer = await db.Customers.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == request.CustomerId, ct);
+            var installation = licence.InstallationId is { } installationId
+                ? await db.Installations.AsNoTracking().SingleOrDefaultAsync(item => item.Id == installationId, ct)
+                : null;
+            if (customer is null || installation is null)
+                return Results.NotFound();
+
+            var envelopeJson = System.Text.Json.JsonSerializer.Serialize(envelope);
+            var acknowledgementDigest = Convert.ToHexString(
+                System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(envelopeJson))).ToLowerInvariant();
+
+            // First ACK wins: an exact signed retry is idempotent; a different signed outcome can
+            // never rewrite an acknowledgement already accepted for this amendment.
+            if (request.AcknowledgementSha256 is not null)
+            {
+                if (System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                        System.Text.Encoding.ASCII.GetBytes(request.AcknowledgementSha256),
+                        System.Text.Encoding.ASCII.GetBytes(acknowledgementDigest)))
+                {
+                    await audit.AppendAsync(new VendorAuditWriteRequest(
+                        null, "vendor.amendment.acknowledgement-retried", nameof(VendorLicenseAmendmentRequest),
+                        request.Id.ToString("D"), CorrelationId(context)), ct);
+                    await tx.CommitAsync(ct);
+                    context.Response.Headers.CacheControl = "no-store";
+                    return Results.Ok(new { status = request.Status, repeated = true });
+                }
+
+                return Results.Conflict(new { error = "amendment_acknowledgement_conflict" });
+            }
+
+            if (!VendorLicenseAmendmentAcknowledgementRules.CanAcceptAcknowledgement(
+                    request.Status, request.DeliveredAtUtc, request.DeliveredNonce, request.DeliveredPayloadSha256))
+                return Results.Conflict(new { error = "amendment_request_not_delivered" });
+
+            if (!CustomerProvisioningAcknowledgementValidator.TryValidateAndVerify(
+                    envelope,
+                    trustedPublicKey.Span,
+                    request.Id.ToString("D"),
+                    request.DeliveredNonce!,
+                    request.DeliveredPayloadSha256!,
+                    customer.CustomerNumber,
+                    installation.InstallationCode,
+                    timeProvider.GetUtcNow().ToUniversalTime(),
+                    out var acknowledgement,
+                    out var validationError))
+                return Results.BadRequest(new { error = validationError });
+
+            // Fail closed: an outcome outside the stable amendment rejection allowlist advances
+            // nothing — the row stays Delivered with no acknowledgement recorded.
+            if (!VendorLicenseAmendmentAcknowledgementRules.TryResolveOutcome(
+                    acknowledgement!.Result, acknowledgement.ErrorCode, out var targetStatus, out var failureCode))
+                return Results.BadRequest(new { error = "amendment_acknowledgement_payload_invalid" });
+
+            var now = timeProvider.GetUtcNow().ToUniversalTime();
+            request.AcknowledgementSha256 = acknowledgementDigest;
+            request.AcknowledgementKeyId = envelope.KeyId;
+            request.AcknowledgementResult = acknowledgement.Result;
+            request.AcknowledgementErrorCode = acknowledgement.ErrorCode;
+            request.CustomerProcessedAtUtc = acknowledgement.ProcessedAtUtc.ToUniversalTime();
+            request.AcknowledgedAtUtc = now;
+            request.Status = targetStatus;
+            request.FailureCode = failureCode;
+            request.UpdatedAtUtc = now;
+
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Results.Conflict(new { error = "stale_row_version" });
+            }
+
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                null,
+                acknowledgement.Result == "Rejected"
+                    ? "vendor.amendment.acknowledgement-rejected"
+                    : "vendor.amendment.acknowledgement-confirmed",
+                nameof(VendorLicenseAmendmentRequest),
+                request.Id.ToString("D"), CorrelationId(context)), ct);
+
+            await tx.CommitAsync(ct);
+            context.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(new { status = request.Status, repeated = false });
+        })
+        .AllowAnonymous()
+        .RequireRateLimiting("provisioning-acknowledgement");
+
         return endpoints;
     }
 
@@ -304,7 +457,8 @@ public static class VendorLicenseAmendmentEndpoints
         item.Kind, item.RequestedMaxCompanies, item.RequestedSupportUntilUtc,
         item.RequestedUpdatesUntilUtc, item.Status, item.ApprovalRequestId,
         item.FailureCode, item.CreatedAtUtc, item.UpdatedAtUtc,
-        Convert.ToBase64String(item.RowVersion));
+        item.IssuedSequence, item.DeliveredAtUtc, item.AcknowledgementResult,
+        item.AcknowledgedAtUtc, Convert.ToBase64String(item.RowVersion));
 
     private static bool IsUniqueConstraintViolation(DbUpdateException exception) =>
         exception.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 };
@@ -328,4 +482,6 @@ public sealed record VendorLicenseAmendmentResponse(
     Guid Id, Guid OrderId, Guid OrderLineId, Guid CustomerId, Guid LicenseId,
     string Kind, int? RequestedMaxCompanies, DateTimeOffset? RequestedSupportUntilUtc,
     DateTimeOffset? RequestedUpdatesUntilUtc, string Status, Guid? ApprovalRequestId,
-    string? FailureCode, DateTimeOffset CreatedAtUtc, DateTimeOffset UpdatedAtUtc, string RowVersion);
+    string? FailureCode, DateTimeOffset CreatedAtUtc, DateTimeOffset UpdatedAtUtc,
+    int? IssuedSequence, DateTimeOffset? DeliveredAtUtc, string? AcknowledgementResult,
+    DateTimeOffset? AcknowledgedAtUtc, string RowVersion);

@@ -421,6 +421,29 @@ namespace Faranou.Vendor.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("AcknowledgedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("AcknowledgementErrorCode")
+                        .HasMaxLength(128)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("AcknowledgementKeyId")
+                        .HasMaxLength(128)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("AcknowledgementResult")
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("AcknowledgementSha256")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<Guid?>("ApprovalRequestId")
                         .HasColumnType("uniqueidentifier");
 
@@ -432,10 +455,29 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("CustomerProcessedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DeliveredAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DeliveredNonce")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("DeliveredPayloadSha256")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<string>("FailureCode")
                         .HasMaxLength(64)
                         .IsUnicode(false)
                         .HasColumnType("varchar(64)");
+
+                    b.Property<int?>("IssuedSequence")
+                        .HasColumnType("int");
 
                     b.Property<string>("Kind")
                         .IsRequired()
@@ -493,13 +535,13 @@ namespace Faranou.Vendor.Persistence.Migrations
 
                     b.HasIndex("OrderLineId")
                         .IsUnique()
-                        .HasFilter("[Status] IN ('Requested', 'PendingApproval', 'Issued')");
+                        .HasFilter("[Status] IN ('Requested', 'PendingApproval', 'Issued', 'Delivered')");
 
                     b.ToTable("VendorLicenseAmendmentRequests", null, t =>
                         {
                             t.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Kind", "[Kind] IN (N'maxCompanies', N'supportUpdates')");
 
-                            t.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Status", "[Status] IN (N'Requested', N'PendingApproval', N'Issued', N'Rejected', N'Failed')");
+                            t.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Status", "[Status] IN (N'Requested', N'PendingApproval', N'Issued', N'Delivered', N'Applied', N'Rejected', N'Failed')");
                         });
                 });
 

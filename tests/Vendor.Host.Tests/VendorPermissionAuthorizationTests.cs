@@ -102,7 +102,11 @@ public sealed class VendorPermissionAuthorizationTests
             "/api/auth/passkey/options",
             "/api/auth/passkey/sign-in",
             "/api/auth/logout",
-            "/api/vendor/provisioning-requests/{requestId}/acknowledgement"
+            "/api/vendor/provisioning-requests/{requestId}/acknowledgement",
+            // Machine-to-machine amendment acknowledgement intake (#393, S-B decision):
+            // authenticated only by a deployment-trusted customer signature over the canonical
+            // envelope, with first-wins persistence and rate limiting.
+            "/api/vendor/license-amendment-requests/{id:guid}/acknowledgement"
         };
 
         Assert.Subset(approvedPublicPaths, publicApiPaths);

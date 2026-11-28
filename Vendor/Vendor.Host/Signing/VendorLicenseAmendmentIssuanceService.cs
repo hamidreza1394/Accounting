@@ -135,6 +135,10 @@ public sealed class VendorLicenseAmendmentIssuanceService(
         request.Status = VendorLicenseAmendmentRequest.StatusIssued;
         request.UpdatedAtUtc = now;
         request.ApprovalRequestId = approval.Id;
+        // Pins the exact signed envelope this request produced: delivery and every customer
+        // acknowledgement bind to (LicenseId, IssuedSequence) → stored envelope payload hash, so
+        // a later issuance of the same license can never be delivered for this older request.
+        request.IssuedSequence = candidate.Sequence;
         license.LastIssuedSequence = candidate.Sequence;
         // Keep the license row in lockstep with the signed payload: the delivery resolver and
         // every future amendment builder compare license.MaxCompanies against the payload's
