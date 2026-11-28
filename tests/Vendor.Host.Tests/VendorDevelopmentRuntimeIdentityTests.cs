@@ -123,6 +123,51 @@ public sealed class VendorDevelopmentRuntimeIdentityTests
         Assert.Contains("Db1، Db2", refusal, StringComparison.Ordinal);
     }
 
+    // ── Audit coverage: reuse only after a complete cross-database audit ────────────────
+
+    [Fact]
+    public void IncompleteDatabaseEnumerationRefusesTheExistingLogin()
+    {
+        // Without sysadmin/CONTROL SERVER/VIEW ANY DATABASE the setup identity cannot even
+        // list every database, so "no mapping found" would be an incomplete proof.
+        var (allowed, refusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateAuditCoverage(
+            "FaranouVendorRuntime", canEnumerateAllDatabases: false, []);
+        Assert.False(allowed);
+        Assert.NotNull(refusal);
+        Assert.Contains("FaranouVendorRuntime", refusal, StringComparison.Ordinal);
+        Assert.Contains("VIEW ANY DATABASE", refusal, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CompleteAuditOfEveryDatabaseWithoutExtraMappingIsAccepted()
+    {
+        var (allowed, refusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateAuditCoverage(
+            "FaranouVendorRuntime", canEnumerateAllDatabases: true, []);
+        Assert.True(allowed);
+        Assert.Null(refusal);
+    }
+
+    [Fact]
+    public void UnauditableDatabasesRefuseTheExistingLoginAndAreListed()
+    {
+        var (allowed, refusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateAuditCoverage(
+            "FaranouVendorRuntime", canEnumerateAllDatabases: true, [" OfflineDb ", "NoAccessDb", "NoAccessDb"]);
+        Assert.False(allowed);
+        Assert.NotNull(refusal);
+        Assert.Contains("FaranouVendorRuntime", refusal, StringComparison.Ordinal);
+        Assert.Contains("OfflineDb، NoAccessDb", refusal, StringComparison.Ordinal);
+        Assert.Contains("ممیزی", refusal, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WhitespaceOnlyUnauditableNamesAreIgnored()
+    {
+        var (allowed, refusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateAuditCoverage(
+            "FaranouVendorRuntime", canEnumerateAllDatabases: true, [" ", ""]);
+        Assert.True(allowed);
+        Assert.Null(refusal);
+    }
+
     // ── Credential safety: sanitized error mapping ──────────────────────────────────────
 
     [Fact]

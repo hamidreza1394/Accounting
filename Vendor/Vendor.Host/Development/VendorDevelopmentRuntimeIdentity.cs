@@ -64,5 +64,37 @@ internal static class VendorDevelopmentRuntimeIdentity
 
             return (false, $"هویت Runtime «{loginName}» در دیتابیس‌های دیگری هم User است ({string.Join("، ", others)}) و به‌عنوان هویت کم‌اختیار پذیرفته نمی‌شود؛ mappingهای اضافه را با مدیر سرور حذف کنید یا نام Runtime دیگری انتخاب کنید.");
         }
+
+        /// <summary>
+        /// Audit-coverage rule: reusing an existing login is only allowed when the setup
+        /// identity could actually audit EVERY non-target database on the instance. Without
+        /// sysadmin/CONTROL SERVER/VIEW ANY DATABASE the enumeration itself is incomplete
+        /// (unseen databases may hold a mapping), and a database the setup identity cannot
+        /// open (offline, no user access) cannot be checked at all — its mapping survives
+        /// invisibly and comes back with the database. Both gaps must refuse reuse (fail
+        /// closed) instead of counting as "no mapping found".
+        /// </summary>
+        public static (bool Allowed, string? Refusal) EvaluateAuditCoverage(
+            string loginName,
+            bool canEnumerateAllDatabases,
+            IEnumerable<string> unauditableDatabaseNames)
+        {
+            if (!canEnumerateAllDatabases)
+            {
+                return (false, $"هویت پیکربندی نمی‌تواند همهٔ دیتابیس‌های سرور را فهرست کند (نه sysadmin است و نه مجوز VIEW ANY DATABASE دارد)، پس نبودِ mapping اضافه برای Login «{loginName}» قابل اثبات نیست و استفاده از آن Login موجود پذیرفته نمی‌شود؛ دسترسی هویت پیکربندی را کامل کنید یا نام Runtime دیگری انتخاب کنید.");
+            }
+
+            var unauditable = unauditableDatabaseNames
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (unauditable.Count > 0)
+            {
+                return (false, $"ممیزی کامل دیتابیس‌های ({string.Join("، ", unauditable)}) ممکن نیست (Offline یا بدون دسترسی هویت پیکربندی)، پس استفاده از Login موجود «{loginName}» پذیرفته نمی‌شود؛ mapping این Login در آن دیتابیس‌ها می‌توانست پنهان بماند و با Online شدن دوباره فعال شود.");
+            }
+
+            return (true, null);
+        }
     }
 }

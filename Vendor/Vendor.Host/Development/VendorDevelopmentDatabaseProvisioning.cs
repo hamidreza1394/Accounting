@@ -1008,19 +1008,57 @@ internal static class VendorDevelopmentDatabaseProvisioning
 
                 // A least-privilege runtime identity must not hold user mappings in any other
                 // database: that is exactly how access would leak beyond the vendor database.
+                // The audit is only trustworthy when the setup identity can enumerate and open
+                // every non-target database, so both gaps fail closed before reuse is accepted.
                 var otherDatabases = new List<string>();
-                await using (var otherDatabasesCommand = connection.CreateCommand())
+                var unauditableDatabases = new List<string>();
+                await using (var coverageCommand = connection.CreateCommand())
                 {
-                    otherDatabasesCommand.CommandText = """
-                        SELECT d.name
-                        FROM sys.databases d
-                        WHERE HAS_DBACCESS(d.name) = 1 AND d.database_id <> DB_ID(@target)
+                    // Effective permissions (fn_my_permissions) include role-inherited grants,
+                    // so a setup identity holding VIEW ANY DATABASE through any source counts.
+                    coverageCommand.CommandText = """
+                        SELECT CAST(CASE
+                            WHEN IS_SRVROLEMEMBER('sysadmin') = 1 THEN 1
+                            WHEN EXISTS (
+                                SELECT 1 FROM fn_my_permissions(NULL, 'SERVER')
+                                WHERE permission_name IN ('VIEW ANY DATABASE', 'CONTROL SERVER'))
+                                THEN 1
+                            ELSE 0 END AS int)
                         """;
-                    otherDatabasesCommand.Parameters.Add(new SqlParameter("@target", System.Data.SqlDbType.NVarChar, 128) { Value = input.Database });
-                    await using var reader = await otherDatabasesCommand.ExecuteReaderAsync(CancellationToken.None);
-                    while (await reader.ReadAsync(CancellationToken.None))
+                    var canEnumerateAllDatabases = await ExecuteScalarAsync(coverageCommand, CancellationToken.None) is 1;
+
+                    await using (var otherDatabasesCommand = connection.CreateCommand())
                     {
-                        otherDatabases.Add(reader.GetString(0));
+                        otherDatabasesCommand.CommandText = """
+                            SELECT d.name, CAST(HAS_DBACCESS(d.name) AS int) AS HasAccess
+                            FROM sys.databases d
+                            WHERE d.database_id <> DB_ID(@target)
+                            """;
+                        otherDatabasesCommand.Parameters.Add(new SqlParameter("@target", System.Data.SqlDbType.NVarChar, 128) { Value = input.Database });
+                        await using var reader = await otherDatabasesCommand.ExecuteReaderAsync(CancellationToken.None);
+                        while (await reader.ReadAsync(CancellationToken.None))
+                        {
+                            var databaseName = reader.GetString(0);
+                            var hasAccess = reader.IsDBNull(1) ? (int?)null : reader.GetInt32(1);
+                            if (hasAccess == 1)
+                            {
+                                otherDatabases.Add(databaseName);
+                            }
+                            else
+                            {
+                                // HAS_DBACCESS = 0 (or NULL) describes the SETUP identity's access,
+                                // not the absence of a runtime mapping: an offline or inaccessible
+                                // database keeps its mapping and exposes it when it comes online.
+                                unauditableDatabases.Add(databaseName);
+                            }
+                        }
+                    }
+
+                    var (coverageAllowed, coverageRefusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateAuditCoverage(
+                        input.RuntimeUsername, canEnumerateAllDatabases, unauditableDatabases);
+                    if (!coverageAllowed)
+                    {
+                        throw new VendorDatabaseMismatchException(coverageRefusal!);
                     }
                 }
 
