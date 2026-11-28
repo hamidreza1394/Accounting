@@ -58,6 +58,24 @@ builder.Configuration.AddEnvironmentVariables(prefix: "FARANO_VENDOR_");
 // prerequisites. It uses the Vendor database only and never accepts credentials in arguments.
 if (bootstrapCommandRequested)
 {
+    // The local Development setup stores the least-privilege runtime connection per Windows
+    // user. Reuse it for the one-time bootstrap command when no explicit configuration wins.
+    if (string.IsNullOrWhiteSpace(builder.Configuration["ConnectionStrings:VendorDb"]))
+    {
+        var savedConnection = VendorDevelopmentDatabaseSetup.ReadSavedConnection();
+        if (!string.IsNullOrWhiteSpace(savedConnection))
+        {
+            builder.Configuration["ConnectionStrings:VendorDb"] = savedConnection;
+        }
+    }
+
+    if (string.IsNullOrWhiteSpace(builder.Configuration["ConnectionStrings:VendorDb"]))
+    {
+        Console.Error.WriteLine("Vendor database connection is not configured. Run the local database setup first or set FARANO_VENDOR_ConnectionStrings__VendorDb.");
+        Environment.ExitCode = 2;
+        return;
+    }
+
     builder.Services.AddVendorPersistence(builder.Configuration);
     new IdentityBuilder(typeof(VendorAdminUser), builder.Services).AddDefaultTokenProviders();
 
@@ -158,9 +176,9 @@ if (developmentSetupEnabled &&
     var challengeCode = setupApp.Services.GetRequiredService<VendorDevelopmentSetupChallenge>().Issue();
     Console.WriteLine();
     Console.WriteLine(VendorDevelopmentSetupChallenge.ConsoleHeader);
-    Console.WriteLine("کد نشست راه‌اندازی (Setup challenge) — این کد را در صفحهٔ setup وارد کنید:");
+    Console.WriteLine("Setup challenge: enter this code in the local setup page:");
     Console.WriteLine($"    {challengeCode}");
-    Console.WriteLine("این کد فقط در همین کنسول نمایش داده می‌شود و با restart فرایند تغییر می‌کند.");
+    Console.WriteLine("This code is shown only in this console and changes when the process restarts.");
     Console.WriteLine();
     await setupApp.RunAsync();
     return;
