@@ -43,6 +43,19 @@ export function createSetupState() {
       saving = false;
     },
 
+    beginDelete() {
+      if (provisioning || saving) return false;
+      saving = true;
+      generation += 1;
+      testInFlight = false;
+      testedSignature = "";
+      return true;
+    },
+
+    endDelete() {
+      saving = false;
+    },
+
     beginProvisioning() {
       if (provisioning || saving) return false;
       provisioning = true;
