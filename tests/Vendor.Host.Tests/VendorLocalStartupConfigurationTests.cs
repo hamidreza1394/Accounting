@@ -3,6 +3,7 @@ using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
 
+// Issue #814 regression coverage for Visual Studio startup and console operator ergonomics.
 public sealed class VendorLocalStartupConfigurationTests
 {
     [Fact]
