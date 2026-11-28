@@ -3913,3 +3913,5 @@
 - **اعتبارسنجی:** در این محیط Build/Test/Node/browser/Windows SQL عملیاتی اجرا نشد؛ CI PR و اجرای واقعی دستگاه مالک برای تأیید باقی است. این تغییرات تا آن زمان Implemented / Not Verified هستند.
 
 - **تحویل Git:** Issue [#814](https://github.com/hamidreza1394/Accounting/issues/814) و PR پیش‌نویس [#815](https://github.com/hamidreza1394/Accounting/pull/815) ایجاد شدند؛ شاخه مستقل `fix/issue-814-vendor-local-first-run` از main ساخته شد. CI روی HEAD PR پس از آخرین اصلاحات باید بررسی شود.
+
+- **یافته تکمیلی Issue #814:** ممیزی مسیر ورود نشان داد UI «نام کاربری یا ایمیل» را وعده می‌داد اما API فقط `FindByNameAsync` داشت. مسیر password sign-in اکنون پس از عدم تطبیق username، در صورت داشتن نشانهٔ ایمیل از `FindByEmailAsync` استفاده می‌کند؛ تست HTTP احراز هویت معتبر با ایمیل مدیر اجرا خواهد شد. ورودی همچنان از Identity Normalizer و RequireUniqueEmail موجود عبور می‌کند.
