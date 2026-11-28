@@ -1038,6 +1038,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
                 // is accepted.
                 var otherDatabases = new List<string>();
                 var unauditableDatabases = new List<string>();
+                var canEnumerateAllDatabases = false;
                 await using (var coverageCommand = connection.CreateCommand())
                 {
                     // Effective permissions (fn_my_permissions) include role-inherited grants,
@@ -1051,7 +1052,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
                                 THEN 1
                             ELSE 0 END AS int)
                         """;
-                    var canEnumerateAllDatabases = await ExecuteScalarAsync(coverageCommand, CancellationToken.None) is 1;
+                    canEnumerateAllDatabases = await ExecuteScalarAsync(coverageCommand, CancellationToken.None) is 1;
 
                     await using (var otherDatabasesCommand = connection.CreateCommand())
                     {
