@@ -157,6 +157,22 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
     }
 
     [Fact]
+    public async Task SetupStateModuleIsServedAsSameOriginJavaScript()
+    {
+        var (factory, client, _) = CreateSetupHost();
+        using var _factory = factory;
+        using var _client = client;
+
+        using var response = await client.GetAsync("/development/database-setup-state.mjs");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/javascript", response.Content.Headers.ContentType?.MediaType);
+        Assert.True(response.Headers.CacheControl!.NoStore);
+
+        var source = await response.Content.ReadAsStringAsync();
+        Assert.Contains("export function createSetupState", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SetupResponsesCarryNoStoreHeaders()
     {
         var (factory, client, _) = CreateSetupHost();
