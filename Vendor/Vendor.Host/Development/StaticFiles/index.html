@@ -15,10 +15,19 @@
       <div>
         <p class="eyebrow">FARANOU · VENDOR</p>
         <h1>راه‌اندازی دیتابیس Vendor</h1>
-        <p class="intro">این صفحه فقط از سمت خود رایانه (localhost) در دسترس است و برای اجرای Development به‌کار می‌رود.</p>
+        <p class="intro">راهنمای اتصال و آماده‌سازی دیتابیس Vendor برای اجرای محلی در Windows.</p>
       </div>
     </header>
     <section class="notice" id="source-notice" role="status" hidden></section>
+
+    <section class="guide" aria-labelledby="connection-guide-title">
+      <h2 id="connection-guide-title">قبل از اتصال</h2>
+      <ul>
+        <li>نام سرور را دقیقاً مطابق SQL Server instance وارد کنید؛ نمونه: <code dir="ltr">localhost\\SQLEXPRESS</code> یا <code dir="ltr">.\\SQL2022</code>.</li>
+        <li>نام دیتابیس Vendor را وارد کنید؛ مقدار معمول <code dir="ltr">VendorDb</code> است.</li>
+        <li>برای ساخت دیتابیس و Login کم‌اختیار، روش احراز هویت انتخابی باید مجوز مدیریتی لازم را داشته باشد. این حساب فقط برای Provisioning است و برنامه با هویت Runtime جداگانه اجرا می‌شود.</li>
+      </ul>
+    </section>
 
     <section class="challenge" id="challenge-section">
       <label>کد نشست راه‌اندازی (Setup challenge)
@@ -30,10 +39,11 @@
     <form id="connection-form" autocomplete="off">
       <div class="grid">
         <label>آدرس SQL Server
-          <input name="server" required maxlength="256" placeholder="localhost یا نام سرور" autocomplete="off">
+          <input name="server" dir="ltr" required maxlength="256" placeholder="localhost\\SQLEXPRESS" autocomplete="off" aria-describedby="server-help">
+          <small id="server-help">نام instance را هم وارد کنید؛ مثلاً localhost\\SQL2022.</small>
         </label>
         <label>نام دیتابیس Vendor
-          <input name="database" required maxlength="128" placeholder="VendorDb" autocomplete="off">
+          <input name="database" dir="ltr" required maxlength="128" placeholder="VendorDb" autocomplete="off">
         </label>
       </div>
       <fieldset>
@@ -61,7 +71,7 @@
           <input name="runtimePassword" type="password" maxlength="128" placeholder="خالی = ساخت گذرواژهٔ قوی" autocomplete="new-password">
         </label>
       </div>
-      <p class="hint">هویت Runtime کم‌اختیار است: فقط خواندن/نوشتن روی همین دیتابیس و هیچ نقش یا مجوز سطح سرور ندارد. اگر Login موجودی را با گذرواژهٔ خودش معرفی کنید، گذرواژه هرگز تغییر داده نمی‌شود.</p>
+      <p class="hint">پیشنهاد: نام کاربری و گذرواژه Runtime را خالی بگذارید تا هویت تصادفی و کم‌اختیار ساخته شود. این هویت فقط خواندن/نوشتن روی همین دیتابیس دارد و هیچ نقش سطح سرور یا db_owner دریافت نمی‌کند. گذرواژه Login مدیریتی SQL تغییر داده نمی‌شود و برای اجرای برنامه استفاده نخواهد شد.</p>
       <div class="actions">
         <button type="button" class="secondary" id="test-button">آزمون اتصال</button>
         <button type="button" class="secondary" id="inspect-button">بازرسی سرور و دیتابیس</button>
@@ -83,6 +93,18 @@
         <p id="runtime-password-wrap" hidden>گذرواژهٔ ساخته‌شده (فقط همین یک‌بار نمایش داده می‌شود): <code id="runtime-password"></code></p>
         <p id="runtime-saved"></p>
       </div>
+    </section>
+    <section class="next-step" id="next-step-panel" hidden>
+      <h2>گام بعدی: ساخت اولین مدیر مرکزی</h2>
+      <p>دیتابیس آماده شده است، اما هنوز حساب مدیر Vendor ساخته نشده است. ساخت مدیر عمداً از ترمینال تعاملی انجام می‌شود و فرم عمومی ثبت‌نام وجود ندارد.</p>
+      <ol>
+        <li>در Visual Studio، از منوی View گزینه Terminal را باز کنید یا PowerShell را در ریشه مخزن اجرا کنید.</li>
+        <li>فرمان زیر را اجرا کنید؛ اتصال ذخیره‌شده برای همین کاربر ویندوز به‌صورت خودکار خوانده می‌شود.</li>
+        <li>نام کاربری، ایمیل، گذرواژه و تکرار آن را در ترمینال وارد کنید؛ سپس URI را در Authenticator ثبت و کد TOTP را تأیید کنید.</li>
+      </ol>
+      <pre dir="ltr"><code>$env:FARANO_VENDOR_Bootstrap__Secret = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+try { dotnet run --project .\\Vendor\\Vendor.Host\\Vendor.Host.csproj -- bootstrap-admin } finally { Remove-Item Env:FARANO_VENDOR_Bootstrap__Secret -ErrorAction SilentlyContinue }</code></pre>
+      <p class="hint">این راز فقط برای یک‌بار bootstrap است. آن را چاپ، ذخیره یا ارسال نکنید. بعد از موفقیت، به <a href="/">صفحه ورود Vendor</a> بروید.</p>
     </section>
     <section class="saved" id="saved-section" hidden>
       <div>
