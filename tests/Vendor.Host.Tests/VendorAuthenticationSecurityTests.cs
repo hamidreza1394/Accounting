@@ -143,7 +143,7 @@ public sealed class VendorAuthenticationSecurityTests
             using var passwordResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/password",
-                new { userName = user.UserName, password = "Secure-Vendor#2026" },
+                new { userName = user.Email, password = "Secure-Vendor#2026" },
                 token,
                 cancellationToken);
             Assert.Equal(HttpStatusCode.OK, passwordResponse.StatusCode);
