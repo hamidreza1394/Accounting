@@ -54,7 +54,7 @@ public sealed class VendorLocalStartupConfigurationTests
 
     private static string FindRepositoryRoot()
     {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        for (DirectoryInfo? directory = new DirectoryInfo(AppContext.BaseDirectory);
              directory is not null;
              directory = directory.Parent)
         {
