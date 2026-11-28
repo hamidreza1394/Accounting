@@ -95,8 +95,8 @@ internal static class VendorDevelopmentDatabaseSetup
             return Results.Json(new
             {
                 source,
-                canSave = source is "none" or "windowsCredentialManager",
-                savedInWindowsCredentialManager = WindowsCredential.Exists(CredentialTarget)
+                canDeleteSavedRuntimeConnection = source is "none" or "windowsCredentialManager",
+                savedRuntimeConnectionInWindowsCredentialManager = WindowsCredential.Exists(CredentialTarget)
             });
         }));
 
@@ -123,54 +123,13 @@ internal static class VendorDevelopmentDatabaseSetup
                 : Results.BadRequest(new { success = false, message = result.SafeMessage });
         }).RequireRateLimiting("vendor-development-setup"));
 
-        Access(app.MapPost("/api/development/database-setup/save", async (
-            HttpContext context,
-            IAntiforgery antiforgery,
-            IConfiguration configuration,
-            ILoggerFactory loggerFactory,
-            SetupRequest request) =>
-        {
-            if (!await IsAuthorizedMutationAsync(context, antiforgery, setupOnly))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            if (GetSource(configuration) is not ("none" or "windowsCredentialManager"))
-            {
-                return Results.Conflict(new { message = "تنظیم از پیکربندی محیط می‌آید؛ ابتدا همان منبع را تغییر دهید." });
-            }
-
-            if (!VendorDevelopmentDatabaseSafety.VendorSqlServerTarget.IsAllowed(
-                    request.Server, GetAllowedSqlHosts(configuration), out var saveTargetError))
-            {
-                return Results.BadRequest(new { success = false, message = saveTargetError });
-            }
-
-            var result = await TestConnectionAsync(request, context.RequestAborted);
-            if (!result.Success)
-            {
-                return Results.BadRequest(new { success = false, message = result.SafeMessage });
-            }
-
-            try
-            {
-                WindowsCredential.Write(CredentialTarget, result.ConnectionString!);
-            }
-            catch (Exception exception) when (exception is Win32Exception or InvalidOperationException)
-            {
-                // The exception carries only the Win32 error; never log the connection string itself.
-                CreateLogger(loggerFactory).LogError(exception, "Saving the Vendor development connection to Windows Credential Manager failed.");
-                return Results.Problem(
-                    statusCode: StatusCodes.Status500InternalServerError,
-                    title: "ذخیره در Windows Credential Manager انجام نشد.");
-            }
-
-            return Results.Json(new
-            {
-                success = true,
-                message = "اتصال تأیید و برای کاربر فعلی ذخیره شد. برای اعمال آن، Vendor را دوباره اجرا کنید."
-            });
-        }).RequireRateLimiting("vendor-development-setup"));
+        // Setup/admin credentials must never be persisted. The only writer for the
+        // shared Credential Manager target is the provisioning pipeline after it has
+        // created and verified the least-privilege Runtime identity.
+        Access(app.MapPost("/api/development/database-setup/save", () =>
+            Results.Problem(
+                statusCode: StatusCodes.Status410Gone,
+                title: "ذخیرهٔ اتصال مدیریتی غیرفعال است؛ فقط راه‌اندازی کامل اتصال Runtime کم‌اختیار را ذخیره می‌کند.")));
 
         Access(app.MapDelete("/api/development/database-setup/saved", async (
             HttpContext context,
@@ -255,7 +214,7 @@ internal static class VendorDevelopmentDatabaseSetup
             });
         }).RequireRateLimiting("vendor-development-setup"));
 
-        // Full seven-stage provisioning: create, migrate, runtime identity, verify, save.
+        // Full seven-stage provisioning: create, migrate, runtime identity, verify, persist Runtime connection.
         // The bootstrap token is single-use and paired with its strict cookie; replays and
         // reuse fail closed, and neither it nor the console challenge alone is sufficient.
         Access(app.MapPost("/api/development/database-setup/provision", async (

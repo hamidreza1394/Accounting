@@ -251,7 +251,7 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
     }
 
     [Fact]
-    public async Task TestAndSaveRejectDisallowedSqlTargets()
+    public async Task TestRejectsDisallowedSqlTargets()
     {
         var (factory, client, challenge) = CreateSetupHost();
         using var _factory = factory;
@@ -261,10 +261,23 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
         var test = await PostSetupAsync(
             client, "/api/development/database-setup/test", DisallowedServerBody, antiforgeryToken, challenge);
         Assert.Equal(HttpStatusCode.BadRequest, test.StatusCode);
+    }
 
-        var save = await PostSetupAsync(
-            client, "/api/development/database-setup/save", DisallowedServerBody, antiforgeryToken, challenge);
-        Assert.Equal(HttpStatusCode.BadRequest, save.StatusCode);
+    [Fact]
+    public async Task LegacySaveEndpointIsGoneAndCannotPersistSetupCredentials()
+    {
+        var (factory, client, challenge) = CreateSetupHost();
+        using var _factory = factory;
+        using var _client = client;
+        var antiforgeryToken = await GetAntiforgeryTokenAsync(client);
+
+        var response = await PostSetupAsync(
+            client, "/api/development/database-setup/save", ProvisionBody, antiforgeryToken, challenge);
+
+        Assert.Equal(HttpStatusCode.Gone, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal((int)HttpStatusCode.Gone, problem.GetProperty("status").GetInt32());
+        Assert.Contains("اتصال مدیریتی", problem.GetProperty("title").GetString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -281,7 +294,6 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
         foreach (var (method, path) in new[]
                  {
                      (HttpMethod.Post, "/api/development/database-setup/test"),
-                     (HttpMethod.Post, "/api/development/database-setup/save"),
                      (HttpMethod.Delete, "/api/development/database-setup/saved"),
                      (HttpMethod.Post, "/api/development/database-setup/inspect"),
                  })

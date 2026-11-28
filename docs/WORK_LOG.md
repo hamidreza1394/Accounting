@@ -3857,3 +3857,11 @@
 - **مرز:** فقط Vendor Host و تست Vendor؛ بدون تغییر Customer، `Server/**`، دیتابیس مشتری، Schema، Migration یا Secret.
 - **Git:** Branch `fix/vendor-provisioning-outcome-http-status`; PR پس از ثبت این یادداشت ایجاد می‌شود.
 
+## 2026-11-28 — Issue #802 (PR-5 hardening): جلوگیری از ذخیرهٔ Credential مدیریتی و Regression هم‌زمانی UI
+
+- **یافتهٔ امنیتی:** فرم setup هنوز مسیر قدیمی `/save` را داشت؛ پس از Provisioning، یک آزمون اتصال تازه می‌توانست اتصال مدیریتی را در همان Credential Target بنویسد و اتصال Runtime کم‌اختیار را جایگزین کند. غیرفعال‌کردن دکمه فقط در UI کافی نبود.
+- **اصلاح ریشه‌ای:** Endpoint قدیمی `/save` اکنون HTTP 410 می‌دهد و هیچ اتصال مدیریتی را Persist نمی‌کند؛ تنها writer مجاز Credential Manager، pipeline پس از ایجاد و Verify هویت Runtime است. پاسخ status نیز قابلیت حذف اتصال Runtime را جداگانه گزارش می‌کند.
+- **UI:** دکمهٔ ذخیرهٔ اتصال مدیریتی حذف شد؛ متن فرم روشن می‌کند فقط Runtime connection ذخیره می‌شود؛ پس از موفقیت، فیلدهای گذرواژه از DOM پاک می‌شوند.
+- **Race condition:** generation token درخواست‌های آزمون/بازرسی قبلی را هنگام تغییر فرم یا شروع Provisioning بی‌اعتبار می‌کند؛ تست JSDOM ترتیب «شروع آزمون ← شروع Provisioning ← پاسخ دیرهنگام آزمون» را پوشش می‌دهد.
+- **Regression:** تست HTTP برای بازنشستگی مسیر Save و تست JSDOM اضافه شد؛ نتیجهٔ اجرای revision جاری در انتظار CI است.
+- **مرز:** فقط Vendor Development Setup، تست‌های Vendor و Vendor.Web؛ بدون Customer consumer، `Server/**`، Customer schema/Migration یا Secret.

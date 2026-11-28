@@ -61,12 +61,11 @@
           <input name="runtimePassword" type="password" maxlength="128" placeholder="خالی = ساخت گذرواژهٔ قوی" autocomplete="new-password">
         </label>
       </div>
-      <p class="hint">هویت Runtime کم‌اختیار است: فقط خواندن/نوشتن روی همین دیتابیس و هیچ نقش یا مجوز سطح سرور ندارد. اگر Login موجودی را با گذرواژهٔ خودش معرفی کنید، گذرواژه هرگز تغییر داده نمی‌شود.</p>
+      <p class="hint">هویت Runtime کم‌اختیار است: فقط دسترسی لازم به همین دیتابیس را دارد و هیچ نقش یا مجوز سطح سرور ندارد. گذرواژهٔ اتصال مدیریتی فقط برای همین نشست استفاده می‌شود و ذخیره نمی‌شود؛ پس از موفقیت، فقط اتصال Runtime در Credential Manager ذخیره خواهد شد. گذرواژهٔ Login موجود هرگز تغییر نمی‌کند.</p>
       <div class="actions">
         <button type="button" class="secondary" id="test-button">آزمون اتصال</button>
         <button type="button" class="secondary" id="inspect-button">بازرسی سرور و دیتابیس</button>
         <button type="submit" id="provision-button">راه‌اندازی کامل</button>
-        <button type="button" class="secondary" id="save-button" disabled>ذخیرهٔ اتصال موفق</button>
       </div>
     </form>
 
@@ -86,12 +85,12 @@
     </section>
     <section class="saved" id="saved-section" hidden>
       <div>
-        <strong>تنظیم ذخیره‌شده برای این کاربر ویندوز</strong>
+        <strong>اتصال Runtime ذخیره‌شده برای کاربر فعلی ویندوز</strong>
         <p>برای اعمال یا حذف تنظیم ذخیره‌شده، برنامه را دوباره اجرا کنید.</p>
       </div>
       <button type="button" class="danger" id="delete-button">حذف تنظیم ذخیره‌شده</button>
     </section>
-    <footer>«راه‌اندازی کامل» دیتابیس Vendor را می‌سازد، Migrationهای موجود را اعمال می‌کند، هویت Runtime کم‌اختیار را برمی‌سازد و اتصال Runtime را ذخیره می‌کند. هیچ چیز دیگری روی سرور تغییر نمی‌کند و هیچ Credential پیکربندی ذخیره نمی‌شود.</footer>
+    <footer>«راه‌اندازی کامل» دیتابیس مستقل Vendor را ایجاد می‌کند، Migrationهای موجود را اعمال می‌کند، هویت Runtime کم‌اختیار را می‌سازد و فقط اتصال Runtime را ذخیره می‌کند. اتصال مدیریتی و گذرواژهٔ آن در Credential Manager ذخیره نمی‌شوند.</footer>
   </main>
 </body>
 </html>
