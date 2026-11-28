@@ -44,6 +44,7 @@
 | [`handoffs/ISSUE-802-vendor-setup-endpoint-security.md`](handoffs/ISSUE-802-vendor-setup-endpoint-security.md) | handoff PR-4 از مجموعهٔ راه‌اندازی خودکار دیتابیس Vendor: Endpointهای inspect/provision، Bootstrap یک‌بارمصرف و Challenge اپراتور کنسولی (Issue #802) |
 | [`handoffs/ISSUE-802-rtl-ui-and-docs.md`](handoffs/ISSUE-802-rtl-ui-and-docs.md) | handoff PR-5 از مجموعهٔ راه‌اندازی خودکار دیتابیس Vendor: رابط فارسی RTL جریان کامل راه‌اندازی (بازرسی، هفت مرحله، هویت Runtime) و مستندات نهایی (Issue #802) |
 | [`handoffs/ISSUE-802-provisioning-outcome-http-status.md`](handoffs/ISSUE-802-provisioning-outcome-http-status.md) | قرارداد HTTP شکست Provisioning: پاسخ غیر 2xx، عدم افشای Runtime credentials در شکست و Regression matrix (Issue #802) |
+| [`handoffs/ISSUE-809-vendor-setup-test-race.md`](handoffs/ISSUE-809-vendor-setup-test-race.md) | رفع race پاسخ دیررس آزمون اتصال با شروع Provisioning و جلوگیری از هم‌زمانی Save/Delete/Provisioning روی Credential Manager (Issue #809، PR #810) |
 
 | [`handoffs/ISSUE-797-vendor-development-database-setup.md`](handoffs/ISSUE-797-vendor-development-database-setup.md) | handoff پیاده‌سازی فرم اتصال Vendor در Development و وضعیت بررسی CI (Issue #797) |
 | [`LOCALHOST_WINDOWS_TEST_GUIDE.md`](LOCALHOST_WINDOWS_TEST_GUIDE.md) | راهنمای فارسی PowerShell برای تست محلی Vendor/Customer و Runtime Licensing؛ اجرای واقعی روی ماتریس Windows هنوز نیازمند تأیید مالک است |
