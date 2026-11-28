@@ -3857,3 +3857,16 @@
 - **مرز:** فقط Vendor Host و تست Vendor؛ بدون تغییر Customer، `Server/**`، دیتابیس مشتری، Schema، Migration یا Secret.
 - **Git:** Branch `fix/vendor-provisioning-outcome-http-status`; PR پس از ثبت این یادداشت ایجاد می‌شود.
 
+
+
+## 2026-11-28 — تأیید نهایی Provisioning دیتابیس Vendor و هم‌ترازی مستندات پس از Merge
+
+- **مبنای بازبینی:** `main@569622a534fc91cc3d4160e0b26aa8240a7dca80`. PRهای #803، #804، #805، #806، #807 و اصلاح تکمیلی #808 همگی بسته و Merge شده‌اند. SHAهای Merge به‌ترتیب: `ae8107e9`، `77d82e4b`، `428d1cfb`، `a61adcb1`، `569622a5` و `cf8cbf26` (PR #808 پیش از #807 ادغام شد). PR #801 نیز با `c99307ff` ادغام شده است.
+- **CI پس از Merge:** #805 و #806 هر چهار Workflow اصلی را روی Merge SHA خود موفق گذراندند؛ #808 و #807 هر ۱۶/۱۶ Check Run روی Merge SHA خود موفق گذراندند. روی main فعلی نیز ۱۶/۱۶ Check Run موفق است و هیچ Run queued/in-progress در پنجرهٔ ۱۰۰ اجرای اخیر وجود ندارد.
+- **تست‌های main:** Vendor CI: job اصلی ۶۵۰ تست (۶۳۳ موفق/۰ ناموفق/۱۷ Skip)، Windows signer و Setup HTTP: ۴۰ تست (۳۸ موفق/۰ ناموفق/۲ Skip)، checkpoint regression روی Ubuntu و Windows هرکدام ۱/۱ موفق. .NET CI: ۱٬۸۳۳ تست (۱٬۸۲۵ موفق/۰ ناموفق/۸ Skip). اجرای محلی Build/Test در این نشست انجام نشد؛ شواهد این ثبت از GitHub Actions و logهای Jobهای همان SHA است.
+- **PRهای مرجع:** #281 روی Merge SHA خود ۱۲/۱۲، #282 برابر ۱۳/۱۳ و #284 برابر ۱۳/۱۳ Check Run موفق دارند. برای #282، چهار Workflow پس از Merge روی `f4a0462b...` نیز همگی موفق‌اند. در کد جاری #284، مجوز منبع قبل از بررسی RowVersion/Status اعمال می‌شود و D-109 self-approval اپراتور مجاز را حفظ می‌کند.
+- **ریشه‌یابی CIهای میانی:** هشت شکست در ۱۰۰ اجرای اخیر همگی Vendor CI روی commitهای میانی شاخه‌های #805/#806/#807 بودند. لاگ‌ها mismatch assertion بین `failed` و `pending`، assertion روی متن مجوزی که عمداً sanitize شده، و تست HTTP که سهمیهٔ Rate Limit را پیش‌تر مصرف کرده بود (403 مورد انتظار در برابر 429 واقعی) را نشان دادند. این خطاها در revisionهای بعدی شاخه‌ها اصلاح/هم‌تراز شدند؛ PRهای نهایی و CI پس از Merge سبز هستند. Exceptionهای Injected audit failure، fault-injection مورد انتظار تست rollback بودند و علت شکست Run نبودند.
+- **اصلاح تکمیلی PR #808:** علت ریشه‌ای پاسخ HTTP 200 برای `ProvisionOutcome.Success=false` بود؛ Client مبتنی بر `response.ok` ممکن بود شکست را موفق نمایش دهد. قرارداد به HTTP 422 تغییر کرد و regression HTTP برای عدم افشای Runtime credentials اضافه شد.
+- **مستندات:** Snapshot تازه در ابتدای `docs/PROJECT_STATUS.md` اضافه شد و این گزارش به‌صورت Append-only در `docs/WORK_LOG.md` ثبت شد. Snapshotهای قبلی حذف یا بازنویسی نشده‌اند.
+- **محدودیت‌های عملیاتی:** اجرای واقعی روی SQL Server سیستم مالک، تغییر Credential Manager، بررسی تصویری UI روی Windows واقعی، Key Ceremony/ACL/Trust Store روی Windows هدف، Customer DB migration و آزمون دو میزبان واقعی انجام نشده‌اند. این موارد Not Verified یا نیازمند تصمیم/دسترسی عملیاتی باقی می‌مانند.
+- **گام بعدی:** Issue #802 پس از Merge این هم‌ترازی مستنداتی بسته می‌شود. کار بعدی نرم‌افزاری Vendor باید روی #228/#393 و فقط در مرز Vendor انجام شود؛ consumer/ACK سمت Customer در #235، signer عملیاتی #236 و sink مستقل #107 جدا و با گیت‌های خودشان پیگیری می‌شوند.
