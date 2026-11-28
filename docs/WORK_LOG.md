@@ -3911,3 +3911,10 @@
 - **امنیت/داده:** هیچ Endpoint یا مجوزی تضعیف نشد؛ هیچ Connection String/credential، SQL role، دیتابیس یا Migration واقعی تغییر نکرد. Runtime همچنان باید کم‌اختیار باشد و نه sa/db_owner.
 - **اعتبارسنجی:** بازبینی ایستای launchSettings.json، Program.cs، VendorDevelopmentDatabaseSetup.cs و HTML/CSS انجام شد. Build/Test محلی و اجرای Visual Studio/SQL Server روی Windows مالک در این محیط اجرا نشد؛ نتیجهٔ Vendor CI روی HEAD PR باید جداگانه بررسی شود و هیچ اجرای موفقی ادعا نمی‌شود.
 - **Git:** Branch fix/vendor-development-first-run-navigation. تغییرات در PR مستقل برای بخشی از Issue #768 ارائه می‌شوند؛ PR #810/#809 برای raceهای جداگانه فرم دست‌نخورده ماند.
+
+
+## 2026-11-28 — تکمیل توضیح فرم: ذخیره اتصال Runtime در برابر Provisioning
+
+- **یافته:** دکمه Save payload همان فرم اتصال اصلی را به endpoint ذخیره می‌فرستد؛ endpoint فقط Server/Database/Authentication/Username/Password/TrustServerCertificate را می‌خواند و مقادیر runtimeUsername/runtimePassword برای Save مصرف نمی‌شوند. بنابراین اپراتور ممکن بود تصور کند فیلدهای Runtime جداگانه ذخیره می‌شوند یا اعتبارنامه مدیریتی اتصال را به‌عنوان Runtime ذخیره کند.
+- **اصلاح UX:** عنوان دکمه به «ذخیره به‌عنوان اتصال Runtime» تغییر کرد و هشدار صریح اضافه شد: فقط هویت از پیش آماده‌شده با دسترسی کم‌اختیار را ذخیره کنید؛ هرگز sa/sysadmin/db_owner را به‌عنوان Runtime ذخیره نکنید. Runbook و handoff همین تفاوت را توضیح می‌دهند.
+- **مرز:** هیچ مجوز SQL یا رفتار endpoint تغییر نکرد؛ این PR صرفاً ابهام UI را برطرف می‌کند. اعتبارسنجی سطح مجوز SQL در مسیر Save، در صورت نیاز محصول، باید به‌عنوان تغییر امنیتی مستقل با تست SQL Server واقعی طراحی شود.
