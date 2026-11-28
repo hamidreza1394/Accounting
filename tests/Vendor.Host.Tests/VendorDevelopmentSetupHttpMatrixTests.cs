@@ -206,9 +206,12 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
         // The guard refusal must not burn the pair: the same pair drives a real run.
         var run = await PostSetupAsync(
             client, "/api/development/database-setup/provision", ProvisionBody, antiforgeryToken, challenge, bootstrapToken);
-        Assert.Equal(HttpStatusCode.OK, run.StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, run.StatusCode);
         var payload = await run.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         Assert.False(payload.GetProperty("success").GetBoolean());
+        Assert.Null(payload.GetProperty("runtimeUsername").GetString());
+        Assert.Null(payload.GetProperty("generatedPassword").GetString());
+        Assert.False(payload.GetProperty("savedToCredentialManager").GetBoolean());
 
         // Single use: the consumed pair is worthless for a replay.
         var replay = await PostSetupAsync(
@@ -339,7 +342,7 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
             var bootstrapToken = await GetBootstrapTokenAsync(client);
             var run = await PostSetupAsync(
                 client, "/api/development/database-setup/provision", ProvisionBody, antiforgeryToken, challenge, bootstrapToken);
-            Assert.Equal(HttpStatusCode.OK, run.StatusCode);
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, run.StatusCode);
         }
 
         var fourthToken = await GetBootstrapTokenAsync(client);
