@@ -203,7 +203,8 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
             client, "/api/development/database-setup/provision", ProvisionBody, antiforgeryToken, challenge: null, bootstrapToken);
         Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
 
-        // The guard refusal must not burn the pair: the same pair drives a real run.
+        // The guard refusal must not burn the pair: the same pair drives a real run, which
+        // fails at the connection stage and reports a failed outcome over 422.
         var run = await PostSetupAsync(
             client, "/api/development/database-setup/provision", ProvisionBody, antiforgeryToken, challenge, bootstrapToken);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, run.StatusCode);

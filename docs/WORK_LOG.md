@@ -3826,6 +3826,26 @@
 - **اعتبارسنجی:** Build Release موفق؛ `dotnet test Vendor.Host.Tests -c Release`: همهٔ تست‌های جدید (Bootstrap token با TimeProvider، SetupChallenge) سبز؛ ۱۲ failed همان baseline محیطی (+۱ flaky زمان‌محور از قبل موجود).
 - **Git:** Branch `fix/vendor-provisioning-endpoint-security`؛ Issue #802.
 
+## 2026-11-28 — Issue #802 (PR-3 تکمیلی): Fail-Closed ممیزی هویت Runtime پس از بازبینی CodeRabbit
+- **دامنه:** سه نکتهٔ بازبینی CodeRabbit روی PR-3: خوانش عددی `IS_SRVROLEMEMBER`، `IntegratedSecurity=false` صریح در پنج Runtime Probe، و ممیزی کامل بین-دیتابیسی با Fail Closed.
+- **اصلاح ریشه‌ای:** تست SQL واقعی CI نشان داد شکاف عمیق‌تری هم هست — هویت پیکربندی بدون sysadmin/VIEW ANY DEFINITION فقط خودش را در `sys.server_principals` می‌بیند؛ Login موجود غایب به‌نظر می‌رسید و جریان به اشتباه به مسیر CREATE LOGIN منحرف می‌شد. حالا پیش از تصمیم reuse/fresh، خوانایی کامل کاتالوگ Principals با `EvaluatePrincipalAuditReadiness` اثبات می‌شود؛ پوشش کامل دیتابیس‌ها (`EvaluateMappingAuditCoverage`: فهرست‌برداری کامل + دیتابیس‌های غیرقابل ممیزی/Offline) فقط برای مسیر reuse الزامی است و `HAS_DBACCESS=0` هرگز «نبود mapping» فرض نمی‌شود.
+- **تست‌ها:** ۶ تست واحد برای دو قاعدهٔ جدید؛ سه تست SQL واقعی (عدم خوانایی Principals، عدم امکان فهرست‌برداری کامل، دیتابیس غیرقابل ممیزی)؛ خوانش عددی tri-state در helper تست؛ `IntegratedSecurity=false` در همهٔ Probeها و builder تشخیصی.
+- **اعتبارسنجی:** Build Release موفق؛ تست‌های واحد سبز؛ baseline محیطی ۱۲ failed بدون تغییر.
+- **Git:** Branch `fix/vendor-provisioning-runtime-identity`؛ Issue #802.
+
+## 2026-11-28 — Issue #802 (PR-4 تکمیلی): رفع باگ سیاست Rate Limit Provision و ماتریس کامل تست HTTP واقعی
+- **دامنه:** بازبینی کامل PR-4: امنیت Bootstrap، امنیت Endpoint و ماتریس تست HTTP واقعی.
+- **باگ بحرانی رفع‌شده:** endpoint `provision` به سیاست `vendor-development-setup-provision` نیاز داشت اما این سیاست در هیچ‌یک از دو شاخهٔ setup-only و full-app ثبت نشده بود؛ هر فراخوانی provision در زمان اجرا با `InvalidOperationException` (HTTP 500) شکست می‌خورد. سیاست با سقف ۳/دقیقه ثبت شد.
+- **ماتریس HTTP واقعی:** `VendorDevelopmentSetupHttpMatrixTests` با `WebApplicationFactory` روی سطح setup-only واقعی — no-store، Cookie سخت‌گیرانهٔ Bootstrap، رد بدون Challenge بدون مصرف جفت توکن، مصرف یگانه و replay، سوختن جفت در عدم تطابق Cookie، allow-list روی test/save، رد همهٔ Endpointهای تغییردهنده بدون Challenge/Challenge اشتباه/Origin بیگانه، inspect از مسیر گاردها، و 429 پس از سه اجرای provision. سطح Windows-only است و job سیسکو ویندوزی آن را با نام کلاس اجرا می‌کند.
+- **مستندات:** تکمیل handoff `ISSUE-802-vendor-setup-endpoint-security.md`.
+- **Git:** Branch `fix/vendor-provisioning-endpoint-security`؛ Issue #802.
+
+## 2026-11-28 — Issue #802 (PR-5): رابط فارسی RTL راه‌اندازی و مستندات نهایی
+- **دامنه:** صفحهٔ `/development/database-setup` برای جریان کامل Provisioning + مستندات نهایی؛ بدون تغییر سمت سرور.
+- **UI:** ورودی کد نشست کنسولی، «بازرسی سرور و دیتابیس» با خلاصهٔ بازرسی، «راه‌اندازی کامل» با دریافت Bootstrap یک‌بارمصرف و رندر هفت مرحله، فیلدهای اختیاری هویت Runtime، پنل نتیجهٔ Runtime (نام هویت، گذرواژهٔ تولیدشدهٔ یک‌بارمصرف، وضعیت ذخیره)، حفظ جریان‌های قبلی با هدر Challenge.
+- **مستندات:** handoff `ISSUE-802-rtl-ui-and-docs.md`، WORK_LOG، INDEX.
+- **محدودهٔ ممنوع حفظ شد:** بدون تغییر Customer/`Server/**`؛ بدون Endpoint جدید؛ CSP و no-store دست‌نخورده.
+- **Git:** Branch `feat/vendor-provisioning-rtl-ui`؛ Issue #802.
 
 ## 2026-11-28 — Issue #802: اصلاح قرارداد HTTP شکست Provisioning
 
@@ -3836,3 +3856,4 @@
 - **اعتبارسنجی:** CI روی HEAD نهایی این شاخه باید تکمیل شود؛ در این یادداشت هیچ Build/Test محلی یا CI موفق ادعا نمی‌شود.
 - **مرز:** فقط Vendor Host و تست Vendor؛ بدون تغییر Customer، `Server/**`، دیتابیس مشتری، Schema، Migration یا Secret.
 - **Git:** Branch `fix/vendor-provisioning-outcome-http-status`; PR پس از ثبت این یادداشت ایجاد می‌شود.
+
