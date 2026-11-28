@@ -52,7 +52,7 @@ public static class VendorAuthenticationEndpoints
             }
 
             var user = await users.FindByNameAsync(request.UserName.Trim());
-            if (user is null && request.UserName.Contains('@', StringComparison.Ordinal))
+            if (user is null && request.UserName.Contains('@'))
             {
                 // The sign-in UI explicitly accepts either username or email. Resolve email
                 // through Identity's normalized, unique-email lookup; never query raw columns.
