@@ -3,7 +3,7 @@
 - **Issue:** [#814](https://github.com/hamidreza1394/Accounting/issues/814)
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-11-28
-- **وضعیت:** پیاده‌سازی در شاخه؛ CI و اجرای عملیاتی هنوز تأیید نشده‌اند
+- **وضعیت:** PR پیش‌نویس #815 باز است؛ CI در حال اجرا/انتظار و اجرای عملیاتی هنوز تأیید نشده است
 
 ## هدف و معیارهای پذیرش
 - [x] Visual Studio با یک launch URL به ریشه برنامه برود؛ در setup-only ریشه به فرم Setup هدایت شود و در full-host صفحه ورود نمایش داده شود.
@@ -74,4 +74,5 @@
 ## شناسه‌های Git
 - Branch: `fix/issue-814-vendor-local-first-run`
 - Commit: ثبت‌شده در تاریخچه شاخه
-- Pull Request: در انتظار ایجاد
+- Pull Request: [#815](https://github.com/hamidreza1394/Accounting/pull/815) (Draft)
+- Head SHA هنگام ایجاد PR: `9e35a1521c33c14f2d925ce2e30ecc1f09a05345`; آخرین commit بعد از اصلاحات تکمیلی: `75062d7f2a2d8997fcc7a72f17ec000078938e07`
