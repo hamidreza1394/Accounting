@@ -66,15 +66,34 @@ internal static class VendorDevelopmentRuntimeIdentity
         }
 
         /// <summary>
-        /// Audit-coverage rule: reusing an existing login is only allowed when the setup
-        /// identity could actually audit EVERY non-target database on the instance. Without
-        /// sysadmin/CONTROL SERVER/VIEW ANY DATABASE the enumeration itself is incomplete
-        /// (unseen databases may hold a mapping), and a database the setup identity cannot
-        /// open (offline, no user access) cannot be checked at all — its mapping survives
-        /// invisibly and comes back with the database. Both gaps must refuse reuse (fail
-        /// closed) instead of counting as "no mapping found".
+        /// Principal-audit readiness rule: the whole reuse-vs-fresh decision depends on
+        /// reading sys.server_principals for the runtime login, and a setup identity
+        /// without sysadmin/CONTROL SERVER/VIEW ANY DEFINITION sees only itself there —
+        /// an existing login would look absent and the flow would misroute into
+        /// CREATE LOGIN. Refuse provisioning until the catalog is provably readable.
         /// </summary>
-        public static (bool Allowed, string? Refusal) EvaluateAuditCoverage(
+        public static (bool Allowed, string? Refusal) EvaluatePrincipalAuditReadiness(
+            string loginName,
+            bool canAuditServerPrincipals)
+        {
+            if (canAuditServerPrincipals)
+            {
+                return (true, null);
+            }
+
+            return (false, $"هویت پیکربندی نمی‌تواند وضعیت Loginهای سطح سرور را کامل بخواند (نه sysadmin است و نه مجوز VIEW ANY DEFINITION دارد)، پس وجود Login «{loginName}» و نقش‌ها و مجوزهای آن قابل اثبات نیست و Provisioning هویت Runtime پذیرفته نمی‌شود؛ دسترسی هویت پیکربندی را کامل کنید.");
+        }
+
+        /// <summary>
+        /// Mapping-audit coverage rule: reusing an existing login is only allowed when the
+        /// setup identity could actually audit EVERY non-target database on the instance.
+        /// Without sysadmin/CONTROL SERVER/VIEW ANY DATABASE the enumeration itself is
+        /// incomplete (unseen databases may hold a mapping), and a database the setup
+        /// identity cannot open (offline, no user access) cannot be checked at all — its
+        /// mapping survives invisibly and comes back with the database. Both gaps must
+        /// refuse reuse (fail closed) instead of counting as "no mapping found".
+        /// </summary>
+        public static (bool Allowed, string? Refusal) EvaluateMappingAuditCoverage(
             string loginName,
             bool canEnumerateAllDatabases,
             IEnumerable<string> unauditableDatabaseNames)

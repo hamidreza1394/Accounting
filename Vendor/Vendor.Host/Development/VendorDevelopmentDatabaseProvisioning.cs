@@ -938,6 +938,31 @@ internal static class VendorDevelopmentDatabaseProvisioning
 
         await OpenServerConnectionAsync(input.SetupBuilder, async connection =>
         {
+            // Fail closed BEFORE the reuse-vs-fresh decision: a setup identity that cannot
+            // read server principals sees only itself in sys.server_principals, so an
+            // existing runtime login looks absent and the flow would misroute into
+            // CREATE LOGIN. The existing-check below is only trustworthy when the audit
+            // of server principals is provably complete.
+            await using (var readinessCommand = connection.CreateCommand())
+            {
+                readinessCommand.CommandText = """
+                    SELECT CAST(CASE
+                        WHEN IS_SRVROLEMEMBER('sysadmin') = 1 THEN 1
+                        WHEN EXISTS (
+                            SELECT 1 FROM fn_my_permissions(NULL, 'SERVER')
+                            WHERE permission_name IN ('VIEW ANY DEFINITION', 'CONTROL SERVER'))
+                            THEN 1
+                        ELSE 0 END AS int)
+                    """;
+                var canAuditServerPrincipals = await ExecuteScalarAsync(readinessCommand, CancellationToken.None) is 1;
+                var (readinessAllowed, readinessRefusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluatePrincipalAuditReadiness(
+                    input.RuntimeUsername, canAuditServerPrincipals);
+                if (!readinessAllowed)
+                {
+                    throw new VendorDatabaseMismatchException(readinessRefusal!);
+                }
+            }
+
             await using var existingCommand = connection.CreateCommand();
             existingCommand.CommandText = "SELECT CAST(principal_id AS int) FROM sys.server_principals WHERE name = @login AND type = 'S'";
             existingCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
@@ -1008,8 +1033,9 @@ internal static class VendorDevelopmentDatabaseProvisioning
 
                 // A least-privilege runtime identity must not hold user mappings in any other
                 // database: that is exactly how access would leak beyond the vendor database.
-                // The audit is only trustworthy when the setup identity can enumerate and open
-                // every non-target database, so both gaps fail closed before reuse is accepted.
+                // The mapping audit is only trustworthy when the setup identity can enumerate
+                // and open every non-target database, so both gaps fail closed before reuse
+                // is accepted.
                 var otherDatabases = new List<string>();
                 var unauditableDatabases = new List<string>();
                 await using (var coverageCommand = connection.CreateCommand())
@@ -1054,7 +1080,7 @@ internal static class VendorDevelopmentDatabaseProvisioning
                         }
                     }
 
-                    var (coverageAllowed, coverageRefusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateAuditCoverage(
+                    var (coverageAllowed, coverageRefusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateMappingAuditCoverage(
                         input.RuntimeUsername, canEnumerateAllDatabases, unauditableDatabases);
                     if (!coverageAllowed)
                     {

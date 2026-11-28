@@ -389,6 +389,38 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
     }
 
     [Fact]
+    public async Task PipelineRefusesProvisioningWhenTheSetupIdentityCannotReadServerPrincipals()
+    {
+        var fixture = await ProvisioningFixture.OpenAsync();
+        if (fixture is null) return;
+        await using var _ = fixture;
+        var runtimePassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await RunPipelineAsync(fixture.CreateRequest(runtimePassword: runtimePassword));
+
+        // A setup identity that sees only itself in sys.server_principals cannot tell an
+        // existing login from a missing one: the whole provisioning must fail closed
+        // instead of silently misrouting into CREATE LOGIN.
+        var setupPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await fixture.CreateLimitedSetupLoginAsync(setupPassword);
+        await fixture.MapLimitedSetupUserIntoTargetAsDbOwnerAsync();
+
+        var (rerun, diagnostics) = await RunPipelineExpectingFailureAsync(fixture.CreateRequest(
+            runtimePassword: runtimePassword,
+            setupUsername: fixture.LimitedSetupLoginName,
+            setupPassword: setupPassword));
+        var rerunStates = States(rerun);
+        var identityMessage = rerun.StageResults.First(stage => stage.Key == "runtimeIdentity").Message;
+
+        Assert.False(rerun.Success);
+        Assert.Equal("failed", rerunStates["runtimeIdentity"]);
+        Assert.Contains("VIEW ANY DEFINITION", identityMessage, StringComparison.Ordinal);
+        // The refused run neither created nor altered the runtime login.
+        Assert.True(await fixture.LoginExistsAsync(fixture.RuntimeLoginName));
+        Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword));
+        GC.KeepAlive(diagnostics);
+    }
+
+    [Fact]
     public async Task PipelineRefusesAnExistingRuntimeLoginWhenTheSetupIdentityCannotEnumerateAllDatabases()
     {
         var fixture = await ProvisioningFixture.OpenAsync();
@@ -399,9 +431,11 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
 
         // A setup identity that cannot enumerate every database cannot prove the absence of
         // cross-database mappings: reuse of the existing login must fail closed instead of
-        // trusting an incomplete sys.databases listing.
+        // trusting an incomplete sys.databases listing. VIEW ANY DEFINITION makes the
+        // principal catalog readable so the dedicated enumeration rule is what fires.
         var setupPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
         await fixture.CreateLimitedSetupLoginAsync(setupPassword);
+        await fixture.GrantViewAnyDefinitionToLimitedSetupLoginAsync();
         await fixture.MapLimitedSetupUserIntoTargetAsDbOwnerAsync();
 
         var (rerun, diagnostics) = await RunPipelineExpectingFailureAsync(fixture.CreateRequest(
@@ -437,6 +471,7 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
         var setupPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
         await fixture.CreateLimitedSetupLoginAsync(setupPassword);
         await fixture.GrantViewAnyDatabaseToLimitedSetupLoginAsync();
+        await fixture.GrantViewAnyDefinitionToLimitedSetupLoginAsync();
         await fixture.MapLimitedSetupUserIntoTargetAsDbOwnerAsync();
 
         var (rerun, diagnostics) = await RunPipelineExpectingFailureAsync(fixture.CreateRequest(
@@ -806,6 +841,9 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
 
         public async Task GrantViewAnyDatabaseToLimitedSetupLoginAsync() =>
             await ExecuteAsync("master", $"GRANT VIEW ANY DATABASE TO [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+
+        public async Task GrantViewAnyDefinitionToLimitedSetupLoginAsync() =>
+            await ExecuteAsync("master", $"GRANT VIEW ANY DEFINITION TO [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
 
         public async Task MapLimitedSetupUserIntoTargetAsDbOwnerAsync()
         {
