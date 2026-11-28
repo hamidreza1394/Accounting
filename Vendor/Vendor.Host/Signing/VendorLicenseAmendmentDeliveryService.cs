@@ -40,6 +40,12 @@ public sealed class VendorLicenseAmendmentDeliveryService(
         if (db.Database.CurrentTransaction is null)
             throw new InvalidOperationException("Amendment delivery must run inside the caller's transaction.");
 
+        // The state gate comes first: a row that never held (or no longer holds) an envelope
+        // must answer with the deliverability conflict, not an envelope resolution error.
+        if (!VendorLicenseAmendmentAcknowledgementRules.CanDeliver(request.Status) &&
+            !VendorLicenseAmendmentAcknowledgementRules.CanReExport(request.Status))
+            return VendorLicenseAmendmentDeliveryResult.Conflict("amendment_not_deliverable");
+
         if (request.IssuedSequence is not int issuedSequence)
             return VendorLicenseAmendmentDeliveryResult.Conflict("amendment_envelope_missing");
 
@@ -61,8 +67,9 @@ public sealed class VendorLicenseAmendmentDeliveryService(
             return VendorLicenseAmendmentDeliveryResult.Conflict("amendment_envelope_invalid");
 
         var now = timeProvider.GetUtcNow().ToUniversalTime();
-        string nonce;
-        bool repeated;
+        // The pre-gate above guarantees exactly one of the two branches below runs.
+        string nonce = string.Empty;
+        bool repeated = false;
         if (VendorLicenseAmendmentAcknowledgementRules.CanDeliver(request.Status))
         {
             nonce = VendorLicenseAmendmentAcknowledgementRules.NewDeliveryNonce();
@@ -98,10 +105,6 @@ public sealed class VendorLicenseAmendmentDeliveryService(
             await audit.AppendAsync(new VendorAuditWriteRequest(
                 actorUserId, "vendor.amendment.delivery-retried", nameof(VendorLicenseAmendmentRequest),
                 request.Id.ToString("D"), correlationId), cancellationToken);
-        }
-        else
-        {
-            return VendorLicenseAmendmentDeliveryResult.Conflict("amendment_not_deliverable");
         }
 
         return VendorLicenseAmendmentDeliveryResult.Success(new VendorLicenseAmendmentDeliveryResponse(
