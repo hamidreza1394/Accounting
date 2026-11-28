@@ -133,7 +133,7 @@ public sealed class VendorLicenseAmendmentAcknowledgementSqlServerTests
             Assert.NotNull(body);
             Assert.Equal(VendorLicenseAmendmentRequest.StatusApplied, body!.Status);
             Assert.False(body.Repeated);
-            Assert.Equal("no-store", response.Headers.CacheControl?.NoStore.ToString());
+            Assert.True(response.Headers.CacheControl?.NoStore);
         }
 
         // The exact signed retry is idempotent and never rewrites the customer health stamp.
@@ -248,7 +248,8 @@ public sealed class VendorLicenseAmendmentAcknowledgementSqlServerTests
         Assert.Null(request.AcknowledgementResult);
         Assert.Null(request.FailureCode);
         Assert.Empty(await fixture.Db.AuditEvents.AsNoTracking()
-            .Where(item => item.ActionCode.StartsWith("vendor.amendment.acknowledgement-", StringComparison.Ordinal))
+            .Where(item => Microsoft.EntityFrameworkCore.EF.Functions.Like(
+                item.ActionCode, "vendor.amendment.acknowledgement-%"))
             .ToListAsync(ct));
     }
 
