@@ -286,7 +286,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.ToTable("VendorLicenseAmendmentRequests", table =>
             {
                 table.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Status",
-                    "[Status] IN (N'Requested', N'PendingApproval', N'Issued', N'Rejected', N'Failed')");
+                    "[Status] IN (N'Requested', N'PendingApproval', N'Issued', N'Delivered', N'Applied', N'Rejected', N'Failed')");
                 table.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Kind",
                     "[Kind] IN (N'maxCompanies', N'supportUpdates')");
             });
@@ -294,10 +294,18 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.Property(item => item.Kind).HasMaxLength(32).IsUnicode(false).IsRequired();
             entity.Property(item => item.Status).HasMaxLength(32).IsUnicode(false).IsRequired();
             entity.Property(item => item.FailureCode).HasMaxLength(64).IsUnicode(false);
+            // Delivery/acknowledgement metadata (S-B, #393): digests, stable outcome codes and
+            // timestamps only — the full acknowledgement envelope is never persisted.
+            entity.Property(item => item.DeliveredNonce).HasMaxLength(64).IsUnicode(false);
+            entity.Property(item => item.DeliveredPayloadSha256).HasMaxLength(64).IsUnicode(false);
+            entity.Property(item => item.AcknowledgementSha256).HasMaxLength(64).IsUnicode(false);
+            entity.Property(item => item.AcknowledgementKeyId).HasMaxLength(128).IsUnicode(false);
+            entity.Property(item => item.AcknowledgementResult).HasMaxLength(32).IsUnicode(false);
+            entity.Property(item => item.AcknowledgementErrorCode).HasMaxLength(128).IsUnicode(false);
             entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
             entity.Property(item => item.UpdatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
             entity.Property(item => item.RowVersion).IsRowVersion();
-            entity.HasIndex(item => item.OrderLineId).IsUnique().HasFilter("[Status] IN ('Requested', 'PendingApproval', 'Issued')");
+            entity.HasIndex(item => item.OrderLineId).IsUnique().HasFilter("[Status] IN ('Requested', 'PendingApproval', 'Issued', 'Delivered')");
             entity.HasIndex(item => item.LicenseId);
             entity.HasIndex(item => item.CustomerId);
             entity.HasIndex(item => item.OrderId);

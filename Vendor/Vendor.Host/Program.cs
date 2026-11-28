@@ -268,6 +268,7 @@ builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
 builder.Services.AddScoped<VendorPaymentVerificationService>();
 builder.Services.AddScoped<VendorLicenseAmendmentIssuanceService>();
+builder.Services.AddScoped<VendorLicenseAmendmentDeliveryService>();
 builder.Services.AddScoped<VendorProvisioningIssuanceService>();
 builder.Services.AddScoped<VendorOfflineRevocationSnapshotFactory>();
 builder.Services.AddScoped<VendorOfflineRevocationIssuanceService>();

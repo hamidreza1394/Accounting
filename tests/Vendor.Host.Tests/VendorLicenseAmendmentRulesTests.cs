@@ -107,10 +107,14 @@ public sealed class VendorLicenseAmendmentRulesTests
     }
 
     [Fact]
-    public void IssuedRequestsBlockNewOnesButRejectedAllowRetries()
+    public void IssuedAndDeliveredRequestsBlockNewOnesButTerminalStatesAllowRetries()
     {
+        Assert.Contains(VendorLicenseAmendmentRequest.StatusRequested, VendorLicenseAmendmentRules.BlockingStatuses);
         Assert.Contains(VendorLicenseAmendmentRequest.StatusIssued, VendorLicenseAmendmentRules.BlockingStatuses);
         Assert.Contains(VendorLicenseAmendmentRequest.StatusPendingApproval, VendorLicenseAmendmentRules.BlockingStatuses);
+        // A delivered amendment is still in flight: its envelope may not be imported yet.
+        Assert.Contains(VendorLicenseAmendmentRequest.StatusDelivered, VendorLicenseAmendmentRules.BlockingStatuses);
+        Assert.DoesNotContain(VendorLicenseAmendmentRequest.StatusApplied, VendorLicenseAmendmentRules.BlockingStatuses);
         Assert.DoesNotContain(VendorLicenseAmendmentRequest.StatusRejected, VendorLicenseAmendmentRules.BlockingStatuses);
         Assert.DoesNotContain(VendorLicenseAmendmentRequest.StatusFailed, VendorLicenseAmendmentRules.BlockingStatuses);
     }
