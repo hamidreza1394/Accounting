@@ -292,15 +292,20 @@ internal static class VendorDevelopmentDatabaseSetup
                 canSaveConnection,
                 GetAllowedSqlHosts(configuration),
                 context.RequestAborted);
+            // A failed provisioning run must not look successful to HTTP clients. The
+            // operation may have completed earlier stages, so callers should inspect the
+            // returned stage details before deciding whether a retry is safe.
             return Results.Json(new
             {
                 success = outcome.Success,
                 stages = outcome.StageResults.Select(stage => new { key = stage.Key, state = stage.State, message = stage.Message }),
-                runtimeUsername = outcome.RuntimeUsername,
-                generatedPassword = outcome.GeneratedPassword,
-                savedToCredentialManager = outcome.SavedToCredentialManager,
+                runtimeUsername = outcome.Success ? outcome.RuntimeUsername : null,
+                generatedPassword = outcome.Success ? outcome.GeneratedPassword : null,
+                savedToCredentialManager = outcome.Success && outcome.SavedToCredentialManager,
                 message = outcome.Message
-            });
+            }, statusCode: outcome.Success
+                ? StatusCodes.Status200OK
+                : StatusCodes.Status422UnprocessableEntity);
         }).RequireRateLimiting("vendor-development-setup-provision"));
 
         if (setupOnly)
