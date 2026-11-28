@@ -456,6 +456,39 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
     }
 
     [Fact]
+    public async Task PipelineRefusesAnExistingRuntimeLoginWhenDatabaseEnumerationIsDenied()
+    {
+        var fixture = await ProvisioningFixture.OpenAsync();
+        if (fixture is null) return;
+        await using var _ = fixture;
+        var runtimePassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await RunPipelineAsync(fixture.CreateRequest(runtimePassword: runtimePassword));
+
+        // VIEW ANY DATABASE is granted to PUBLIC by default, so the enumeration rule is only
+        // reachable through an explicit DENY: an explicitly denied setup identity cannot list
+        // every database and therefore cannot prove the absence of cross-database mappings.
+        var setupPassword = VendorDevelopmentDatabaseProvisioning.VendorRuntimePassword.Generate();
+        await fixture.CreateLimitedSetupLoginAsync(setupPassword);
+        await fixture.GrantViewAnyDefinitionToLimitedSetupLoginAsync();
+        await fixture.DenyViewAnyDatabaseToLimitedSetupLoginAsync();
+        await fixture.MapLimitedSetupUserIntoTargetAsDbOwnerAsync();
+
+        var (rerun, diagnostics) = await RunPipelineExpectingFailureAsync(fixture.CreateRequest(
+            runtimePassword: runtimePassword,
+            setupUsername: fixture.LimitedSetupLoginName,
+            setupPassword: setupPassword));
+        var rerunStates = States(rerun);
+        var identityMessage = rerun.StageResults.First(stage => stage.Key == "runtimeIdentity").Message;
+
+        Assert.False(rerun.Success);
+        Assert.Equal("failed", rerunStates["runtimeIdentity"]);
+        Assert.Contains("VIEW ANY DATABASE", identityMessage, StringComparison.Ordinal);
+        // The refusal never touched the login or its password.
+        Assert.True(await fixture.RuntimeLoginCanConnectAsync(fixture.RuntimeLoginName, runtimePassword));
+        GC.KeepAlive(diagnostics);
+    }
+
+    [Fact]
     public async Task PipelineRefusesAnExistingRuntimeLoginWhenANonTargetDatabaseCannotBeAudited()
     {
         var fixture = await ProvisioningFixture.OpenAsync();
@@ -846,6 +879,9 @@ public sealed class VendorDevelopmentDatabaseProvisioningSqlServerTests
 
         public async Task GrantViewAnyDefinitionToLimitedSetupLoginAsync() =>
             await ExecuteAsync("master", $"GRANT VIEW ANY DEFINITION TO [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
+
+        public async Task DenyViewAnyDatabaseToLimitedSetupLoginAsync() =>
+            await ExecuteAsync("master", $"DENY VIEW ANY DATABASE TO [{LimitedSetupLoginName.Replace("]", "]]", StringComparison.Ordinal)}]");
 
         public async Task MapLimitedSetupUserIntoTargetAsDbOwnerAsync()
         {

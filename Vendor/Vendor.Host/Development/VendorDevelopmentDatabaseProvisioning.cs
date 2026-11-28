@@ -1079,18 +1079,27 @@ internal static class VendorDevelopmentDatabaseProvisioning
                             }
                         }
                     }
-
-                    var (coverageAllowed, coverageRefusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateMappingAuditCoverage(
-                        input.RuntimeUsername, canEnumerateAllDatabases, unauditableDatabases);
-                    if (!coverageAllowed)
-                    {
-                        throw new VendorDatabaseMismatchException(coverageRefusal!);
-                    }
                 }
 
                 var mappedInOther = new List<string>();
                 foreach (var otherDatabase in otherDatabases)
                 {
+                    // Principal-visibility canary: metadata visibility can hide OTHER users'
+                    // rows even where HAS_DBACCESS = 1, so a zero mapping count is only
+                    // trustworthy when this database's principal rows are actually readable.
+                    // Every real database holds at least the dbo principal with a different
+                    // SID, so zero visible others proves the rows are NOT readable and the
+                    // database is added to the un-auditable list (fail closed) instead of
+                    // being counted as "no mapping found".
+                    await using var visibilityCommand = connection.CreateCommand();
+                    visibilityCommand.CommandText = $"SELECT CAST(COUNT(*) AS int) FROM {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(otherDatabase)}.sys.database_principals AS dp WHERE dp.sid <> SUSER_SID()";
+                    var visibleOthers = await ExecuteScalarAsync(visibilityCommand, CancellationToken.None);
+                    if (visibleOthers is not > 0)
+                    {
+                        unauditableDatabases.Add(otherDatabase);
+                        continue;
+                    }
+
                     await using var mappedCommand = connection.CreateCommand();
                     mappedCommand.CommandText = $"SELECT CAST(COUNT(*) AS int) FROM {VendorDevelopmentDatabaseSafety.VendorSqlIdentifier.Quote(otherDatabase)}.sys.database_principals AS dp WHERE dp.type IN ('S', 'U') AND dp.sid = (SELECT sp.sid FROM sys.server_principals AS sp WHERE sp.name = @login AND sp.type = 'S')";
                     mappedCommand.Parameters.Add(new SqlParameter("@login", System.Data.SqlDbType.NVarChar, 128) { Value = input.RuntimeUsername });
@@ -1098,6 +1107,13 @@ internal static class VendorDevelopmentDatabaseProvisioning
                     {
                         mappedInOther.Add(otherDatabase);
                     }
+                }
+
+                var (coverageAllowed, coverageRefusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateMappingAuditCoverage(
+                    input.RuntimeUsername, canEnumerateAllDatabases, unauditableDatabases);
+                if (!coverageAllowed)
+                {
+                    throw new VendorDatabaseMismatchException(coverageRefusal!);
                 }
 
                 var (crossDbAllowed, crossDbRefusal) = VendorDevelopmentRuntimeIdentity.VendorCrossDatabaseAccess.EvaluateUserMappings(input.RuntimeUsername, mappedInOther);
