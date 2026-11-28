@@ -47,6 +47,15 @@ public sealed class VendorDevelopmentSetupHttpMatrixTests
         {
             webHost.UseSetting("environment", "Development");
             webHost.UseSetting("DevelopmentSetup:Enabled", "true");
+            // TestServer requests carry no loopback RemoteIpAddress, so the setup guard
+            // middleware would 404 every request (that behaviour is the dedicated exposure
+            // test). The matrix drives the real local-operator flow, so it presents the
+            // loopback peer explicitly; the loopback HOST name still comes from the request.
+            webHost.Configure(appBuilder => appBuilder.Use(next => async context =>
+            {
+                context.Connection.RemoteIpAddress = IPAddress.Loopback;
+                await next(context);
+            }));
         });
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
