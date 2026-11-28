@@ -3911,3 +3911,5 @@
 - **مستندات:** Vendor README، راهنمای local/remote readiness، INDEX و handoff Issue #814 به‌روزرسانی شدند.
 - **مرز:** هیچ Schema/Migration، Customer DB، سیاست loopback/challenge/Origin/antiforgery/rate limit یا سطح دسترسی Runtime تغییر نکرد.
 - **اعتبارسنجی:** در این محیط Build/Test/Node/browser/Windows SQL عملیاتی اجرا نشد؛ CI PR و اجرای واقعی دستگاه مالک برای تأیید باقی است. این تغییرات تا آن زمان Implemented / Not Verified هستند.
+
+- **تحویل Git:** Issue [#814](https://github.com/hamidreza1394/Accounting/issues/814) و PR پیش‌نویس [#815](https://github.com/hamidreza1394/Accounting/pull/815) ایجاد شدند؛ شاخه مستقل `fix/issue-814-vendor-local-first-run` از main ساخته شد. CI روی HEAD PR پس از آخرین اصلاحات باید بررسی شود.
