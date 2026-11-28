@@ -3825,3 +3825,14 @@
 - **مستندات:** handoff `ISSUE-802-vendor-setup-endpoint-security.md`، WORK_LOG، INDEX.
 - **اعتبارسنجی:** Build Release موفق؛ `dotnet test Vendor.Host.Tests -c Release`: همهٔ تست‌های جدید (Bootstrap token با TimeProvider، SetupChallenge) سبز؛ ۱۲ failed همان baseline محیطی (+۱ flaky زمان‌محور از قبل موجود).
 - **Git:** Branch `fix/vendor-provisioning-endpoint-security`؛ Issue #802.
+
+
+## 2026-11-28 — Issue #802: اصلاح قرارداد HTTP شکست Provisioning
+
+- **علت ریشه‌ای:** endpoint `POST /api/development/database-setup/provision` حتی در `ProvisionOutcome.Success=false` پاسخ 200 می‌داد؛ Client مبتنی بر `response.ok` می‌توانست شکست را موفق نمایش دهد.
+- **اصلاح:** پاسخ موفق فقط HTTP 200 و پاسخ Pipeline ناموفق HTTP 422 است. فیلدهای Runtime username، generated password و Credential Manager success فقط در نتیجهٔ موفق منتشر می‌شوند.
+- **Regression:** ماتریس HTTP واقعی شکست روی SQL loopback/closed-port را به 422، `success=false` و عدم افشای Runtime credentials مقید می‌کند؛ تست Rate Limit نیز با قرارداد جدید هم‌تراز شد.
+- **مستندات:** handoff `ISSUE-802-provisioning-outcome-http-status.md` و ارجاع در INDEX.
+- **اعتبارسنجی:** CI روی HEAD نهایی این شاخه باید تکمیل شود؛ در این یادداشت هیچ Build/Test محلی یا CI موفق ادعا نمی‌شود.
+- **مرز:** فقط Vendor Host و تست Vendor؛ بدون تغییر Customer، `Server/**`، دیتابیس مشتری، Schema، Migration یا Secret.
+- **Git:** Branch `fix/vendor-provisioning-outcome-http-status`; PR پس از ثبت این یادداشت ایجاد می‌شود.
