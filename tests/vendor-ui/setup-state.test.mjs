@@ -58,6 +58,20 @@ test("Save and Provisioning mutations cannot overlap", () => {
   state.endProvisioning();
 });
 
+test("Delete and Provisioning credential writes cannot overlap", () => {
+  const state = createSetupState();
+  assert.equal(state.beginDelete(), true);
+  assert.equal(state.isBusy(), true);
+  assert.equal(state.beginProvisioning(), false);
+  assert.equal(state.beginSave("connection-a", true), false);
+  assert.equal(state.beginTest("connection-a"), null);
+  state.endDelete();
+  assert.equal(state.isBusy(), false);
+  assert.equal(state.beginProvisioning(), true);
+  assert.equal(state.beginDelete(), false);
+  state.endProvisioning();
+});
+
 test("a failed or stale test never enables Save", () => {
   const state = createSetupState();
   const failedTest = state.beginTest("connection-a");
