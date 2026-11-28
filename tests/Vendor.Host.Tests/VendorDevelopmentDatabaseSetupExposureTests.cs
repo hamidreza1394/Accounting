@@ -11,10 +11,13 @@ namespace Faranou.Vendor.Host.Tests;
 /// </summary>
 public sealed class VendorDevelopmentDatabaseSetupExposureTests
 {
-    private static readonly string[] SetupApiPaths =
+    private static readonly string[] SetupPaths =
     [
         "/api/development/database-setup/status",
-        "/api/development/database-setup/antiforgery"
+        "/api/development/database-setup/antiforgery",
+        "/development/database-setup.css",
+        "/development/database-setup.js",
+        "/development/database-setup-state.mjs"
     ];
 
     [Fact]
@@ -23,7 +26,7 @@ public sealed class VendorDevelopmentDatabaseSetupExposureTests
         await using var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient();
 
-        foreach (var path in SetupApiPaths)
+        foreach (var path in SetupPaths)
         {
             using var response = await client.GetAsync(path, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -45,7 +48,7 @@ public sealed class VendorDevelopmentDatabaseSetupExposureTests
             .WithWebHostBuilder(builder => builder.UseSetting("DevelopmentSetup:Enabled", "true"));
         using var client = factory.CreateClient();
 
-        foreach (var path in SetupApiPaths)
+        foreach (var path in SetupPaths)
         {
             using var response = await client.GetAsync(path, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
